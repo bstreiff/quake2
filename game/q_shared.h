@@ -39,12 +39,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stdlib.h>
 #include <time.h>
 
-#if (defined _M_IX86 || defined __i386__) && !defined C_ONLY && !defined __sun__
-#define id386	1
-#else
-#define id386	0
-#endif
-
 #if defined _M_ALPHA && !defined C_ONLY
 #define idaxp	1
 #else
@@ -138,18 +132,13 @@ struct cplane_s;
 
 extern vec3_t vec3_origin;
 
-#define	nanmask (255<<23)
-
-#define	IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
-
-// microsoft's fabs seems to be ungodly slow...
-//float Q_fabs (float f);
-//#define	fabs(f) Q_fabs(f)
-#if !defined C_ONLY && !defined __linux__ && !defined __sgi
-extern long Q_ftol( float f );
+#if _MSC_VER
+#define IS_NAN(x) _isnan(x)
 #else
-#define Q_ftol( f ) ( long ) (f)
+#define IS_NAN(x) isnan(x)
 #endif
+
+#define Q_ftol( f ) ( long ) (f)
 
 #define DotProduct(x,y)			(x[0]*y[0]+x[1]*y[1]+x[2]*y[2])
 #define VectorSubtract(a,b,c)	(c[0]=a[0]-b[0],c[1]=a[1]-b[1],c[2]=a[2]-b[2])

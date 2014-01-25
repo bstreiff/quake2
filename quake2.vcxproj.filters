@@ -156,9 +156,6 @@
     <ClCompile Include="win32\vid_menu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\x86.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\anorms.h">
