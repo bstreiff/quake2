@@ -620,8 +620,6 @@ qboolean VID_LoadRefresh( char *name )
 	{
 		if(!strcmp (vid_ref->string, "gl"))
 			vidref_val = VIDREF_GL;
-		else if(!strcmp(vid_ref->string, "soft"))
-			vidref_val = VIDREF_SOFT;
 	}
 //PGM
 //======
@@ -673,9 +671,9 @@ void VID_CheckChanges (void)
 		Com_sprintf( name, sizeof(name), "ref_%s.dll", vid_ref->string );
 		if ( !VID_LoadRefresh( name ) )
 		{
-			if ( strcmp (vid_ref->string, "soft") == 0 )
-				Com_Error (ERR_FATAL, "Couldn't fall back to software refresh!");
-			Cvar_Set( "vid_ref", "soft" );
+			if ( strcmp (vid_ref->string, "gl") == 0 )
+				Com_Error (ERR_FATAL, "Couldn't fall back to GL refresh!");
+			Cvar_Set( "vid_ref", "gl" );
 
 			/*
 			** drop the console if we fail to load a refresh
@@ -709,7 +707,7 @@ VID_Init
 void VID_Init (void)
 {
 	/* Create the video variables so we know how to start the graphics drivers */
-	vid_ref = Cvar_Get ("vid_ref", "soft", CVAR_ARCHIVE);
+	vid_ref = Cvar_Get ("vid_ref", "gl", CVAR_ARCHIVE);
 	vid_xpos = Cvar_Get ("vid_xpos", "3", CVAR_ARCHIVE);
 	vid_ypos = Cvar_Get ("vid_ypos", "22", CVAR_ARCHIVE);
 	vid_fullscreen = Cvar_Get ("vid_fullscreen", "0", CVAR_ARCHIVE);

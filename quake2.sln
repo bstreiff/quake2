@@ -9,8 +9,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "quake2", "quake2.vcxproj", 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ref_gl", "ref_gl\ref_gl.vcxproj", "{1451934D-0944-4095-BAAA-7B800DDE85B5}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ref_soft", "ref_soft\ref_soft.vcxproj", "{56E7B72C-30EE-40F3-B0DA-979E33A5274D}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -42,12 +40,6 @@ Global
 		{1451934D-0944-4095-BAAA-7B800DDE85B5}.Release|Win32.Build.0 = Release|Win32
 		{1451934D-0944-4095-BAAA-7B800DDE85B5}.Template|Win32.ActiveCfg = Template|Win32
 		{1451934D-0944-4095-BAAA-7B800DDE85B5}.Template|Win32.Build.0 = Template|Win32
-		{56E7B72C-30EE-40F3-B0DA-979E33A5274D}.Debug|Win32.ActiveCfg = Debug|Win32
-		{56E7B72C-30EE-40F3-B0DA-979E33A5274D}.Debug|Win32.Build.0 = Debug|Win32
-		{56E7B72C-30EE-40F3-B0DA-979E33A5274D}.Release|Win32.ActiveCfg = Release|Win32
-		{56E7B72C-30EE-40F3-B0DA-979E33A5274D}.Release|Win32.Build.0 = Release|Win32
-		{56E7B72C-30EE-40F3-B0DA-979E33A5274D}.Template|Win32.ActiveCfg = Template|Win32
-		{56E7B72C-30EE-40F3-B0DA-979E33A5274D}.Template|Win32.Build.0 = Template|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
