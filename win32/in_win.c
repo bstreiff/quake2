@@ -487,7 +487,7 @@ void IN_StartupJoystick (void)
 { 
 	int			numdevs;
 	JOYCAPS		jc;
-	MMRESULT	mmr;
+	MMRESULT	mmr = 0;
 	cvar_t		*cv;
 
  	// assume no joystick
@@ -571,6 +571,7 @@ PDWORD RawValuePointer (int axis)
 	case JOY_AXIS_V:
 		return &ji.dwVpos;
 	}
+	return NULL;
 }
 
 

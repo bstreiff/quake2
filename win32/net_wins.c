@@ -121,6 +121,7 @@ qboolean	NET_CompareAdr (netadr_t a, netadr_t b)
 			return true;
 		return false;
 	}
+	return false;
 }
 
 /*
@@ -151,6 +152,7 @@ qboolean	NET_CompareBaseAdr (netadr_t a, netadr_t b)
 			return true;
 		return false;
 	}
+	return false;
 }
 
 char	*NET_AdrToString (netadr_t a)
@@ -396,7 +398,7 @@ void NET_SendPacket (netsrc_t sock, int length, void *data, netadr_t to)
 {
 	int		ret;
 	struct sockaddr	addr;
-	int		net_socket;
+	int		net_socket = 0;
 
 	if ( to.type == NA_LOOPBACK )
 	{
