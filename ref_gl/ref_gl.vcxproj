@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -22,16 +22,16 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Template|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -51,12 +51,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>.\..\debug\</OutDir>
-    <IntDir>.\debug\</IntDir>
+    <IntDir>.\debug\obj\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>.\..\release\</OutDir>
-    <IntDir>.\release\</IntDir>
+    <IntDir>.\release\obj\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -70,11 +70,11 @@
       <MinimalRebuild>true</MinimalRebuild>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AssemblerListingLocation>.\debug\</AssemblerListingLocation>
+      <AssemblerListingLocation>.\debug\obj\</AssemblerListingLocation>
       <BrowseInformation>true</BrowseInformation>
-      <PrecompiledHeaderOutputFile>.\debug\ref_gl.pch</PrecompiledHeaderOutputFile>
-      <ObjectFileName>.\debug\</ObjectFileName>
-      <ProgramDataBaseFileName>.\debug\</ProgramDataBaseFileName>
+      <PrecompiledHeaderOutputFile>.\debug\obj\ref_gl.pch</PrecompiledHeaderOutputFile>
+      <ObjectFileName>.\debug\obj\</ObjectFileName>
+      <ProgramDataBaseFileName>.\debug\obj\</ProgramDataBaseFileName>
     </ClCompile>
     <Midl>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -89,7 +89,7 @@
     </ResourceCompile>
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <OutputFile>.\..\debug\ref_gl.bsc</OutputFile>
+      <OutputFile>.\..\debug\obj\ref_gl.bsc</OutputFile>
     </Bscmake>
     <Link>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -97,7 +97,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\..\debug\ref_gl.dll</OutputFile>
-      <ImportLibrary>.\..\debug\ref_gl.lib</ImportLibrary>
+      <ImportLibrary>.\..\debug\obj\ref_gl.lib</ImportLibrary>
       <AdditionalDependencies>winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>.\ref_gl.def</ModuleDefinitionFile>
     </Link>
