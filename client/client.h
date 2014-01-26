@@ -387,6 +387,7 @@ typedef struct cparticle_system_s {
 	cparticle_t *active_particles;
 } cparticle_system_t;
 
+#define NEW_PARTICLE_SYSTEM -1
 cparticle_system_t *CL_GetParticleSystem(int edict);
 void CL_ParticleSystem_Clear(cparticle_system_t *ps);
 cparticle_t *CL_ParticleSystem_AddParticle(cparticle_system_t *ps);
