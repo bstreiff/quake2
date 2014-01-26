@@ -1430,5 +1430,112 @@ void Weapon_BFG (edict_t *ent)
 	Weapon_Generic (ent, 8, 32, 55, 58, pause_frames, fire_frames, weapon_bfg_fire);
 }
 
+/* THP
+======================================================================
+
+LIGHTNING GUN
+
+======================================================================
+*/
+void LightningGun_Fire (edict_t *ent, vec3_t g_offset, int damage)
+{
+	vec3_t	forward, right;
+	vec3_t	start;
+	vec3_t	offset;
+
+	if (is_quad)
+		damage *= 4;
+	AngleVectors (ent->client->v_angle, forward, right, NULL);
+	VectorSet(offset, 24, 8, ent->viewheight-8);
+	VectorAdd (offset, g_offset, offset);
+	P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
+
+	VectorScale (forward, -2, ent->client->kick_origin);
+	ent->client->kick_angles[0] = -1;
+
+	fire_lightning (ent, start, forward, damage, MOD_LIGHTNING);
+
+	// send muzzle flash
+	gi.WriteByte (svc_muzzleflash);
+	gi.WriteShort (ent-g_edicts);
+	gi.WriteByte (MZ_LIGHTNINGGUN| is_silenced);
+	gi.multicast (ent->s.origin, MULTICAST_PVS);
+
+	PlayerNoise(ent, start, PNOISE_WEAPON);
+}
+
+void Weapon_LightningGun_Fire (edict_t *ent)
+{
+	float	rotation;
+	vec3_t	forward, right;
+	vec3_t	offset;
+	int		effect;
+	int		damage;
+
+	ent->client->weapon_sound = gi.soundindex("weapons/lightgun.wav");
+
+	if (!(ent->client->buttons & BUTTON_ATTACK))
+	{
+		ent->client->ps.gunframe++;
+	}
+	else
+	{
+		if (! ent->client->pers.inventory[ent->client->ammo_index] )
+		{
+			if (level.time >= ent->pain_debounce_time)
+			{
+				gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
+				ent->pain_debounce_time = level.time + 1;
+			}
+			NoAmmoWeaponChange (ent);
+		}
+		else
+		{
+			rotation = (ent->client->ps.gunframe - 5) * 2*M_PI/6;
+			offset[0] = offset[1] = -4 * sin(rotation);
+			offset[2] = 4 * cos(rotation);
+
+			if (deathmatch->value)
+				damage = 5;
+			else
+				damage = 10;
+			LightningGun_Fire (ent, offset, damage);
+			if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
+				ent->client->pers.inventory[ent->client->ammo_index]--;
+
+			ent->client->anim_priority = ANIM_ATTACK;
+			if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
+			{
+				ent->s.frame = FRAME_crattak1 - 1;
+				ent->client->anim_end = FRAME_crattak9;
+			}
+			else
+			{
+				ent->s.frame = FRAME_attack1 - 1;
+				ent->client->anim_end = FRAME_attack8;
+			}
+		}
+
+		ent->client->ps.gunframe++;
+		if (ent->client->ps.gunframe == 12 && ent->client->pers.inventory[ent->client->ammo_index])
+			ent->client->ps.gunframe = 6;
+	}
+
+	if (ent->client->ps.gunframe == 12)
+	{
+		gi.sound(ent, CHAN_AUTO, gi.soundindex("weapons/lightgun.wav"), 1, ATTN_NORM, 0);
+		ent->client->weapon_sound = 0;
+	}
+
+}
+
+void Weapon_LightningGun (edict_t *ent)
+{
+	static int	pause_frames[]	= {0};
+	static int	fire_frames[]	= {6, 7, 8, 9, 10, 11, 0};
+
+	Weapon_Generic (ent, 5, 20, 49, 53, pause_frames, fire_frames, Weapon_LightningGun_Fire);
+}
+
 
 //======================================================================
