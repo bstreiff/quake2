@@ -922,7 +922,7 @@ void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, f
 fire_lightning
 =================
 */
-#define ELECTROCUTION_RADIUS 256
+#define ELECTROCUTION_RADIUS 128
 void fire_lightning (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int mod) {
 	vec3_t		from;
 	vec3_t		end;
@@ -952,7 +952,7 @@ void fire_lightning (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int
 			water = true;
 			// electrocute anyone nearby who is in the water
 			ent = NULL;
-			while ((ent = findradius(ent, tr.endpos, ELECTROCUTION_RADIUS)) != NULL) {
+			while ((ent = findradius(ent, tr.endpos, ELECTROCUTION_RADIUS*2)) != NULL) {
 				if (!ent->takedamage) continue;
 				if (!CanDamage (ent, self)) continue;
 				if (!ent->waterlevel && !(gi.pointcontents(ent->s.origin) & MASK_WATER)) continue;
@@ -961,8 +961,8 @@ void fire_lightning (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int
 				VectorMA (ent->s.origin, 0.5, v, v);
 				VectorSubtract (self->s.origin, v, v);
 				dist = VectorLength(v);
-				points = damage * (1.0 - sqrt(dist/ELECTROCUTION_RADIUS));
-				if (ent == self->owner) points = points * 0.5;
+				points = damage * 2; //* (1.0 - sqrt(dist/ELECTROCUTION_RADIUS)); // water conducts electricity!
+				//if (ent == self->owner) points = points * 0.5;
 				gi.WriteByte (svc_temp_entity);
 				gi.WriteByte (TE_LIGHTNING2);
 				gi.WritePosition (tr.endpos);
@@ -973,6 +973,26 @@ void fire_lightning (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int
 		} else {
 			if ((tr.ent != self) && (tr.ent->takedamage))
 				T_Damage (tr.ent, self, self, aimdir, tr.endpos, tr.plane.normal, damage, 0, 0, MOD_LIGHTNING);
+			ent = NULL;
+			while ((ent = findradius(ent, tr.endpos, ELECTROCUTION_RADIUS)) != NULL) {
+				if (!ent->takedamage) continue;
+				if (!CanDamage (ent, self)) continue;
+				if (ent == self) continue; // don't reflect back on yourself when not in the water.
+				//if (!ent->waterlevel && !(gi.pointcontents(ent->s.origin) & MASK_WATER)) continue;
+
+				VectorAdd (ent->mins, ent->maxs, v);
+				VectorMA (ent->s.origin, 0.5, v, v);
+				VectorSubtract (self->s.origin, v, v);
+				dist = VectorLength(v);
+				points = damage; //* (1.0 - sqrt(dist/ELECTROCUTION_RADIUS));
+				//if (ent == self) points = points * 0.5;
+				gi.WriteByte (svc_temp_entity);
+				gi.WriteByte (TE_LIGHTNING2);
+				gi.WritePosition (tr.endpos);
+				gi.WritePosition (ent->s.origin);
+				gi.multicast (ent->s.origin, MULTICAST_PHS);
+				T_Damage (ent, self, self, aimdir, ent->s.origin, vec3_origin, (int)points, 0, DAMAGE_ENERGY, MOD_LIGHTNING);
+			}
 		}
 	}
 
