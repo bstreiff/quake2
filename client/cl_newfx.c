@@ -1277,7 +1277,7 @@ CL_BlasterTrail2
 Green!
 ===============
 */
-void CL_BlasterTrail2 (vec3_t start, vec3_t end)
+void CL_BlasterTrail2 (entity_state_t *ent, vec3_t start, vec3_t end)
 {
 	vec3_t		move;
 	vec3_t		vec;
@@ -1293,24 +1293,30 @@ void CL_BlasterTrail2 (vec3_t start, vec3_t end)
 	dec = 5;
 	VectorScale (vec, 5, vec);
 
+	cparticle_system_t *ps = CL_GetParticleSystem( ent->number );
+	if (!ps) { Com_Printf("can't get a particle system for %d\n", ent->number ); return; }
+	ps->type = PARTICLE_TYPE_LIGHTNING;
+
 	// FIXME: this is a really silly way to have a loop
 	while (len > 0)
 	{
 		len -= dec;
 
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		//if (!free_particles)
+		//	return;
+		//p = free_particles;
+		//free_particles = p->next;
+		//p->next = active_particles;
+		//active_particles = p;
 		VectorClear (p->accel);
 		
 		p->time = cl.time;
 
 		p->alpha = 1.0;
 		p->alphavel = -1.0 / (0.3+frand()*0.2);
-		p->color = 0xd0;
+//		p->color = 0xd0;
+		p->color = 0x74;
 		for (j=0 ; j<3 ; j++)
 		{
 			p->org[j] = move[j] + crand();

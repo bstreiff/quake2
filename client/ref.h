@@ -22,10 +22,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "../qcommon/qcommon.h"
 
-#define	MAX_DLIGHTS		32
-#define	MAX_ENTITIES	128
-#define	MAX_PARTICLES	4096
-#define	MAX_LIGHTSTYLES	256
+#define	MAX_DLIGHTS				32
+#define	MAX_ENTITIES			128
+#define	MAX_PARTICLES			4096
+#define MAX_PARTICLESYSTEMS			256
+#define MAX_PARTICLES_PER_SYSTEM	256
+#define	MAX_LIGHTSTYLES			256
 
 #define POWERSUIT_SCALE		4.0F
 
@@ -89,9 +91,25 @@ typedef struct
 typedef struct
 {
 	vec3_t	origin;
+	vec3_t	old_origin;
 	int		color;
 	float	alpha;
 } particle_t;
+
+// THP particle systems
+#define PARTICLE_TYPE_POINT			0
+#define PARTICLE_TYPE_LINE			1
+#define PARTICLE_TYPE_SPRITE		2
+#define PARTICLE_TYPE_LIGHTNING		3
+typedef struct {
+	int		edict;			// entity index, if applicable.
+	char	type;			// type ofparticles to draw
+							// THP todo: sprite data of some kind for sprite-type particle systems
+	//particle_t *particles;
+	int num_particles;
+	particle_t particles[MAX_PARTICLES_PER_SYSTEM];
+} particle_system_t;
+// !THP
 
 typedef struct
 {
@@ -121,6 +139,9 @@ typedef struct
 
 	int			num_particles;
 	particle_t	*particles;
+	// THP particle systems
+	int					num_particlesystems;
+	particle_system_t	*particlesystems;
 } refdef_t;
 
 

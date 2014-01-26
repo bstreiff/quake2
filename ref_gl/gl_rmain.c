@@ -466,8 +466,7 @@ void GL_DrawParticles( int num_particles, const particle_t particles[], const un
 R_DrawParticles
 ===============
 */
-void R_DrawParticles (void)
-{
+void R_OLD_DrawParticles (void) {
 	if ( gl_ext_pointparameters->value && qglPointParameterfEXT )
 	{
 		int i;
@@ -479,7 +478,6 @@ void R_DrawParticles (void)
 		qglDisable( GL_TEXTURE_2D );
 
 		qglPointSize( gl_particle_size->value );
-
 		qglBegin( GL_POINTS );
 		for ( i = 0, p = r_newrefdef.particles; i < r_newrefdef.num_particles; i++, p++ )
 		{
@@ -487,7 +485,7 @@ void R_DrawParticles (void)
 			color[3] = p->alpha*255;
 
 			qglColor4ubv( color );
-
+			
 			qglVertex3fv( p->origin );
 		}
 		qglEnd();
@@ -502,6 +500,77 @@ void R_DrawParticles (void)
 	{
 		GL_DrawParticles( r_newrefdef.num_particles, r_newrefdef.particles, d_8to24table );
 	}
+}
+
+void R_DrawParticles (void)
+{
+	int i, j;
+	float scale;
+	unsigned char color[4];
+	const particle_t *p;
+	const particle_system_t *ps;
+	vec3_t tv;
+
+	R_OLD_DrawParticles(); // Draw the legacy particles, at least until everything is converted over.
+
+	qglDepthMask( GL_FALSE );
+	qglEnable( GL_BLEND );
+	qglDisable( GL_TEXTURE_2D );
+
+	for ( j = 0, ps = r_newrefdef.particlesystems; j < r_newrefdef.num_particlesystems; j++, ps++ ) {
+		switch (ps->type) {
+		case PARTICLE_TYPE_SPRITE: // THP fixme: implement sprite particles
+		case PARTICLE_TYPE_POINT: default:
+			qglPointSize( gl_particle_size->value );
+			qglBegin( GL_POINTS );
+			for ( i = 0, p = ps->particles; i < ps->num_particles; i++, p++ ) {
+				*(int *)color = d_8to24table[p->color];
+				color[3] = p->alpha*255;
+				qglColor4ubv( color );
+				qglVertex3fv( p->origin );
+			}
+			qglEnd();
+			break;
+		case PARTICLE_TYPE_LINE:
+			p = ps->particles;
+			VectorSubtract (p->origin, vpn, tv);
+			scale = VectorLength(tv);
+			if (scale > 20) scale = 20.0f;
+			if (scale < 1.0) scale = 1.0f;
+			qglLineWidth(gl_particle_size->value / scale);
+			//qglLineWidth( gl_particle_size->value );
+			qglBegin( GL_LINES );
+			for ( i = 0, p = ps->particles; i < ps->num_particles; i++, p++ ) {
+				*(int *)color = d_8to24table[p->color];
+				color[3] = p->alpha*255;
+				qglColor4ubv( color );
+
+				VectorSubtract( p->old_origin, p->origin, tv );
+				VectorScale( tv, 8.0f, tv );
+				VectorAdd(p->origin, tv, tv);
+				qglVertex3fv( tv );
+				qglVertex3fv( p->origin );
+			}
+			qglEnd();
+			break;
+		case PARTICLE_TYPE_LIGHTNING:
+			qglLineWidth( gl_particle_size->value / 10.0f );
+			qglBegin( GL_LINE_STRIP );
+			for ( i = 0, p = ps->particles; i < ps->num_particles; i++, p++ ) {
+				*(int *)color = d_8to24table[p->color];
+				color[3] = p->alpha*255;
+				qglColor4ubv( color );
+				qglVertex3fv( p->origin );
+			}
+			qglEnd();
+			break;
+		}
+	}
+
+	qglDisable( GL_BLEND );
+	qglColor4f( 1.0F, 1.0F, 1.0F, 1.0F );
+	qglDepthMask( GL_TRUE );
+	qglEnable( GL_TEXTURE_2D );
 }
 
 /*
