@@ -1556,7 +1556,7 @@ Writes key bindings and archived cvars to config.cfg
 void CL_WriteConfiguration (void)
 {
 	FILE	*f;
-	char	path[MAX_QPATH];
+	char	path[MAX_OSPATH];
 
 	if (cls.state == ca_uninitialized)
 		return;
