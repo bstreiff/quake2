@@ -20,6 +20,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "g_local.h"
 
+typedef struct {
+	char *change;
+	char *into;
+} spawn_replacement_t;
+
 typedef struct
 {
 	char	*name;
@@ -268,6 +273,11 @@ spawn_t	spawns[] = {
 	{NULL, NULL}
 };
 
+spawn_replacement_t alternates[] = {
+	{"weapon_hyperblaster", "weapon_lightning_gun"},
+	{NULL, NULL}
+};
+
 /*
 ===============
 ED_CallSpawn
@@ -279,12 +289,24 @@ void ED_CallSpawn (edict_t *ent)
 {
 	spawn_t	*s;
 	gitem_t	*item;
+	spawn_replacement_t *sr;
 	int		i;
+	char *classname;
 
 	if (!ent->classname)
 	{
 		gi.dprintf ("ED_CallSpawn: NULL classname\n");
 		return;
+	}
+	classname = ent->classname;
+	// THP alternate spawn functions
+	if (sv_alternatespawns->value) {
+		for (i=0,sr = alternates; sr->change; i++, sr++) {
+			if (!strcmp(classname, sr->change)) {
+				classname = sr->into;
+				break;
+			}
+		}
 	}
 
 	// check item spawn functions
@@ -292,7 +314,7 @@ void ED_CallSpawn (edict_t *ent)
 	{
 		if (!item->classname)
 			continue;
-		if (!strcmp(item->classname, ent->classname))
+		if (!strcmp(item->classname, classname))
 		{	// found it
 			SpawnItem (ent, item);
 			return;
@@ -302,7 +324,7 @@ void ED_CallSpawn (edict_t *ent)
 	// check normal spawn functions
 	for (s=spawns ; s->name ; s++)
 	{
-		if (!strcmp(s->name, ent->classname))
+		if (!strcmp(s->name, classname))
 		{	// found it
 			s->spawn (ent);
 			return;

@@ -922,7 +922,7 @@ void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, f
 fire_lightning
 =================
 */
-#define ELECTROCUTION_RADIUS 512
+#define ELECTROCUTION_RADIUS 256
 void fire_lightning (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int mod) {
 	vec3_t		from;
 	vec3_t		end;
