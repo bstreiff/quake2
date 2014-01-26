@@ -531,6 +531,68 @@ void *Sys_GetGameAPI (void *parms)
 
 //=======================================================================
 
+/*
+==================
+Sys_GetSteamDirectory
+==================
+*/
+
+static size_t QueryRegistryKeyForPath(
+	HKEY hive,
+	const char* keypath,
+	const char* valuename,
+	char* outBuffer,
+	size_t bufferLength)
+{
+	HKEY key = INVALID_HANDLE_VALUE;
+	DWORD pathtype;
+	DWORD pathlen;
+	LONG retval;
+	size_t result = 0;
+
+	// Open the key.
+	if (RegOpenKeyExA(hive, keypath, 0, KEY_QUERY_VALUE, &key) == ERROR_SUCCESS)
+	{
+		// Make sure the value is the right type, and that it exists.
+		if (RegQueryValueEx(key, valuename, 0, &pathtype, NULL, &pathlen) == ERROR_SUCCESS)
+		{
+			if (pathtype == REG_SZ && pathlen != 0)
+			{
+				// Cool, it does, copy it.
+
+				// RegQueryValueEx can only take a DWORD length size, so if we for some crazy
+				// reason want to try and get more than 4GB out of it... cap that.
+				if (bufferLength > 0xFFFFFFFEUL)
+					pathlen = 0xFFFFFFFFUL;
+				else
+					pathlen = (DWORD)bufferLength;
+
+				retval = RegQueryValueEx(key, valuename, 0, NULL, (LPBYTE)outBuffer, &pathlen);
+				if (retval == ERROR_MORE_DATA)
+					result = -pathlen;
+				else
+					result = pathlen;
+			}
+		}
+		RegCloseKey(key);
+	}
+
+	return result;
+}
+
+size_t Sys_GetSteamDirectory(char* steamDirectory, size_t length)
+{
+	size_t retval;
+	retval = QueryRegistryKeyForPath(HKEY_CURRENT_USER, "Software\\Valve\\Steam", "SteamPath", steamDirectory, length);
+	if (retval != 0)
+		return retval;
+
+	retval = QueryRegistryKeyForPath(HKEY_CURRENT_USER, "Software\\Valve\\Steam", "InstallPath", steamDirectory, length);
+	if (retval != 0)
+		return retval;
+
+	return 0;
+}
 
 /*
 ==================

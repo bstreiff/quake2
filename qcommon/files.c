@@ -865,7 +865,23 @@ void FS_InitFilesystem (void)
 	//
 	// start up with baseq2 by default
 	//
-	FS_AddGameDirectory (va("%s/"BASEDIRNAME, fs_basedir->string) );
+	FS_AddGameDirectory(va("%s/"BASEDIRNAME, fs_basedir->string));
+
+#if _WIN32
+	//
+	// Also add Steam directory, if available.
+	//
+	{
+		size_t steamPathLength = Sys_GetSteamDirectory(NULL, 0);
+		if (steamPathLength > 0)
+		{
+			char* steamPath = (char*)malloc(steamPathLength*sizeof(char));
+			Sys_GetSteamDirectory(steamPath, steamPathLength);
+			FS_AddGameDirectory(va("%s/SteamApps/common/Quake 2/"BASEDIRNAME, steamPath));
+			free(steamPath);
+		}
+	}
+#endif
 
 	// any set gamedirs will be freed up to here
 	fs_base_searchpaths = fs_searchpaths;

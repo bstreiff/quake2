@@ -802,6 +802,10 @@ void	Sys_Error (char *error, ...);
 void	Sys_Quit (void);
 char	*Sys_GetClipboardData( void );
 
+#if _WIN32
+size_t	Sys_GetSteamDirectory(char* steamDirectory, size_t length);
+#endif
+
 /*
 ==============================================================
 
