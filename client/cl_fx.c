@@ -2281,14 +2281,14 @@ void CL_LightningSpark (vec3_t org, vec3_t dir, int color, int count)
 		for (j=0 ; j<3 ; j++)
 		{
 			p->org[j] = org[j] + ((rand()&3)-2);
-			p->vel[j] = d*(dir[j] + crand()); //crand()*20;
+			p->vel[j] = d*(dir[j] + crand()*2); //crand()*20;
 		}
 
 		p->accel[0] = p->accel[1] = 0;
 		p->accel[2] = -PARTICLE_GRAVITY;
 		p->alpha = 1.0;
 
-		p->alphavel = -1.0 + (frand()*0.3);//-1.0 / (0.5 + frand()*0.3);
+		p->alphavel = -1.0 / (0.5 + frand()*0.3);
 	}
 }
 
@@ -2321,14 +2321,14 @@ void CL_LightningTrail (vec3_t start, vec3_t end) {
 		p->time = cl.time;
 
 		p->alpha = 1.0;
-		p->alphavel = -0.5f;// -1 / (1+frand()*0.2)
+		p->alphavel = -1.5f;// -1 / (1+frand()*0.2)
 		p->color = 16 - (rand()&7);
 		for (j=0 ; j<3 ; j++)
 		{
 			float tv = crand()*2;
 			p->org[j] = move[j] + tv; //crand()*2;
-			p->vel[j] = -tv; //crand()*5;
-			p->accel[j] = tv;
+			p->vel[j] = -tv*2; //crand()*5;
+			p->accel[j] = tv*2;
 		}
 
 		VectorAdd (move, vec, move);
