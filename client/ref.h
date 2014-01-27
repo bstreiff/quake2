@@ -137,8 +137,6 @@ typedef struct
 	int			num_dlights;
 	dlight_t	*dlights;
 
-	int			num_particles;
-	particle_t	*particles;
 	// THP particle systems
 	int					num_particlesystems;
 	particle_system_t	*particlesystems;

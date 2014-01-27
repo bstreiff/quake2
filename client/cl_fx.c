@@ -2299,70 +2299,10 @@ void CL_AddParticles (void)
 			VectorMA(p->org, time, p->vel, p->org);
 			VectorMA(p->vel, time, p->accel, p->vel);
 			p->time = cl.time;
-			//p->org[0] = p->org[0] + p->vel[0]*time + p->accel[0]*time2;
-			//p->org[1] = p->org[1] + p->vel[1]*time + p->accel[1]*time2;
-			//p->org[2] = p->org[2] + p->vel[2]*time + p->accel[2]*time2;
-			//VectorMA(p->vel, time2, p->accel, p->vel);
-			//p->time = cl.time;
 		}
 		ps->active_particles = active;
 		V_AddParticleSystem(ps);
 	}
-
-/*	active = NULL;
-	tail = NULL;
-	for (p=active_particles ; p ; p=next)
-	{
-		next = p->next;
-
-		// PMM - added INSTANT_PARTICLE handling for heat beam
-		if (p->alphavel != INSTANT_PARTICLE)
-		{
-			time = (cl.time - p->time)*0.001;
-			alpha = p->alpha + time*p->alphavel;
-			if (alpha <= 0)
-			{	// faded out
-				p->next = free_particles;
-				free_particles = p;
-				continue;
-			}
-		}
-		else
-		{
-			alpha = p->alpha;
-		}
-
-		p->next = NULL;
-		if (!tail)
-			active = tail = p;
-		else
-		{
-			tail->next = p;
-			tail = p;
-		}
-
-		if (alpha > 1.0)
-			alpha = 1;
-		color = p->color;
-
-		time2 = time*time;
-
-		VectorCopy(p->org, p->old_org);
-		org[0] = p->org[0] + p->vel[0]*time + p->accel[0]*time2;
-		org[1] = p->org[1] + p->vel[1]*time + p->accel[1]*time2;
-		org[2] = p->org[2] + p->vel[2]*time + p->accel[2]*time2;
-
-		V_AddParticle (org, p->old_org, color, alpha);
-		// PMM
-		if (p->alphavel == INSTANT_PARTICLE)
-		{
-			p->alphavel = 0.0;
-			p->alpha = 0.0;
-		}
-	}
-
-	active_particles = active;
-*/
 }
 
 

@@ -88,22 +88,10 @@ void V_AddEntity (entity_t *ent)
 
 /*
 =====================
-V_AddParticle
+V_AddParticleSystem
 
 =====================
 */
-void V_AddParticle (vec3_t org, vec3_t old_org, int color, float alpha)
-{
-	particle_t	*p;
-
-	if (r_numparticles >= MAX_PARTICLES)
-		return;
-	p = &r_particles[r_numparticles++];
-	VectorCopy (org, p->origin);
-	VectorCopy (old_org, p->old_origin);
-	p->color = color;
-	p->alpha = alpha;
-}
 
 void V_AddParticleSystem(cparticle_system_t *cps) {
 	particle_system_t *ps;
@@ -542,8 +530,6 @@ void V_RenderView( float stereo_separation )
 
 		cl.refdef.num_entities = r_numentities;
 		cl.refdef.entities = r_entities;
-		cl.refdef.num_particles = r_numparticles;
-		cl.refdef.particles = r_particles;
 		cl.refdef.num_particlesystems = r_numparticlesystems;
 		cl.refdef.particlesystems = r_particlesystems;
 		cl.refdef.num_dlights = r_numdlights;
