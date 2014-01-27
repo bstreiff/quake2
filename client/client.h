@@ -367,6 +367,8 @@ typedef struct particle_s
 	float		colorvel;
 	float		alpha;
 	float		alphavel;
+	float		scale[2];
+	float		scalevel[2];
 } cparticle_t;
 
 #define	PARTICLE_GRAVITY	40
@@ -377,8 +379,9 @@ typedef struct particle_s
 // THP particle systems
 typedef struct cparticle_system_s {
 	qboolean active;
-	int type;
+	int type;				// see ref.h
 	int edict;
+	char *sprite; // for sprite-type particles.
 
 	//int num_particles;
 	//cparticle_t *particles;

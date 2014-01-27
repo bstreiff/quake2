@@ -892,6 +892,7 @@ cparticle_system_t *CL_GetParticleSystem(int edict){
 		CL_ParticleSystem_Clear(ps);
 		ps->active = true;
 		ps->edict = edict;
+		ps->sprite = "";
 		return ps;
 	}
 	return NULL;
@@ -924,6 +925,8 @@ cparticle_t *CL_ParticleSystem_AddParticle(cparticle_system_t *ps) {
 	ps->free_particles = p->next;
 	p->next = ps->active_particles;
 	ps->active_particles = p;
+	p->scale[0] = 1.0f; p->scale[1] = 1.0f;
+
 	return p;
 }
 // !THP
@@ -953,32 +956,15 @@ typedef struct particle_s
 	float		alphavel;
 } cparticle_t;
 
-
 #define	PARTICLE_GRAVITY	40
-*/
 
+// ...AND THIS WAS MADE OBSOLETE -- thp
 cparticle_t	*active_particles, *free_particles;
 
 cparticle_t	particles[MAX_PARTICLES];
 int			cl_numparticles = MAX_PARTICLES;
 
-/*
-===============
-CL_ClearParticles
-===============
 */
-void CL_ClearParticles (void)
-{
-	int		i;
-	
-	free_particles = &particles[0];
-	active_particles = NULL;
-
-	for (i=0 ;i<cl_numparticles ; i++)
-		particles[i].next = &particles[i+1];
-	particles[cl_numparticles-1].next = NULL;
-}
-
 
 /*
 ===============
@@ -1331,7 +1317,8 @@ void CL_BlasterParticles (vec3_t org, vec3_t dir)
 
 	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
 	if (!ps) return;
-	ps->type = PARTICLE_TYPE_POINT;
+	ps->type = PARTICLE_TYPE_SPRITE;
+	ps->sprite = "sprites/particle/soft.tga";
 
 	count = 40;
 	for (i=0 ; i<count ; i++)
@@ -1341,12 +1328,15 @@ void CL_BlasterParticles (vec3_t org, vec3_t dir)
 
 		p->time = cl.time;
 		p->color = 0xe0 + (rand()&7);
+		p->scale[0] = 0.1;
+		p->scale[1] = 1.0;
+		p->scalevel[1] = -0.5;
 
-		d = rand()&15;
+		d = rand()&3; //rand()&15;
 		for (j=0 ; j<3 ; j++)
 		{
-			p->org[j] = org[j] + ((rand()&7)-4) + d*dir[j];
-			p->vel[j] = dir[j] * 30 + crand()*40;
+			p->org[j] = org[j] + ((rand()&3)-2) + d*dir[j]; //org[j] + ((rand()&7)-4) + d*dir[j];
+			p->vel[j] = dir[j] * 30 + crand()*20; // crand()*40
 		}
 
 		p->accel[0] = p->accel[1] = 0;
@@ -1551,7 +1541,8 @@ void CL_DiminishingTrail (vec3_t start, vec3_t end, centity_t *old, int flags)
 
 	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
 	if (!ps) return;
-	ps->type = PARTICLE_TYPE_POINT;
+	ps->type = PARTICLE_TYPE_SPRITE;
+	ps->sprite = "sprites/particle/soft.tga";
 
 	while (len > 0)
 	{
@@ -2343,10 +2334,7 @@ CL_AddParticles
 void CL_AddParticles (void)
 {
 	cparticle_t		*p, *next;
-	float			alpha;
 	float			time, time2;
-	vec3_t			org;
-	int				color;
 	cparticle_t		*active, *tail;
 
 
@@ -2380,6 +2368,8 @@ void CL_AddParticles (void)
 
 			if (p->alpha > 1.0) p->alpha = 1;
 			p->color += time*p->colorvel;
+			p->scale[0] += time*p->scalevel[0];
+			p->scale[1] += time*p->scalevel[1];
 
 			time2 = time*time;
 
@@ -2442,7 +2432,6 @@ CL_ClearEffects
 */
 void CL_ClearEffects (void)
 {
-	CL_ClearParticles ();
 	CL_ClearDlights ();
 	CL_ClearLightStyles ();
 }

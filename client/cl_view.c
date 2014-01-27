@@ -101,11 +101,17 @@ void V_AddParticleSystem(cparticle_system_t *cps) {
 	ps = &r_particlesystems[r_numparticlesystems++];
 	ps->edict = cps->edict;
 	ps->type = cps->type;
+	if (cps->sprite && strlen(cps->sprite))
+		ps->sprite = re.RegisterSkin(cps->sprite);
+	//ps->sprite = cps->sprite;
 	for (ps->num_particles = 0, p = cps->active_particles; p ; ps->num_particles++, p = p->next) {
-		VectorCopy(p->org, ps->particles[ps->num_particles].origin);
-		VectorCopy(p->old_org, ps->particles[ps->num_particles].old_origin);
-		ps->particles[ps->num_particles].color = p->color;
-		ps->particles[ps->num_particles].alpha = p->alpha;
+		particle_t *rp = &(ps->particles[ps->num_particles]);
+		VectorCopy(p->org, rp->origin);
+		VectorCopy(p->old_org, rp->old_origin);
+		rp->color = p->color;
+		rp->alpha = p->alpha;
+		rp->scale[0] = p->scale[0];
+		rp->scale[1] = p->scale[1];
 	}
 }
 

@@ -94,20 +94,26 @@ typedef struct
 	vec3_t	old_origin;
 	int		color;
 	float	alpha;
+	// for sprite particles
+	float   scale[2];
 } particle_t;
 
 // THP particle systems
-#define PARTICLE_TYPE_POINT			0
-#define PARTICLE_TYPE_LINE			1
-#define PARTICLE_TYPE_SPRITE		2
-#define PARTICLE_TYPE_LIGHTNING		3
+#define PARTICLE_TYPE_POINT					0
+#define PARTICLE_TYPE_LINE					1
+#define PARTICLE_TYPE_SPRITE				2
+#define PARTICLE_TYPE_LIGHTNING				3
 typedef struct {
-	int		edict;			// entity index, if applicable.
-	char	type;			// type ofparticles to draw
-							// THP todo: sprite data of some kind for sprite-type particle systems
-	//particle_t *particles;
+	int		edict;				// entity index, if applicable.
+	char	type;				// type of particles to draw
+	struct image_s *	sprite;	// for SPRITE particles, the image to use.
+	
 	int num_particles;
 	particle_t particles[MAX_PARTICLES_PER_SYSTEM];
+	// THP todo: consider rewriting this to dynamically allocate particles?
+	// Or at least maybe allocate particles TO each system FROM a global cache,
+	// much like the old system used to allocate each individual particle.
+	//particle_t *particles; 
 } particle_system_t;
 // !THP
 

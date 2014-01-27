@@ -409,15 +409,59 @@ void R_DrawParticles (void)
 	unsigned char color[4];
 	const particle_t *p;
 	const particle_system_t *ps;
-	vec3_t tv;
+	vec3_t tv, up, right;
 
 	qglDepthMask( GL_FALSE );
 	qglEnable( GL_BLEND );
 	qglDisable( GL_TEXTURE_2D );
 
+	//VectorCopy(vup, up);
+	//VectorCopy(vright, right);
+
 	for ( j = 0, ps = r_newrefdef.particlesystems; j < r_newrefdef.num_particlesystems; j++, ps++ ) {
 		switch (ps->type) {
 		case PARTICLE_TYPE_SPRITE: // THP fixme: implement sprite particles
+			qglEnable( GL_TEXTURE_2D );
+			qglDisable( GL_CULL_FACE );
+			GL_TexEnv( GL_MODULATE );
+			GL_Bind(ps->sprite->texnum);
+			qglBegin( GL_QUADS );
+			for ( i = 0, p = ps->particles; i < ps->num_particles; i++, p++ ) {
+				*(int *)color = d_8to24table[p->color];
+				color[3] = p->alpha*255;
+				qglColor4ubv( color );
+
+				// find view-space vectors for drawing the sprite
+				VectorSubtract(p->old_origin, p->origin, up); // thp this goes "backwards" by design
+				CrossProduct(up, vpn, right);
+
+				// calculate scale factor, same as the old code.
+				scale = ( p->origin[0] - r_origin[0] ) * vpn[0] + ( p->origin[1] - r_origin[1] ) * vpn[1] + ( p->origin[2] - r_origin[2] ) * vpn[2];
+				scale *= gl_particle_size->value;
+				if (scale < 20) scale = 1;
+					else scale = 1 + scale * 0.004;
+				
+				qglTexCoord2f( 0.0f, 0.0f );
+				qglVertex3fv( p->origin );
+
+				qglTexCoord2f( 0.0f, 1.0f );
+				qglVertex3f( p->origin[0] + right[0]*scale*p->scale[0],
+							 p->origin[1] + right[1]*scale*p->scale[0],
+							 p->origin[2] + right[2]*scale*p->scale[0]);
+
+				qglTexCoord2f( 1.0f, 1.0f );
+				qglVertex3f( p->origin[0] + right[0]*scale*p->scale[0] + up[0]*scale*p->scale[1],
+							 p->origin[1] + right[1]*scale*p->scale[0] + up[1]*scale*p->scale[1],
+							 p->origin[2] + right[2]*scale*p->scale[0] + up[2]*scale*p->scale[1]);
+
+				qglTexCoord2f( 1.0f, 0.0f );
+				qglVertex3f( p->origin[0] + up[0]*scale*p->scale[1],
+							 p->origin[1] + up[1]*scale*p->scale[1],
+							 p->origin[2] + up[2]*scale*p->scale[1]);
+			}
+			qglEnd();
+			qglDisable( GL_TEXTURE_2D );
+			break;
 		case PARTICLE_TYPE_POINT: default:
 			qglPointSize( gl_particle_size->value );
 			qglBegin( GL_POINTS );
