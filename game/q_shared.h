@@ -644,6 +644,9 @@ typedef struct
 #define	MZ_NUKE4			38
 #define	MZ_NUKE8			39
 //ROGUE
+// THP
+#define MZ_LIGHTNINGGUN		40
+// THP
 
 //
 // monster muzzle flashes
@@ -945,8 +948,10 @@ typedef enum
 	TE_WIDOWSPLASH,
 	TE_EXPLOSION1_BIG,
 	TE_EXPLOSION1_NP,
-	TE_FLECHETTE
+	TE_FLECHETTE,
 //ROGUE
+	TE_LIGHTNING2,
+	TE_LIGHTNING_SPARKS
 } temp_event_t;
 
 #define SPLASH_UNKNOWN		0

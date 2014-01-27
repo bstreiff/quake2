@@ -417,6 +417,12 @@ void CL_ParseMuzzleFlash (void)
 		break;
 // PGM
 // ======================
+// THP
+	case MZ_LIGHTNINGGUN:
+		dl->color[0] = 1;dl->color[1] = 1;dl->color[2] = 1;
+		dl->radius = 100 + (rand()%31);
+		S_StartSound (NULL, i, CHAN_WEAPON, S_RegisterSound("weapons/lightzap.wav"), volume, ATTN_NORM, 0);
+		break;
 	}
 }
 
@@ -2246,6 +2252,88 @@ void CL_TeleportParticles (vec3_t org)
 			}
 }
 
+/*
+===============
+CL_LightningTrail
+
+===============
+*/
+void CL_LightningSpark (vec3_t org, vec3_t dir, int color, int count)
+{
+	int			i, j;
+	cparticle_t	*p;
+	float		d;
+
+	cparticle_system_t *ps = CL_GetParticleSystem( -1 );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_LINE;
+	ps->active = true;
+
+	for (i=0 ; i<count ; i++)
+	{
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) break;
+
+		p->time = cl.time;
+		p->color = color;
+
+		d = rand()&31;
+		for (j=0 ; j<3 ; j++)
+		{
+			p->org[j] = org[j] + ((rand()&3)-2);
+			p->vel[j] = d*(dir[j] + crand()); //crand()*20;
+		}
+
+		p->accel[0] = p->accel[1] = 0;
+		p->accel[2] = -PARTICLE_GRAVITY;
+		p->alpha = 1.0;
+
+		p->alphavel = -1.0 + (frand()*0.3);//-1.0 / (0.5 + frand()*0.3);
+	}
+}
+
+void CL_LightningTrail (vec3_t start, vec3_t end) {
+	vec3_t		move;
+	vec3_t		vec;
+	float		len;
+	int			i, j;
+	cparticle_t	*p;
+	float		dec;
+
+	VectorCopy (start, move);
+	VectorSubtract (end, start, vec);
+	len = VectorNormalize (vec);
+
+	dec = 16;
+	VectorScale (vec, dec, vec);
+
+	cparticle_system_t *ps = CL_GetParticleSystem( -1 );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_LIGHTNING;
+	ps->active = true;
+
+	for (i=0 ; i<len ; i+=dec)
+	{
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) break;
+
+		VectorClear (p->accel);
+		p->time = cl.time;
+
+		p->alpha = 1.0;
+		p->alphavel = -0.5f;// -1 / (1+frand()*0.2)
+		p->color = 16 - (rand()&7);
+		for (j=0 ; j<3 ; j++)
+		{
+			float tv = crand()*2;
+			p->org[j] = move[j] + tv; //crand()*2;
+			p->vel[j] = -tv; //crand()*5;
+			p->accel[j] = tv;
+		}
+
+		VectorAdd (move, vec, move);
+	}
+}
 
 /*
 ===============

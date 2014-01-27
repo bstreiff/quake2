@@ -402,6 +402,7 @@ void CL_QuadTrail (vec3_t start, vec3_t end);
 void CL_RailTrail (vec3_t start, vec3_t end);
 void CL_BubbleTrail (vec3_t start, vec3_t end);
 void CL_FlagTrail (vec3_t start, vec3_t end, float color);
+void CL_LightningTrail (vec3_t start, vec3_t end);
 
 // RAFAEL
 void CL_IonripperTrail (vec3_t start, vec3_t end);
