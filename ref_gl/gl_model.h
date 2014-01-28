@@ -259,3 +259,56 @@ void	Hunk_Free (void *base);
 
 void	Mod_FreeAll (void);
 void	Mod_Free (model_t *mod);
+
+
+//============================================================================
+// Alias models
+//============================================================================
+
+typedef struct
+{
+	short	index_xyz[3];
+	short	index_st[3];
+} alias_model_triangle_t;
+
+typedef struct
+{
+	vec3_t	v;
+	vec3_t	lightnormal;
+	int		lightnormalindex;
+} alias_model_vertex_t;
+
+typedef struct
+{
+	size_t					num_verts; // TODO: should this go into alias_model_t? Should be same for all frames.
+	alias_model_vertex_t*	verts;
+
+	vec3_t					mins;
+	vec3_t					maxs;
+} alias_model_frame_t;
+
+// the glcmd format:
+// a positive integer starts a tristrip command, followed by that many
+// vertex structures.
+// a negative integer starts a trifan command, followed by -x vertexes
+// a zero indicates the end of the command list.
+// a vertex consists of a floating point s, a floating point t,
+// and an integer vertex index.
+
+typedef struct
+{
+	int			skinwidth;
+	int			skinheight;
+
+	size_t		num_tris;
+	alias_model_triangle_t*	tris;
+
+	size_t		num_frames;
+	alias_model_frame_t*	frames;
+
+	size_t		num_glcmds;
+	int*		glcmds;
+
+
+
+} alias_model_t;

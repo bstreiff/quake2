@@ -51,7 +51,15 @@ float	r_avertexnormal_dots[SHADEDOT_QUANT][256] =
 
 float	*shadedots = r_avertexnormal_dots[0];
 
-void GL_LerpVerts( int nverts, dtrivertx_t *v, dtrivertx_t *ov, dtrivertx_t *verts, float *lerp, float move[3], float frontv[3], float backv[3] )
+static void GL_LerpVerts(
+	const int nverts,
+	const alias_model_vertex_t *v,
+	const alias_model_vertex_t *ov,
+	const alias_model_vertex_t *verts,
+	float *lerp,
+	const float move[3],
+	const float frontlerp,
+	const float backlerp)
 {
 	int i;
 
@@ -60,23 +68,20 @@ void GL_LerpVerts( int nverts, dtrivertx_t *v, dtrivertx_t *ov, dtrivertx_t *ver
 	{
 		for (i=0 ; i < nverts; i++, v++, ov++, lerp+=4 )
 		{
-			float *normal = r_avertexnormals[verts[i].lightnormalindex];
-
-			lerp[0] = move[0] + ov->v[0]*backv[0] + v->v[0]*frontv[0] + normal[0] * POWERSUIT_SCALE;
-			lerp[1] = move[1] + ov->v[1]*backv[1] + v->v[1]*frontv[1] + normal[1] * POWERSUIT_SCALE;
-			lerp[2] = move[2] + ov->v[2]*backv[2] + v->v[2]*frontv[2] + normal[2] * POWERSUIT_SCALE; 
+			lerp[0] = move[0] + ov->v[0]*backlerp + v->v[0]*frontlerp + verts[i].lightnormal[0] * POWERSUIT_SCALE;
+			lerp[1] = move[1] + ov->v[1]*backlerp + v->v[1]*frontlerp + verts[i].lightnormal[1] * POWERSUIT_SCALE;
+			lerp[2] = move[2] + ov->v[2]*backlerp + v->v[2]*frontlerp + verts[i].lightnormal[2] * POWERSUIT_SCALE; 
 		}
 	}
 	else
 	{
 		for (i=0 ; i < nverts; i++, v++, ov++, lerp+=4)
 		{
-			lerp[0] = move[0] + ov->v[0]*backv[0] + v->v[0]*frontv[0];
-			lerp[1] = move[1] + ov->v[1]*backv[1] + v->v[1]*frontv[1];
-			lerp[2] = move[2] + ov->v[2]*backv[2] + v->v[2]*frontv[2];
+			lerp[0] = move[0] + ov->v[0]*backlerp + v->v[0]*frontlerp;
+			lerp[1] = move[1] + ov->v[1]*backlerp + v->v[1]*frontlerp;
+			lerp[2] = move[2] + ov->v[2]*backlerp + v->v[2]*frontlerp;
 		}
 	}
-
 }
 
 /*
@@ -87,33 +92,27 @@ interpolates between two frames and origins
 FIXME: batch lerp all vertexes
 =============
 */
-void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
+static void GL_DrawAliasFrameLerp (const alias_model_t *alias, float backlerp)
 {
 	float 	l;
-	daliasframe_t	*frame, *oldframe;
-	dtrivertx_t	*v, *ov, *verts;
-	int		*order;
+	const alias_model_frame_t	*frame, *oldframe;
+	const alias_model_vertex_t	*v, *ov, *verts;
+	const int		*order;
 	int		count;
 	float	frontlerp;
 	float	alpha;
 	vec3_t	move, delta, vectors[3];
-	vec3_t	frontv, backv;
 	int		i;
 	int		index_xyz;
 	float	*lerp;
 
-	frame = (daliasframe_t *)((byte *)paliashdr + paliashdr->ofs_frames 
-		+ currententity->frame * paliashdr->framesize);
-	verts = v = frame->verts;
+	frame = &(alias->frames[currententity->frame]);
+	oldframe = &(alias->frames[currententity->oldframe]);
 
-	oldframe = (daliasframe_t *)((byte *)paliashdr + paliashdr->ofs_frames 
-		+ currententity->oldframe * paliashdr->framesize);
+	verts = v = frame->verts;
 	ov = oldframe->verts;
 
-	order = (int *)((byte *)paliashdr + paliashdr->ofs_glcmds);
-
-//	glTranslatef (frame->translate[0], frame->translate[1], frame->translate[2]);
-//	glScalef (frame->scale[0], frame->scale[1], frame->scale[2]);
+	order = alias->glcmds;
 
 	if (currententity->flags & RF_TRANSLUCENT)
 		alpha = currententity->alpha;
@@ -134,22 +133,14 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 	move[1] = -DotProduct (delta, vectors[1]);	// left
 	move[2] = DotProduct (delta, vectors[2]);	// up
 
-	VectorAdd (move, oldframe->translate, move);
-
-	for (i=0 ; i<3 ; i++)
+	for (i = 0; i < 3; i++)
 	{
-		move[i] = backlerp*move[i] + frontlerp*frame->translate[i];
-	}
-
-	for (i=0 ; i<3 ; i++)
-	{
-		frontv[i] = frontlerp*frame->scale[i];
-		backv[i] = backlerp*oldframe->scale[i];
+		move[i] = backlerp*move[i];
 	}
 
 	lerp = s_lerped[0];
 
-	GL_LerpVerts( paliashdr->num_xyz, v, ov, verts, lerp, move, frontv, backv );
+	GL_LerpVerts( frame->num_verts, v, ov, verts, lerp, move, frontlerp, backlerp );
 
 	if ( gl_vertex_arrays->value )
 	{
@@ -172,7 +163,7 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 			//
 			// pre light everything
 			//
-			for ( i = 0; i < paliashdr->num_xyz; i++ )
+			for (i = 0; i < frame->num_verts; i++ )
 			{
 				float l = shadedots[verts[i].lightnormalindex];
 
@@ -183,9 +174,9 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 		}
 
 		if ( qglLockArraysEXT != 0 )
-			qglLockArraysEXT( 0, paliashdr->num_xyz );
+			qglLockArraysEXT( 0, frame->num_verts );
 
-		while (1)
+		for (;;)
 		{
 			// get the vertex count and primitive type
 			count = *order++;
@@ -239,7 +230,7 @@ void GL_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp)
 	}
 	else
 	{
-		while (1)
+		for (;;)
 		{
 			// get the vertex count and primitive type
 			count = *order++;
@@ -303,24 +294,23 @@ GL_DrawAliasShadow
 */
 extern	vec3_t			lightspot;
 
-void GL_DrawAliasShadow (dmdl_t *paliashdr, int posenum)
+static void GL_DrawAliasShadow(const alias_model_t *alias, int posenum)
 {
-	dtrivertx_t	*verts;
-	int		*order;
+	const alias_model_vertex_t	*verts;
+	const int		*order;
 	vec3_t	point;
 	float	height, lheight;
 	int		count;
-	daliasframe_t	*frame;
+	const alias_model_frame_t	*frame;
 
 	lheight = currententity->origin[2] - lightspot[2];
 
-	frame = (daliasframe_t *)((byte *)paliashdr + paliashdr->ofs_frames 
-		+ currententity->frame * paliashdr->framesize);
+	frame = &(alias->frames[currententity->frame]);
 	verts = frame->verts;
 
 	height = 0;
 
-	order = (int *)((byte *)paliashdr + paliashdr->ofs_glcmds);
+	order = alias->glcmds;
 
 	height = -lheight + 1.0;
 
@@ -374,55 +364,50 @@ static qboolean R_CullAliasModel( vec3_t bbox[8], entity_t *e )
 {
 	int i;
 	vec3_t		mins, maxs;
-	dmdl_t		*paliashdr;
+	alias_model_t		*alias;
 	vec3_t		vectors[3];
 	vec3_t		thismins, oldmins, thismaxs, oldmaxs;
-	daliasframe_t *pframe, *poldframe;
+	alias_model_frame_t *frame, *oldframe;
 	vec3_t angles;
 
-	paliashdr = (dmdl_t *)currentmodel->extradata;
+	alias = (alias_model_t *)currentmodel->extradata;
 
-	if ( ( e->frame >= paliashdr->num_frames ) || ( e->frame < 0 ) )
+	if ((e->frame >= alias->num_frames) || (e->frame < 0))
 	{
 		ri.Con_Printf (PRINT_ALL, "R_CullAliasModel %s: no such frame %d\n", 
 			currentmodel->name, e->frame);
 		e->frame = 0;
 	}
-	if ( ( e->oldframe >= paliashdr->num_frames ) || ( e->oldframe < 0 ) )
+	if ((e->oldframe >= alias->num_frames) || (e->oldframe < 0))
 	{
 		ri.Con_Printf (PRINT_ALL, "R_CullAliasModel %s: no such oldframe %d\n", 
 			currentmodel->name, e->oldframe);
 		e->oldframe = 0;
 	}
 
-	pframe = ( daliasframe_t * ) ( ( byte * ) paliashdr + 
-		                              paliashdr->ofs_frames +
-									  e->frame * paliashdr->framesize);
-
-	poldframe = ( daliasframe_t * ) ( ( byte * ) paliashdr + 
-		                              paliashdr->ofs_frames +
-									  e->oldframe * paliashdr->framesize);
+	frame = &(alias->frames[currententity->frame]);
+	oldframe = &(alias->frames[currententity->oldframe]);
 
 	/*
 	** compute axially aligned mins and maxs
 	*/
-	if ( pframe == poldframe )
+	if (currententity->frame == currententity->oldframe)
 	{
 		for ( i = 0; i < 3; i++ )
 		{
-			mins[i] = pframe->translate[i];
-			maxs[i] = mins[i] + pframe->scale[i]*255;
+			mins[i] = frame->mins[i];
+			maxs[i] = frame->maxs[i];
 		}
 	}
 	else
 	{
 		for ( i = 0; i < 3; i++ )
 		{
-			thismins[i] = pframe->translate[i];
-			thismaxs[i] = thismins[i] + pframe->scale[i]*255;
+			thismins[i] = frame->mins[i];
+			thismaxs[i] = frame->maxs[i];
 
-			oldmins[i]  = poldframe->translate[i];
-			oldmaxs[i]  = oldmins[i] + poldframe->scale[i]*255;
+			oldmins[i]  = oldframe->mins[i];
+			oldmaxs[i]  = oldframe->maxs[i];
 
 			if ( thismins[i] < oldmins[i] )
 				mins[i] = thismins[i];
@@ -519,7 +504,7 @@ R_DrawAliasModel
 void R_DrawAliasModel (entity_t *e)
 {
 	int			i;
-	dmdl_t		*paliashdr;
+	const alias_model_t		*alias;
 	float		an;
 	vec3_t		bbox[8];
 	image_t		*skin;
@@ -536,7 +521,7 @@ void R_DrawAliasModel (entity_t *e)
 			return;
 	}
 
-	paliashdr = (dmdl_t *)currentmodel->extradata;
+	alias = (alias_model_t *)currentmodel->extradata;
 
 	//
 	// get lighting information
@@ -727,7 +712,7 @@ void R_DrawAliasModel (entity_t *e)
 	// locate the proper data
 	//
 
-	c_alias_polys += paliashdr->num_tris;
+	c_alias_polys += alias->num_tris;
 
 	//
 	// draw all the triangles
@@ -783,7 +768,7 @@ void R_DrawAliasModel (entity_t *e)
 	}
 
 
-	if ( (currententity->frame >= paliashdr->num_frames) 
+	if ( (currententity->frame >= alias->num_frames) 
 		|| (currententity->frame < 0) )
 	{
 		ri.Con_Printf (PRINT_ALL, "R_DrawAliasModel %s: no such frame %d\n",
@@ -792,7 +777,7 @@ void R_DrawAliasModel (entity_t *e)
 		currententity->oldframe = 0;
 	}
 
-	if ( (currententity->oldframe >= paliashdr->num_frames)
+	if ( (currententity->oldframe >= alias->num_frames)
 		|| (currententity->oldframe < 0))
 	{
 		ri.Con_Printf (PRINT_ALL, "R_DrawAliasModel %s: no such oldframe %d\n",
@@ -803,7 +788,7 @@ void R_DrawAliasModel (entity_t *e)
 
 	if ( !r_lerpmodels->value )
 		currententity->backlerp = 0;
-	GL_DrawAliasFrameLerp (paliashdr, currententity->backlerp);
+	GL_DrawAliasFrameLerp (alias, currententity->backlerp);
 
 	GL_TexEnv( GL_REPLACE );
 	qglShadeModel (GL_FLAT);
@@ -849,7 +834,7 @@ void R_DrawAliasModel (entity_t *e)
 		qglDisable (GL_TEXTURE_2D);
 		qglEnable (GL_BLEND);
 		qglColor4f (0,0,0,0.5);
-		GL_DrawAliasShadow (paliashdr, currententity->frame );
+		GL_DrawAliasShadow (alias, currententity->frame );
 		qglEnable (GL_TEXTURE_2D);
 		qglDisable (GL_BLEND);
 		qglPopMatrix ();
