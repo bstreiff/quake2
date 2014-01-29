@@ -415,12 +415,10 @@ void R_DrawParticles (void)
 	qglEnable( GL_BLEND );
 	qglDisable( GL_TEXTURE_2D );
 
-	//VectorCopy(vup, up);
-	//VectorCopy(vright, right);
-
 	for ( j = 0, ps = r_newrefdef.particlesystems; j < r_newrefdef.num_particlesystems; j++, ps++ ) {
 		switch (ps->type) {
-		case PARTICLE_TYPE_SPRITE: // THP fixme: implement sprite particles
+		case PARTICLE_TYPE_SPRITE:
+		case PARTICLE_TYPE_SPRITE_BILLBOARD:
 			qglEnable( GL_TEXTURE_2D );
 			qglDisable( GL_CULL_FACE );
 			GL_TexEnv( GL_MODULATE );
@@ -432,14 +430,18 @@ void R_DrawParticles (void)
 				qglColor4ubv( color );
 
 				// find view-space vectors for drawing the sprite
-				VectorSubtract(p->old_origin, p->origin, up); // thp this goes "backwards" by design
-				CrossProduct(up, vpn, right);
+				if (ps->type == PARTICLE_TYPE_SPRITE) {
+					VectorSubtract(p->old_origin, p->origin, up); // thp this goes "backwards" by design
+					CrossProduct(up, vpn, right);
+				} else if (ps->type == PARTICLE_TYPE_SPRITE_BILLBOARD) {
+					VectorCopy(vup, up);
+					VectorCopy(vright, right);
+				}
 
-				// calculate scale factor, same as the old code.
-				scale = ( p->origin[0] - r_origin[0] ) * vpn[0] + ( p->origin[1] - r_origin[1] ) * vpn[1] + ( p->origin[2] - r_origin[2] ) * vpn[2];
-				scale *= gl_particle_size->value;
-				if (scale < 20) scale = 1;
-					else scale = 1 + scale * 0.004;
+				// scale factor
+				scale = gl_particle_size->value;
+				if (scale > 20) scale = 20;
+				if (scale < 0.001) scale = 0.001;
 				
 				qglTexCoord2f( 0.0f, 0.0f );
 				qglVertex3fv( p->origin );

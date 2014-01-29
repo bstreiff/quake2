@@ -1098,7 +1098,8 @@ void CL_TeleporterParticles (entity_state_t *ent)
 
 	cparticle_system_t *ps = CL_GetParticleSystem( ent->number );
 	if (!ps) return;
-	ps->type = PARTICLE_TYPE_LINE;
+	ps->type = PARTICLE_TYPE_SPRITE_BILLBOARD;
+	ps->sprite = "sprites/particle/soft.tga";
 
 	for (i=0 ; i<16 ; i++)
 	{
@@ -1106,6 +1107,9 @@ void CL_TeleporterParticles (entity_state_t *ent)
 		if (!p) return;
 		p->time = cl.time;
 		p->color = 0x74 - (rand()%4); //0xdb;
+		p->scale[0] = 0.1;
+		p->scale[1] = 1.0;
+		p->scalevel[1] = -0.5;
 
 		for (j=0 ; j<2 ; j++)
 		{

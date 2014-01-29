@@ -102,7 +102,8 @@ typedef struct
 #define PARTICLE_TYPE_POINT					0
 #define PARTICLE_TYPE_LINE					1
 #define PARTICLE_TYPE_SPRITE				2
-#define PARTICLE_TYPE_LIGHTNING				3
+#define PARTICLE_TYPE_SPRITE_BILLBOARD		3
+#define PARTICLE_TYPE_LIGHTNING				4
 typedef struct {
 	int		edict;				// entity index, if applicable.
 	char	type;				// type of particles to draw
