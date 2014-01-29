@@ -417,6 +417,12 @@ void CL_ParseMuzzleFlash (void)
 		break;
 // PGM
 // ======================
+// THP
+	case MZ_LIGHTNINGGUN:
+		dl->color[0] = 1;dl->color[1] = 1;dl->color[2] = 1;
+		dl->radius = 100 + (rand()%31);
+		S_StartSound (NULL, i, CHAN_WEAPON, S_RegisterSound("weapons/lightzap.wav"), volume, ATTN_NORM, 0);
+		break;
 	}
 }
 
@@ -852,6 +858,78 @@ void CL_AddDLights (void)
 }
 
 
+/* THP
+==============================================================
+PARTICLE SYSTEMS
+==============================================================
+Code to handle the new particle systems.
+*/
+
+// THP particle systems
+cparticle_system_t	particlesystems[MAX_PARTICLESYSTEMS];
+int			cl_numparticlesystems = MAX_PARTICLESYSTEMS;
+
+
+/*===============
+CL_GetParticleSystem
+===============
+Returns the particle system associated with a given entity, or a new one if -1 is passed in.
+*/
+cparticle_system_t *CL_GetParticleSystem(int edict){
+	cparticle_system_t *ps;
+	int i;
+	// if edict is non-negative, we're asking for a particle system for this specific edict, not just world particles.
+	// if it's negative, then we're asking for a brand new particle system regardless.
+	if (edict >= 0) {
+		for (i = 0, ps = &particlesystems[0]; i < MAX_PARTICLESYSTEMS; i++, ps++) {
+			if (!ps->active) continue;
+			if (ps->edict == edict) return ps;
+		}
+	}
+	// make a new one.
+	for (i = 0, ps = &particlesystems[0]; i < MAX_PARTICLESYSTEMS; i++, ps++) {
+		if (ps->active) continue;
+		CL_ParticleSystem_Clear(ps);
+		ps->active = true;
+		ps->edict = edict;
+		ps->sprite = "";
+		return ps;
+	}
+	return NULL;
+}
+
+/*===============
+CL_ParticleSystem_Clear
+===============
+Empties out the particle system and resets it.
+*/
+void CL_ParticleSystem_Clear(cparticle_system_t *ps) {
+	int i;
+	memset(ps,0,sizeof(cparticle_system_t));
+	ps->free_particles = &ps->particles[0];
+	ps->active_particles = NULL;
+	for (i = 0; i < MAX_PARTICLES_PER_SYSTEM; i++)
+		ps->particles[i].next = &ps->particles[i+1];
+	ps->particles[MAX_PARTICLES_PER_SYSTEM-1].next = NULL;
+}
+
+/*===============
+CL_ParticleSystem_AddParticle
+===============
+Adds a particle to the system and returns it.
+*/
+cparticle_t *CL_ParticleSystem_AddParticle(cparticle_system_t *ps) {
+	cparticle_t *p;
+	if (!ps->free_particles) return NULL;
+	p = ps->free_particles;
+	ps->free_particles = p->next;
+	p->next = ps->active_particles;
+	ps->active_particles = p;
+	p->scale[0] = 1.0f; p->scale[1] = 1.0f;
+
+	return p;
+}
+// !THP
 
 /*
 ==============================================================
@@ -878,33 +956,15 @@ typedef struct particle_s
 	float		alphavel;
 } cparticle_t;
 
-
 #define	PARTICLE_GRAVITY	40
-*/
 
+// ...AND THIS WAS MADE OBSOLETE -- thp
 cparticle_t	*active_particles, *free_particles;
 
 cparticle_t	particles[MAX_PARTICLES];
 int			cl_numparticles = MAX_PARTICLES;
 
-
-/*
-===============
-CL_ClearParticles
-===============
 */
-void CL_ClearParticles (void)
-{
-	int		i;
-	
-	free_particles = &particles[0];
-	active_particles = NULL;
-
-	for (i=0 ;i<cl_numparticles ; i++)
-		particles[i].next = &particles[i+1];
-	particles[cl_numparticles-1].next = NULL;
-}
-
 
 /*
 ===============
@@ -919,14 +979,14 @@ void CL_ParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 	cparticle_t	*p;
 	float		d;
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	for (i=0 ; i<count ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 
 		p->time = cl.time;
 		p->color = color + (rand()&7);
@@ -958,14 +1018,14 @@ void CL_ParticleEffect2 (vec3_t org, vec3_t dir, int color, int count)
 	cparticle_t	*p;
 	float		d;
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	for (i=0 ; i<count ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 
 		p->time = cl.time;
 		p->color = color;
@@ -998,14 +1058,14 @@ void CL_ParticleEffect3 (vec3_t org, vec3_t dir, int color, int count)
 	cparticle_t	*p;
 	float		d;
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	for (i=0 ; i<count ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 
 		p->time = cl.time;
 		p->color = color;
@@ -1034,18 +1094,22 @@ void CL_TeleporterParticles (entity_state_t *ent)
 {
 	int			i, j;
 	cparticle_t	*p;
+	float dist; vec3_t temp;
 
-	for (i=0 ; i<8 ; i++)
+	cparticle_system_t *ps = CL_GetParticleSystem( ent->number );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_SPRITE_BILLBOARD;
+	ps->sprite = "sprites/particle/soft.tga";
+
+	for (i=0 ; i<16 ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
-
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 		p->time = cl.time;
-		p->color = 0xdb;
+		p->color = 0x74 - (rand()%4); //0xdb;
+		p->scale[0] = 0.1;
+		p->scale[1] = 1.0;
+		p->scalevel[1] = -0.5;
 
 		for (j=0 ; j<2 ; j++)
 		{
@@ -1053,14 +1117,22 @@ void CL_TeleporterParticles (entity_state_t *ent)
 			p->vel[j] = crand()*14;
 		}
 
-		p->org[2] = ent->origin[2] - 8 + (rand()&7);
-		p->vel[2] = 80 + (rand()&7);
+		p->org[2] = ent->origin[2];
+		VectorSubtract(p->org, ent->origin, temp);
+		dist = VectorLength(temp);
 
-		p->accel[0] = p->accel[1] = 0;
-		p->accel[2] = -PARTICLE_GRAVITY;
+		if (i > 4) {
+			p->org[2] = ent->origin[2] + 64 - (rand()&7) - (dist);
+			p->vel[2] = -80 - (rand()&7) + (dist);
+		} else {
+			p->org[2] = ent->origin[2] + (rand()&7) + (dist);
+			p->vel[2] = 80 + (rand()&7) - (dist);
+		}
+
+		p->vel[0] = p->vel[1] = 0;
+		p->accel[0] = p->accel[1] = p->accel[2] = 0;
 		p->alpha = 1.0;
-
-		p->alphavel = -0.5;
+		p->alphavel = -1.25;
 	}
 }
 
@@ -1076,14 +1148,14 @@ void CL_LogoutEffect (vec3_t org, int type)
 	int			i, j;
 	cparticle_t	*p;
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	for (i=0 ; i<500 ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 
 		p->time = cl.time;
 
@@ -1093,6 +1165,7 @@ void CL_LogoutEffect (vec3_t org, int type)
 			p->color = 0x40 + (rand()&7);	// red
 		else
 			p->color = 0xe0 + (rand()&7);	// yellow
+
 
 		p->org[0] = org[0] - 16 + frand()*32;
 		p->org[1] = org[1] - 16 + frand()*32;
@@ -1121,14 +1194,14 @@ void CL_ItemRespawnParticles (vec3_t org)
 	int			i, j;
 	cparticle_t	*p;
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	for (i=0 ; i<64 ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 
 		p->time = cl.time;
 
@@ -1160,14 +1233,14 @@ void CL_ExplosionParticles (vec3_t org)
 	int			i, j;
 	cparticle_t	*p;
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	for (i=0 ; i<256 ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 
 		p->time = cl.time;
 		p->color = 0xe0 + (rand()&7);
@@ -1199,14 +1272,14 @@ void CL_BigTeleportParticles (vec3_t org)
 	float		angle, dist;
 	static int colortable[4] = {2*8,13*8,21*8,18*8};
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	for (i=0 ; i<4096 ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 
 		p->time = cl.time;
 
@@ -1246,24 +1319,28 @@ void CL_BlasterParticles (vec3_t org, vec3_t dir)
 	float		d;
 	int			count;
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_SPRITE;
+	ps->sprite = "sprites/particle/soft.tga";
+
 	count = 40;
 	for (i=0 ; i<count ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 
 		p->time = cl.time;
 		p->color = 0xe0 + (rand()&7);
+		p->scale[0] = 0.1;
+		p->scale[1] = 1.0;
+		p->scalevel[1] = -0.5;
 
-		d = rand()&15;
+		d = rand()&3; //rand()&15;
 		for (j=0 ; j<3 ; j++)
 		{
-			p->org[j] = org[j] + ((rand()&7)-4) + d*dir[j];
-			p->vel[j] = dir[j] * 30 + crand()*40;
+			p->org[j] = org[j] + ((rand()&3)-2) + d*dir[j]; //org[j] + ((rand()&7)-4) + d*dir[j];
+			p->vel[j] = dir[j] * 30 + crand()*20; // crand()*40
 		}
 
 		p->accel[0] = p->accel[1] = 0;
@@ -1281,7 +1358,7 @@ CL_BlasterTrail
 
 ===============
 */
-void CL_BlasterTrail (vec3_t start, vec3_t end)
+void CL_BlasterTrail (entity_state_t *ent, vec3_t start, vec3_t end)
 {
 	vec3_t		move;
 	vec3_t		vec;
@@ -1297,17 +1374,17 @@ void CL_BlasterTrail (vec3_t start, vec3_t end)
 	dec = 5;
 	VectorScale (vec, 5, vec);
 
+	cparticle_system_t *ps = CL_GetParticleSystem( ent->number );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_LIGHTNING;
+	ps->active = true;
+
 	// FIXME: this is a really silly way to have a loop
 	while (len > 0)
 	{
 		len -= dec;
 
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
 		VectorClear (p->accel);
 		
 		p->time = cl.time;
@@ -1348,16 +1425,16 @@ void CL_QuadTrail (vec3_t start, vec3_t end)
 	dec = 5;
 	VectorScale (vec, 5, vec);
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	while (len > 0)
 	{
 		len -= dec;
 
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 		VectorClear (p->accel);
 		
 		p->time = cl.time;
@@ -1398,16 +1475,16 @@ void CL_FlagTrail (vec3_t start, vec3_t end, float color)
 	dec = 5;
 	VectorScale (vec, 5, vec);
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	while (len > 0)
 	{
 		len -= dec;
 
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 		VectorClear (p->accel);
 		
 		p->time = cl.time;
@@ -1466,20 +1543,20 @@ void CL_DiminishingTrail (vec3_t start, vec3_t end, centity_t *old, int flags)
 		velscale = 5;
 	}
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_SPRITE;
+	ps->sprite = "sprites/particle/soft.tga";
+
 	while (len > 0)
 	{
 		len -= dec;
 
-		if (!free_particles)
-			return;
-
 		// drop less particles as it flies
 		if ((rand()&1023) < old->trailcount)
 		{
-			p = free_particles;
-			free_particles = p->next;
-			p->next = active_particles;
-			active_particles = p;
+			p = CL_ParticleSystem_AddParticle(ps);
+			if (!p) return;
 			VectorClear (p->accel);
 		
 			p->time = cl.time;
@@ -1573,19 +1650,18 @@ void CL_RocketTrail (vec3_t start, vec3_t end, centity_t *old)
 	dec = 1;
 	VectorScale (vec, dec, vec);
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	while (len > 0)
 	{
 		len -= dec;
 
-		if (!free_particles)
-			return;
-
 		if ( (rand()&7) == 0)
 		{
-			p = free_particles;
-			free_particles = p->next;
-			p->next = active_particles;
-			active_particles = p;
+			p = CL_ParticleSystem_AddParticle(ps);
+			if (!p) return;
 			
 			VectorClear (p->accel);
 			p->time = cl.time;
@@ -1623,6 +1699,7 @@ void CL_RailTrail (vec3_t start, vec3_t end)
 	float		d, c, s;
 	vec3_t		dir;
 	byte		clr = 0x74;
+	cparticle_system_t *ps, *ps2;
 
 	VectorCopy (start, move);
 	VectorSubtract (end, start, vec);
@@ -1630,15 +1707,14 @@ void CL_RailTrail (vec3_t start, vec3_t end)
 
 	MakeNormalVectors (vec, right, up);
 
+	ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	for (i=0 ; i<len ; i++)
 	{
-		if (!free_particles)
-			return;
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 		
 		p->time = cl.time;
 		VectorClear (p->accel);
@@ -1651,12 +1727,13 @@ void CL_RailTrail (vec3_t start, vec3_t end)
 		VectorMA (dir, s, up, dir);
 
 		p->alpha = 1.0;
-		p->alphavel = -1.0 / (1+frand()*0.2);
+		p->alphavel = -0.75 / (1+frand()*0.2);
 		p->color = clr + (rand()&7);
 		for (j=0 ; j<3 ; j++)
 		{
-			p->org[j] = move[j] + dir[j]*3;
-			p->vel[j] = dir[j]*6;
+			p->org[j] = move[j] + dir[j];
+			p->vel[j] = dir[j]*9;
+			p->accel[j] = -dir[j]*9;
 		}
 
 		VectorAdd (move, vec, move);
@@ -1666,16 +1743,15 @@ void CL_RailTrail (vec3_t start, vec3_t end)
 	VectorScale (vec, dec, vec);
 	VectorCopy (start, move);
 
+	ps2 = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps2) return;
+	ps2->type = PARTICLE_TYPE_POINT;
 	while (len > 0)
 	{
 		len -= dec;
 
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps2);
+		if (!p) return;
 
 		p->time = cl.time;
 		VectorClear (p->accel);
@@ -1686,7 +1762,7 @@ void CL_RailTrail (vec3_t start, vec3_t end)
 
 		for (j=0 ; j<3 ; j++)
 		{
-			p->org[j] = move[j] + crand()*3;
+			p->org[j] = move[j] + crand()*2;
 			p->vel[j] = crand()*3;
 			p->accel[j] = 0;
 		}
@@ -1718,16 +1794,16 @@ void CL_IonripperTrail (vec3_t start, vec3_t ent)
 	dec = 5;
 	VectorScale (vec, 5, vec);
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	while (len > 0)
 	{
 		len -= dec;
 
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 		VectorClear (p->accel);
 
 		p->time = cl.time;
@@ -1781,15 +1857,14 @@ void CL_BubbleTrail (vec3_t start, vec3_t end)
 	dec = 32;
 	VectorScale (vec, dec, vec);
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	for (i=0 ; i<len ; i+=dec)
 	{
-		if (!free_particles)
-			return;
-
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 
 		VectorClear (p->accel);
 		p->time = cl.time;
@@ -1807,7 +1882,6 @@ void CL_BubbleTrail (vec3_t start, vec3_t end)
 		VectorAdd (move, vec, move);
 	}
 }
-
 
 /*
 ===============
@@ -1837,6 +1911,10 @@ void CL_FlyParticles (vec3_t origin, int count)
 	}
 
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	ltime = (float)cl.time / 1000.0;
 	for (i=0 ; i<count ; i+=2)
 	{
@@ -1854,12 +1932,8 @@ void CL_FlyParticles (vec3_t origin, int count)
 		forward[1] = cp*sy;
 		forward[2] = -sp;
 
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 
 		p->time = cl.time;
 
@@ -1935,6 +2009,9 @@ void CL_BfgParticles (entity_t *ent)
 			avelocities[0][i] = (rand()&255) * 0.01;
 	}
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
 
 	ltime = (float)cl.time / 1000.0;
 	for (i=0 ; i<NUMVERTEXNORMALS ; i++)
@@ -1953,12 +2030,8 @@ void CL_BfgParticles (entity_t *ent)
 		forward[1] = cp*sy;
 		forward[2] = -sp;
 
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 
 		p->time = cl.time;
 
@@ -1996,6 +2069,7 @@ void CL_TrapParticles (entity_t *ent)
 	int			j;
 	cparticle_t	*p;
 	int			dec;
+	cparticle_system_t *ps, *ps2;
 
 	ent->origin[2]-=14;
 	VectorCopy (ent->origin, start);
@@ -2009,17 +2083,17 @@ void CL_TrapParticles (entity_t *ent)
 	dec = 5;
 	VectorScale (vec, 5, vec);
 
+	ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	// FIXME: this is a really silly way to have a loop
 	while (len > 0)
 	{
 		len -= dec;
 
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 		VectorClear (p->accel);
 		
 		p->time = cl.time;
@@ -2052,16 +2126,16 @@ void CL_TrapParticles (entity_t *ent)
 	VectorCopy (ent->origin, org);
 
 
+	ps2 = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps2) return;
+	ps2->type = PARTICLE_TYPE_POINT;
+
 	for (i=-2 ; i<=2 ; i+=4)
 		for (j=-2 ; j<=2 ; j+=4)
 			for (k=-2 ; k<=4 ; k+=4)
 			{
-				if (!free_particles)
-					return;
-				p = free_particles;
-				free_particles = p->next;
-				p->next = active_particles;
-				active_particles = p;
+				p = CL_ParticleSystem_AddParticle(ps2);
+				if (!p) return;
 
 				p->time = cl.time;
 				p->color = 0xe0 + (rand()&3);
@@ -2099,14 +2173,14 @@ void CL_BFGExplosionParticles (vec3_t org)
 	int			i, j;
 	cparticle_t	*p;
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	for (i=0 ; i<256 ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) return;
 
 		p->time = cl.time;
 		p->color = 0xd0 + (rand()&7);
@@ -2139,16 +2213,16 @@ void CL_TeleportParticles (vec3_t org)
 	float		vel;
 	vec3_t		dir;
 
+	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_POINT;
+
 	for (i=-16 ; i<=16 ; i+=4)
 		for (j=-16 ; j<=16 ; j+=4)
 			for (k=-16 ; k<=32 ; k+=4)
 			{
-				if (!free_particles)
-					return;
-				p = free_particles;
-				free_particles = p->next;
-				p->next = active_particles;
-				active_particles = p;
+				p = CL_ParticleSystem_AddParticle(ps);
+				if (!p) return;
 
 				p->time = cl.time;
 				p->color = 7 + (rand()&7);
@@ -2173,6 +2247,88 @@ void CL_TeleportParticles (vec3_t org)
 			}
 }
 
+/*
+===============
+CL_LightningTrail
+
+===============
+*/
+void CL_LightningSpark (vec3_t org, vec3_t dir, int color, int count)
+{
+	int			i, j;
+	cparticle_t	*p;
+	float		d;
+
+	cparticle_system_t *ps = CL_GetParticleSystem( -1 );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_LINE;
+	ps->active = true;
+
+	for (i=0 ; i<count ; i++)
+	{
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) break;
+
+		p->time = cl.time;
+		p->color = color;
+
+		d = rand()&31;
+		for (j=0 ; j<3 ; j++)
+		{
+			p->org[j] = org[j] + ((rand()&3)-2);
+			p->vel[j] = d*(dir[j] + crand()*2); //crand()*20;
+		}
+
+		p->accel[0] = p->accel[1] = 0;
+		p->accel[2] = -PARTICLE_GRAVITY;
+		p->alpha = 1.0;
+
+		p->alphavel = -1.0 / (0.5 + frand()*0.3);
+	}
+}
+
+void CL_LightningTrail (vec3_t start, vec3_t end) {
+	vec3_t		move;
+	vec3_t		vec;
+	float		len;
+	int			i, j;
+	cparticle_t	*p;
+	float		dec;
+
+	VectorCopy (start, move);
+	VectorSubtract (end, start, vec);
+	len = VectorNormalize (vec);
+
+	dec = 16;
+	VectorScale (vec, dec, vec);
+
+	cparticle_system_t *ps = CL_GetParticleSystem( -1 );
+	if (!ps) return;
+	ps->type = PARTICLE_TYPE_LIGHTNING;
+	ps->active = true;
+
+	for (i=0 ; i<len ; i+=dec)
+	{
+		p = CL_ParticleSystem_AddParticle(ps);
+		if (!p) break;
+
+		VectorClear (p->accel);
+		p->time = cl.time;
+
+		p->alpha = 1.0;
+		p->alphavel = -1.5f;// -1 / (1+frand()*0.2)
+		p->color = 16 - (rand()&7);
+		for (j=0 ; j<3 ; j++)
+		{
+			float tv = crand()*2;
+			p->org[j] = move[j] + tv; //crand()*2;
+			p->vel[j] = -tv*2; //crand()*5;
+			p->accel[j] = tv*2;
+		}
+
+		VectorAdd (move, vec, move);
+	}
+}
 
 /*
 ===============
@@ -2182,65 +2338,53 @@ CL_AddParticles
 void CL_AddParticles (void)
 {
 	cparticle_t		*p, *next;
-	float			alpha;
 	float			time, time2;
-	vec3_t			org;
-	int				color;
 	cparticle_t		*active, *tail;
 
-	active = NULL;
-	tail = NULL;
 
-	for (p=active_particles ; p ; p=next)
-	{
-		next = p->next;
+	cparticle_system_t *ps;
+	int i;
+	for (i = 0, ps = particlesystems; i < MAX_PARTICLESYSTEMS; i++, ps++) {
+		if (!ps->active) continue;
+		active = NULL;
+		tail = NULL;
+		if (!ps->active_particles) {
+			ps->active = false;
+		}
+		for (p = ps->active_particles ; p ; p = next) {
+			next = p->next;
 
-		// PMM - added INSTANT_PARTICLE handling for heat beam
-		if (p->alphavel != INSTANT_PARTICLE)
-		{
 			time = (cl.time - p->time)*0.001;
-			alpha = p->alpha + time*p->alphavel;
-			if (alpha <= 0)
-			{	// faded out
-				p->next = free_particles;
-				free_particles = p;
+			p->alpha = p->alpha + time*p->alphavel;
+			if (p->alpha <= 0) {	// faded out
+				p->next = ps->free_particles;
+				ps->free_particles = p;
 				continue;
 			}
+
+			p->next = NULL;
+			if (!tail)
+				active = tail = p;
+			else {
+				tail->next = p;
+				tail = p;
+			}
+
+			if (p->alpha > 1.0) p->alpha = 1;
+			p->color += time*p->colorvel;
+			p->scale[0] += time*p->scalevel[0];
+			p->scale[1] += time*p->scalevel[1];
+
+			time2 = time*time;
+
+			VectorCopy(p->org, p->old_org);
+			VectorMA(p->org, time, p->vel, p->org);
+			VectorMA(p->vel, time, p->accel, p->vel);
+			p->time = cl.time;
 		}
-		else
-		{
-			alpha = p->alpha;
-		}
-
-		p->next = NULL;
-		if (!tail)
-			active = tail = p;
-		else
-		{
-			tail->next = p;
-			tail = p;
-		}
-
-		if (alpha > 1.0)
-			alpha = 1;
-		color = p->color;
-
-		time2 = time*time;
-
-		org[0] = p->org[0] + p->vel[0]*time + p->accel[0]*time2;
-		org[1] = p->org[1] + p->vel[1]*time + p->accel[1]*time2;
-		org[2] = p->org[2] + p->vel[2]*time + p->accel[2]*time2;
-
-		V_AddParticle (org, color, alpha);
-		// PMM
-		if (p->alphavel == INSTANT_PARTICLE)
-		{
-			p->alphavel = 0.0;
-			p->alpha = 0.0;
-		}
+		ps->active_particles = active;
+		V_AddParticleSystem(ps);
 	}
-
-	active_particles = active;
 }
 
 
@@ -2292,7 +2436,6 @@ CL_ClearEffects
 */
 void CL_ClearEffects (void)
 {
-	CL_ClearParticles ();
 	CL_ClearDlights ();
 	CL_ClearLightStyles ();
 }

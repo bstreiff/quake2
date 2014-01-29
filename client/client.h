@@ -360,29 +360,52 @@ typedef struct particle_s
 	float		time;
 
 	vec3_t		org;
+	vec3_t		old_org;
 	vec3_t		vel;
 	vec3_t		accel;
 	float		color;
 	float		colorvel;
 	float		alpha;
 	float		alphavel;
+	float		scale[2];
+	float		scalevel[2];
 } cparticle_t;
-
 
 #define	PARTICLE_GRAVITY	40
 #define BLASTER_PARTICLE_COLOR		0xe0
 // PMM
 #define INSTANT_PARTICLE	-10000.0
+
+// THP particle systems
+typedef struct cparticle_system_s {
+	qboolean active;
+	int type;				// see ref.h
+	int edict;
+	char *sprite; // for sprite-type particles.
+
+	//int num_particles;
+	//cparticle_t *particles;
+	cparticle_t particles[MAX_PARTICLES_PER_SYSTEM];
+	cparticle_t *free_particles;
+	cparticle_t *active_particles;
+} cparticle_system_t;
+
+#define NEW_PARTICLE_SYSTEM -1
+cparticle_system_t *CL_GetParticleSystem(int edict);
+void CL_ParticleSystem_Clear(cparticle_system_t *ps);
+cparticle_t *CL_ParticleSystem_AddParticle(cparticle_system_t *ps);
+
 // PGM
 // ========
 
 void CL_ClearEffects (void);
 void CL_ClearTEnts (void);
-void CL_BlasterTrail (vec3_t start, vec3_t end);
+void CL_BlasterTrail (entity_state_t *ent, vec3_t start, vec3_t end);
 void CL_QuadTrail (vec3_t start, vec3_t end);
 void CL_RailTrail (vec3_t start, vec3_t end);
 void CL_BubbleTrail (vec3_t start, vec3_t end);
 void CL_FlagTrail (vec3_t start, vec3_t end, float color);
+void CL_LightningTrail (vec3_t start, vec3_t end);
 
 // RAFAEL
 void CL_IonripperTrail (vec3_t start, vec3_t end);
@@ -390,7 +413,7 @@ void CL_IonripperTrail (vec3_t start, vec3_t end);
 // ========
 // PGM
 void CL_BlasterParticles2 (vec3_t org, vec3_t dir, unsigned int color);
-void CL_BlasterTrail2 (vec3_t start, vec3_t end);
+void CL_BlasterTrail2 (entity_state_t *ent, vec3_t start, vec3_t end);
 void CL_DebugTrail (vec3_t start, vec3_t end);
 void CL_SmokeTrail (vec3_t start, vec3_t end, int colorStart, int colorRun, int spacing);
 void CL_Flashlight (int ent, vec3_t pos);
@@ -521,7 +544,7 @@ extern	struct model_s	*gun_model;
 void V_Init (void);
 void V_RenderView( float stereo_separation );
 void V_AddEntity (entity_t *ent);
-void V_AddParticle (vec3_t org, int color, float alpha);
+void V_AddParticleSystem(cparticle_system_t *cps);
 void V_AddLight (vec3_t org, float intensity, float r, float g, float b);
 void V_AddLightStyle (int style, float r, float g, float b);
 

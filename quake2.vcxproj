@@ -98,6 +98,10 @@
       <OutputFile>.\debug\quake2.exe</OutputFile>
       <AdditionalDependencies>winmm.lib;wsock32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>cmd.exe /c xcopy "$(ProjectDir)data\*" "$(OutputPath)baseq2" /S /Y</Command>
+      <Message>Copying pak files...</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -139,6 +143,12 @@
       <OutputFile>.\release\quake2.exe</OutputFile>
       <AdditionalDependencies>winmm.lib;wsock32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>cmd.exe /c xcopy "$(ProjectDir)data\*" "$(OutputPath)baseq2" /S /Y</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying pak files...</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Template|Win32'">
     <Link>

@@ -399,106 +399,119 @@ void R_DrawEntitiesOnList (void)
 
 }
 
-/*
-** GL_DrawParticles
-**
-*/
-void GL_DrawParticles( int num_particles, const particle_t particles[], const unsigned colortable[768] )
-{
-	const particle_t *p;
-	int				i;
-	vec3_t			up, right;
-	float			scale;
-	byte			color[4];
-
-    GL_Bind(r_particletexture->texnum);
-	qglDepthMask( GL_FALSE );		// no z buffering
-	qglEnable( GL_BLEND );
-	GL_TexEnv( GL_MODULATE );
-	qglBegin( GL_TRIANGLES );
-
-	VectorScale (vup, 1.5, up);
-	VectorScale (vright, 1.5, right);
-
-	for ( p = particles, i=0 ; i < num_particles ; i++,p++)
-	{
-		// hack a scale up to keep particles from disapearing
-		scale = ( p->origin[0] - r_origin[0] ) * vpn[0] + 
-			    ( p->origin[1] - r_origin[1] ) * vpn[1] +
-			    ( p->origin[2] - r_origin[2] ) * vpn[2];
-
-		if (scale < 20)
-			scale = 1;
-		else
-			scale = 1 + scale * 0.004;
-
-		*(int *)color = colortable[p->color];
-		color[3] = p->alpha*255;
-
-		qglColor4ubv( color );
-
-		qglTexCoord2f( 0.0625, 0.0625 );
-		qglVertex3fv( p->origin );
-
-		qglTexCoord2f( 1.0625, 0.0625 );
-		qglVertex3f( p->origin[0] + up[0]*scale, 
-			         p->origin[1] + up[1]*scale, 
-					 p->origin[2] + up[2]*scale);
-
-		qglTexCoord2f( 0.0625, 1.0625 );
-		qglVertex3f( p->origin[0] + right[0]*scale, 
-			         p->origin[1] + right[1]*scale, 
-					 p->origin[2] + right[2]*scale);
-	}
-
-	qglEnd ();
-	qglDisable( GL_BLEND );
-	qglColor4f( 1,1,1,1 );
-	qglDepthMask( 1 );		// back to normal Z buffering
-	GL_TexEnv( GL_REPLACE );
-}
-
-/*
-===============
-R_DrawParticles
-===============
-*/
 void R_DrawParticles (void)
 {
-	if ( gl_ext_pointparameters->value && qglPointParameterfEXT )
-	{
-		int i;
-		unsigned char color[4];
-		const particle_t *p;
+	int i, j;
+	float scale;
+	unsigned char color[4];
+	const particle_t *p;
+	const particle_system_t *ps;
+	vec3_t tv, up, right;
 
-		qglDepthMask( GL_FALSE );
-		qglEnable( GL_BLEND );
-		qglDisable( GL_TEXTURE_2D );
+	qglDepthMask( GL_FALSE );
+	qglEnable( GL_BLEND );
+	qglDisable( GL_TEXTURE_2D );
 
-		qglPointSize( gl_particle_size->value );
+	for ( j = 0, ps = r_newrefdef.particlesystems; j < r_newrefdef.num_particlesystems; j++, ps++ ) {
+		switch (ps->type) {
+		case PARTICLE_TYPE_SPRITE:
+		case PARTICLE_TYPE_SPRITE_BILLBOARD:
+			qglEnable( GL_TEXTURE_2D );
+			qglDisable( GL_CULL_FACE );
+			GL_TexEnv( GL_MODULATE );
+			GL_Bind(ps->sprite->texnum);
+			qglBegin( GL_QUADS );
+			for ( i = 0, p = ps->particles; i < ps->num_particles; i++, p++ ) {
+				*(int *)color = d_8to24table[p->color];
+				color[3] = p->alpha*255;
+				qglColor4ubv( color );
 
-		qglBegin( GL_POINTS );
-		for ( i = 0, p = r_newrefdef.particles; i < r_newrefdef.num_particles; i++, p++ )
-		{
-			*(int *)color = d_8to24table[p->color];
-			color[3] = p->alpha*255;
+				// find view-space vectors for drawing the sprite
+				if (ps->type == PARTICLE_TYPE_SPRITE) {
+					VectorSubtract(p->old_origin, p->origin, up); // thp this goes "backwards" by design
+					CrossProduct(up, vpn, right);
+				} else if (ps->type == PARTICLE_TYPE_SPRITE_BILLBOARD) {
+					VectorCopy(vup, up);
+					VectorCopy(vright, right);
+				}
 
-			qglColor4ubv( color );
+				// scale factor
+				scale = gl_particle_size->value;
+				if (scale > 20) scale = 20;
+				if (scale < 0.001) scale = 0.001;
+				
+				qglTexCoord2f( 0.0f, 0.0f );
+				qglVertex3fv( p->origin );
 
-			qglVertex3fv( p->origin );
+				qglTexCoord2f( 0.0f, 1.0f );
+				qglVertex3f( p->origin[0] + right[0]*scale*p->scale[0],
+							 p->origin[1] + right[1]*scale*p->scale[0],
+							 p->origin[2] + right[2]*scale*p->scale[0]);
+
+				qglTexCoord2f( 1.0f, 1.0f );
+				qglVertex3f( p->origin[0] + right[0]*scale*p->scale[0] + up[0]*scale*p->scale[1],
+							 p->origin[1] + right[1]*scale*p->scale[0] + up[1]*scale*p->scale[1],
+							 p->origin[2] + right[2]*scale*p->scale[0] + up[2]*scale*p->scale[1]);
+
+				qglTexCoord2f( 1.0f, 0.0f );
+				qglVertex3f( p->origin[0] + up[0]*scale*p->scale[1],
+							 p->origin[1] + up[1]*scale*p->scale[1],
+							 p->origin[2] + up[2]*scale*p->scale[1]);
+			}
+			qglEnd();
+			qglDisable( GL_TEXTURE_2D );
+			break;
+		case PARTICLE_TYPE_POINT: default:
+			qglPointSize( gl_particle_size->value );
+			qglBegin( GL_POINTS );
+			for ( i = 0, p = ps->particles; i < ps->num_particles; i++, p++ ) {
+				*(int *)color = d_8to24table[p->color];
+				color[3] = p->alpha*255;
+				qglColor4ubv( color );
+				qglVertex3fv( p->origin );
+			}
+			qglEnd();
+			break;
+		case PARTICLE_TYPE_LINE:
+			p = ps->particles;
+			VectorSubtract (p->origin, r_newrefdef.vieworg, tv);
+			scale = (VectorLength(tv) / 8.0f);
+			qglLineWidth(gl_particle_size->value / scale);
+			qglBegin( GL_LINES );
+			for ( i = 0, p = ps->particles; i < ps->num_particles; i++, p++ ) {
+				*(int *)color = d_8to24table[p->color];
+				color[3] = p->alpha*255;
+				qglColor4ubv( color );
+
+				VectorSubtract( p->old_origin, p->origin, tv );
+				VectorScale( tv, 8.0f, tv );
+				VectorAdd(p->origin, tv, tv);
+				qglVertex3fv( tv );
+				qglVertex3fv( p->origin );
+			}
+			qglEnd();
+			break;
+		case PARTICLE_TYPE_LIGHTNING:
+			p = ps->particles;
+			VectorSubtract (p->origin, r_newrefdef.vieworg, tv);
+			scale = (VectorLength(tv) / 8.0f);
+			qglLineWidth(gl_particle_size->value / scale);
+			qglBegin( GL_LINE_STRIP );
+			for ( i = 0, p = ps->particles; i < ps->num_particles; i++, p++ ) {
+				*(int *)color = d_8to24table[p->color];
+				color[3] = p->alpha*255;
+				qglColor4ubv( color );
+				qglVertex3fv( p->origin );
+			}
+			qglEnd();
+			break;
 		}
-		qglEnd();
-
-		qglDisable( GL_BLEND );
-		qglColor4f( 1.0F, 1.0F, 1.0F, 1.0F );
-		qglDepthMask( GL_TRUE );
-		qglEnable( GL_TEXTURE_2D );
-
 	}
-	else
-	{
-		GL_DrawParticles( r_newrefdef.num_particles, r_newrefdef.particles, d_8to24table );
-	}
+
+	qglDisable( GL_BLEND );
+	qglColor4f( 1.0F, 1.0F, 1.0F, 1.0F );
+	qglDepthMask( GL_TRUE );
+	qglEnable( GL_TEXTURE_2D );
 }
 
 /*

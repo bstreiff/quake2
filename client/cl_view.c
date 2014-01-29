@@ -48,6 +48,9 @@ entity_t	r_entities[MAX_ENTITIES];
 int			r_numparticles;
 particle_t	r_particles[MAX_PARTICLES];
 
+int					r_numparticlesystems;
+particle_system_t	r_particlesystems[MAX_PARTICLESYSTEMS];
+
 lightstyle_t	r_lightstyles[MAX_LIGHTSTYLES];
 
 char cl_weaponmodels[MAX_CLIENTWEAPONMODELS][MAX_QPATH];
@@ -65,6 +68,7 @@ void V_ClearScene (void)
 	r_numdlights = 0;
 	r_numentities = 0;
 	r_numparticles = 0;
+	r_numparticlesystems = 0;
 }
 
 
@@ -84,20 +88,31 @@ void V_AddEntity (entity_t *ent)
 
 /*
 =====================
-V_AddParticle
+V_AddParticleSystem
 
 =====================
 */
-void V_AddParticle (vec3_t org, int color, float alpha)
-{
-	particle_t	*p;
 
-	if (r_numparticles >= MAX_PARTICLES)
-		return;
-	p = &r_particles[r_numparticles++];
-	VectorCopy (org, p->origin);
-	p->color = color;
-	p->alpha = alpha;
+void V_AddParticleSystem(cparticle_system_t *cps) {
+	particle_system_t *ps;
+	cparticle_t *p;
+
+	if (r_numparticlesystems >= MAX_PARTICLESYSTEMS) return;
+	ps = &r_particlesystems[r_numparticlesystems++];
+	ps->edict = cps->edict;
+	ps->type = cps->type;
+	if (cps->sprite && strlen(cps->sprite))
+		ps->sprite = re.RegisterSkin(cps->sprite);
+	//ps->sprite = cps->sprite;
+	for (ps->num_particles = 0, p = cps->active_particles; p ; ps->num_particles++, p = p->next) {
+		particle_t *rp = &(ps->particles[ps->num_particles]);
+		VectorCopy(p->org, rp->origin);
+		VectorCopy(p->old_org, rp->old_origin);
+		rp->color = p->color;
+		rp->alpha = p->alpha;
+		rp->scale[0] = p->scale[0];
+		rp->scale[1] = p->scale[1];
+	}
 }
 
 /*
@@ -521,8 +536,8 @@ void V_RenderView( float stereo_separation )
 
 		cl.refdef.num_entities = r_numentities;
 		cl.refdef.entities = r_entities;
-		cl.refdef.num_particles = r_numparticles;
-		cl.refdef.particles = r_particles;
+		cl.refdef.num_particlesystems = r_numparticlesystems;
+		cl.refdef.particlesystems = r_particlesystems;
 		cl.refdef.num_dlights = r_numdlights;
 		cl.refdef.dlights = r_dlights;
 		cl.refdef.lightstyles = r_lightstyles;
