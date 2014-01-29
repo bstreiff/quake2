@@ -268,7 +268,7 @@ void	Mod_Free (model_t *mod);
 typedef struct
 {
 	short	index_xyz[3];
-	short	index_st[3];
+	// can also store index_st here but GL render doesn't use it
 } alias_model_triangle_t;
 
 typedef struct

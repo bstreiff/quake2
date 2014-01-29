@@ -929,6 +929,116 @@ Mod_LoadAliasModel
 #define NUMVERTEXNORMALS	162
 extern float	r_avertexnormals[NUMVERTEXNORMALS][3];
 
+typedef struct
+{
+	unsigned int	index;	// vertex index
+	unsigned int	submodel_id;	// id of submodel_id
+} vertex_submodel_t;
+
+static int compare_submodel_ids(const void* x, const void* y)
+{
+	const vertex_submodel_t* xs = (const vertex_submodel_t*)x;
+	const vertex_submodel_t* ys = (const vertex_submodel_t*)y;
+
+	return (xs->submodel_id - ys->submodel_id);
+}
+
+// 'begin' and 'end' have STL semantics:
+// - 'end' must be greater or equal to 'begin'.
+// - 'end' refers to the address after the last valid element.
+//
+// You must have at least three points. This is probably not a huge problem,
+// because the minimum possible set would be the three vertices of a single
+// triangle.
+static void Mod_FixupAliasSubmodel(
+	const char* name,
+	alias_model_t* alias,
+	vertex_submodel_t* begin,
+	vertex_submodel_t* end)
+{
+	Com_Printf("set %d:\n", begin->submodel_id);
+
+	for (vertex_submodel_t* submodel_itr = begin; submodel_itr != end; ++submodel_itr)
+	{
+		alias_model_vertex_t* vtx = &(alias->frames[0].verts[submodel_itr->index]);
+		Com_Printf("   {%f, %f, %f}\n", vtx->v[0], vtx->v[1], vtx->v[2]);
+	}
+	Com_Printf("\n");
+}
+
+static void Mod_FixupAliasModel(const char* name, alias_model_t *alias)
+{
+	qboolean has_updated_tags = false;
+	vertex_submodel_t*	vtx_submodel_ids;
+	unsigned int	last_submodel_id = ~0UL;
+	vertex_submodel_t* begin;
+	vertex_submodel_t* end;
+
+	// This transformation only works if we have multiple frames to compare.
+	if (alias->num_frames <= 1)
+		return;
+
+	Com_Printf("Fixing up %s\n", name);
+
+	vtx_submodel_ids = (vertex_submodel_t*)malloc(alias->frames[0].num_verts*sizeof(vertex_submodel_t));
+
+	// Initially, each submodel_id id corresponds to each vertex id.
+	for (size_t i = 0; i < alias->frames[0].num_verts; ++i)
+	{
+		vtx_submodel_ids[i].submodel_id = vtx_submodel_ids[i].index = (unsigned int)i;
+	}
+
+	// First, we tag all vertices to group them into submodel_ids.
+	// The submodel_id for a vertex is the minimum of the submodel_ids for all neighbors,
+	// applied transitively.
+	do
+	{
+		has_updated_tags = false;
+
+		for (int i = 0; i < alias->num_tris; ++i)
+		{
+			short tri_submodel_ids[3];
+			short new_submodel_id;
+			for (int j = 0; j < 3; ++j)
+				tri_submodel_ids[j] = vtx_submodel_ids[alias->tris[i].index_xyz[j]].submodel_id;
+
+			new_submodel_id = min(min(tri_submodel_ids[0], tri_submodel_ids[1]), tri_submodel_ids[2]);
+
+			for (int j = 0; j < 3; ++j)
+			{
+				if (new_submodel_id < vtx_submodel_ids[alias->tris[i].index_xyz[j]].submodel_id)
+				{
+					vtx_submodel_ids[alias->tris[i].index_xyz[j]].submodel_id = new_submodel_id;
+					has_updated_tags = true;
+				}
+			}
+		}
+	} while (has_updated_tags);
+
+	// Sort by submodel_id.
+	qsort(vtx_submodel_ids, alias->frames[0].num_verts, sizeof(vertex_submodel_t), compare_submodel_ids);
+
+	// Now, run Mod_FixupAliasSubmodel on each grouping of vertices.
+	last_submodel_id = vtx_submodel_ids[0].submodel_id;
+	begin = vtx_submodel_ids;
+	end = vtx_submodel_ids + 1;
+	for (int i = 1; i < alias->frames[0].num_verts; ++i, ++end)
+	{
+		if (vtx_submodel_ids[i].submodel_id != last_submodel_id)
+		{
+			last_submodel_id = vtx_submodel_ids[i].submodel_id;
+			Mod_FixupAliasSubmodel(name, alias, begin, end);
+			begin = end;
+		}
+	}
+	if (begin != end)
+	{
+		Mod_FixupAliasSubmodel(name, alias, begin, end);
+	}
+
+	free(vtx_submodel_ids);
+}
+
 void Mod_LoadAliasModel(model_t *mod, void *buffer)
 {
 	int					i, j;
@@ -1019,7 +1129,6 @@ void Mod_LoadAliasModel(model_t *mod, void *buffer)
 		for (j = 0; j<3; j++)
 		{
 			outmodel->tris[i].index_xyz[j] = LittleShort(pintri[i].index_xyz[j]);
-			outmodel->tris[i].index_st[j] = LittleShort(pintri[i].index_st[j]);
 		}
 	}
 
@@ -1089,6 +1198,9 @@ void Mod_LoadAliasModel(model_t *mod, void *buffer)
 	mod->maxs[0] = 32;
 	mod->maxs[1] = 32;
 	mod->maxs[2] = 32;
+
+	// Fix up vertices.
+	Mod_FixupAliasModel(mod->name, outmodel);
 }
 
 /*
