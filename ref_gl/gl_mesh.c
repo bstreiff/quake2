@@ -29,27 +29,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 =============================================================
 */
 
-#define NUMVERTEXNORMALS	162
-
-float	r_avertexnormals[NUMVERTEXNORMALS][3] = {
-#include "anorms.h"
-};
-
 typedef float vec4_t[4];
 
 static	vec4_t	s_lerped[MAX_VERTS];
+static	vec4_t	s_lerpednormal[MAX_VERTS];
 //static	vec3_t	lerped[MAX_VERTS];
 
 vec3_t	shadevector;
 float	shadelight[3];
-
-// precalculated dot products for quantized angles
-#define SHADEDOT_QUANT 16
-float	r_avertexnormal_dots[SHADEDOT_QUANT][256] =
-#include "anormtab.h"
-;
-
-float	*shadedots = r_avertexnormal_dots[0];
 
 static void GL_LerpVerts(
 	const int nverts,
@@ -57,6 +44,7 @@ static void GL_LerpVerts(
 	const alias_model_vertex_t *ov,
 	const alias_model_vertex_t *verts,
 	float *lerp,
+	float *lerpnormal,
 	const float move[3],
 	const float frontlerp,
 	const float backlerp)
@@ -66,22 +54,41 @@ static void GL_LerpVerts(
 	//PMM -- added RF_SHELL_DOUBLE, RF_SHELL_HALF_DAM
 	if ( currententity->flags & ( RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE | RF_SHELL_DOUBLE | RF_SHELL_HALF_DAM) )
 	{
-		for (i=0 ; i < nverts; i++, v++, ov++, lerp+=4 )
+		for (i=0 ; i < nverts; i++, v++, ov++, lerp+=4, lerpnormal+=4 )
 		{
 			lerp[0] = move[0] + ov->v[0]*backlerp + v->v[0]*frontlerp + verts[i].lightnormal[0] * POWERSUIT_SCALE;
 			lerp[1] = move[1] + ov->v[1]*backlerp + v->v[1]*frontlerp + verts[i].lightnormal[1] * POWERSUIT_SCALE;
 			lerp[2] = move[2] + ov->v[2]*backlerp + v->v[2]*frontlerp + verts[i].lightnormal[2] * POWERSUIT_SCALE; 
+			lerpnormal[0] = ov->lightnormal[0]*backlerp + v->lightnormal[0]*frontlerp;
+			lerpnormal[1] = ov->lightnormal[1]*backlerp + v->lightnormal[1]*frontlerp;
+			lerpnormal[2] = ov->lightnormal[2]*backlerp + v->lightnormal[2]*frontlerp;
 		}
 	}
 	else
 	{
-		for (i=0 ; i < nverts; i++, v++, ov++, lerp+=4)
+		for (i=0 ; i < nverts; i++, v++, ov++, lerp+=4, lerpnormal+=4)
 		{
 			lerp[0] = move[0] + ov->v[0]*backlerp + v->v[0]*frontlerp;
 			lerp[1] = move[1] + ov->v[1]*backlerp + v->v[1]*frontlerp;
 			lerp[2] = move[2] + ov->v[2]*backlerp + v->v[2]*frontlerp;
+			lerpnormal[0] = ov->lightnormal[0]*backlerp + v->lightnormal[0]*frontlerp;
+			lerpnormal[1] = ov->lightnormal[1]*backlerp + v->lightnormal[1]*frontlerp;
+			lerpnormal[2] = ov->lightnormal[2]*backlerp + v->lightnormal[2]*frontlerp;
 		}
 	}
+}
+
+static __inline vec_t GL_ComputeShadingFromNormal(const vec3_t lightnormal, const vec3_t shadevector)
+{
+	// Classic Quake/Quake2 looked this up in a table (r_avertexnormal_dots) that
+	// was indexed by a quantized version of the entity's angle.
+	//float l = shadedots[lightnormalindex];
+
+	// According to this: http://forums.inside3d.com/viewtopic.php?f=3&t=2983
+	// The shadedots table is built with the following:
+	vec_t l = DotProduct(lightnormal, shadevector);
+	l = 1.0f + (l < 0 ? l * (13.0f / 44.0f) : l);
+	return l;
 }
 
 /*
@@ -105,6 +112,7 @@ static void GL_DrawAliasFrameLerp (const alias_model_t *alias, float backlerp)
 	int		i;
 	int		index_xyz;
 	float	*lerp;
+	float	*lerpnormal;
 
 	frame = &(alias->frames[currententity->frame]);
 	oldframe = &(alias->frames[currententity->oldframe]);
@@ -139,8 +147,9 @@ static void GL_DrawAliasFrameLerp (const alias_model_t *alias, float backlerp)
 	}
 
 	lerp = s_lerped[0];
+	lerpnormal = s_lerpednormal[0];
 
-	GL_LerpVerts( frame->num_verts, v, ov, verts, lerp, move, frontlerp, backlerp );
+	GL_LerpVerts( frame->num_verts, v, ov, verts, lerp, lerpnormal, move, frontlerp, backlerp );
 
 	if ( gl_vertex_arrays->value )
 	{
@@ -165,7 +174,7 @@ static void GL_DrawAliasFrameLerp (const alias_model_t *alias, float backlerp)
 			//
 			for (i = 0; i < frame->num_verts; i++ )
 			{
-				float l = shadedots[verts[i].lightnormalindex];
+				l = GL_ComputeShadingFromNormal(s_lerpednormal[i], shadevector);
 
 				colorArray[i*3+0] = l * shadelight[0];
 				colorArray[i*3+1] = l * shadelight[1];
@@ -268,7 +277,7 @@ static void GL_DrawAliasFrameLerp (const alias_model_t *alias, float backlerp)
 					order += 3;
 
 					// normals and vertexes come from the frame list
-					l = shadedots[verts[index_xyz].lightnormalindex];
+					l = GL_ComputeShadingFromNormal(s_lerpednormal[index_xyz], shadevector);
 					
 					qglColor4f (l* shadelight[0], l*shadelight[1], l*shadelight[2], alpha);
 					qglVertex3fv (s_lerped[index_xyz]);
@@ -699,8 +708,6 @@ void R_DrawAliasModel (entity_t *e)
 	}
 // PGM	
 // =================
-
-	shadedots = r_avertexnormal_dots[((int)(currententity->angles[1] * (SHADEDOT_QUANT / 360.0))) & (SHADEDOT_QUANT - 1)];
 	
 	an = currententity->angles[1]/180*M_PI;
 	shadevector[0] = cos(-an);

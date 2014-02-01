@@ -275,7 +275,6 @@ typedef struct
 {
 	vec3_t	v;
 	vec3_t	lightnormal;
-	int		lightnormalindex;
 } alias_model_vertex_t;
 
 typedef struct

@@ -928,7 +928,12 @@ Mod_LoadAliasModel
 =================
 */
 #define NUMVERTEXNORMALS	162
-extern float	r_avertexnormals[NUMVERTEXNORMALS][3];
+
+// MD2 files use these for precalculated normals.
+// We use those normals if the gl_fixupmodels cvar is 0.
+static const float	r_avertexnormals[NUMVERTEXNORMALS][3] = {
+#include "anorms.h"
+};
 
 typedef struct
 {
@@ -976,9 +981,7 @@ static void Mod_FixupAliasSubmodel(
 		{
 			alias_model_vertex_t* vtx = &(alias->frames[f].verts[submodel_itr->index]);
 			VectorAdd(vtx->v, sum, sum);
-			//Com_Printf("   {%f, %f, %f}\n", vtx->v[0], vtx->v[1], vtx->v[2]);
 		}
-		//Com_Printf("%d \n", (int)vtxcount);
 		VectorScale(sum, 1.0f / (vec_t)vtxcount, frame_info[f].centroid);
 	}
 
@@ -1079,9 +1082,6 @@ static void Mod_FixupAliasSubmodel(
 	free(frame_info);
 }
 
-
-// TODO: Figure out how the hell r_avertexnormal_dots is computed so I can
-// figure out how to compute that based on fixed normals, too...
 static void Mod_RecomputeVertexNormals(
 	const char* name,
 	alias_model_t* alias)
@@ -1338,9 +1338,6 @@ void Mod_LoadAliasModel(model_t *mod, void *buffer)
 			amv->lightnormal[0] = r_avertexnormals[ptrivertx->lightnormalindex][0];
 			amv->lightnormal[1] = r_avertexnormals[ptrivertx->lightnormalindex][1];
 			amv->lightnormal[2] = r_avertexnormals[ptrivertx->lightnormalindex][2];
-
-			// TODO: still need this for shadedots stuff when drawing, ugh
-			amv->lightnormalindex = ptrivertx->lightnormalindex;
 		}
 
 		for (j = 0; j < 3; ++j)
@@ -1367,8 +1364,10 @@ void Mod_LoadAliasModel(model_t *mod, void *buffer)
 	for (i = 0; i<header.num_skins; i++)
 	{
 		const char* skinname = (char *)buffer + header.ofs_skins + i*MAX_SKINNAME;
-		outmodel->skins[i] = (char*)Hunk_Alloc(strnlen(skinname, MAX_SKINNAME)*sizeof(char));
+		size_t skinname_length = strnlen(skinname, MAX_SKINNAME);
+		outmodel->skins[i] = (char*)Hunk_Alloc((skinname_length+1)*sizeof(char));
 		strncpy(outmodel->skins[i], skinname, MAX_SKINNAME);
+		outmodel->skins[i][skinname_length] = '\0';
 
 		mod->skins[i] = GL_FindImage(outmodel->skins[i], it_skin);
 	}

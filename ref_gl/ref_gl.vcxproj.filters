@@ -62,9 +62,6 @@
     <ClInclude Include="anorms.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="anormtab.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="gl_local.h">
       <Filter>Header Files</Filter>
     </ClInclude>
