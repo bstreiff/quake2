@@ -865,8 +865,6 @@ void FS_InitFilesystem (void)
 	//
 	// start up with baseq2 by default
 	//
-	FS_AddGameDirectory(va("%s/"BASEDIRNAME, fs_basedir->string));
-
 #if _WIN32
 	//
 	// Also add Steam directory, if available.
@@ -882,6 +880,9 @@ void FS_InitFilesystem (void)
 		}
 	}
 #endif
+
+	// default to the current basedir.
+	FS_AddGameDirectory(va("%s/"BASEDIRNAME, fs_basedir->string));
 
 	// any set gamedirs will be freed up to here
 	fs_base_searchpaths = fs_searchpaths;
