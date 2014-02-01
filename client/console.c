@@ -220,6 +220,7 @@ Con_MessageMode_f
 */
 void Con_MessageMode_f (void)
 {
+	chat_console = false;
 	chat_team = false;
 	cls.key_dest = key_message;
 }
@@ -231,7 +232,14 @@ Con_MessageMode2_f
 */
 void Con_MessageMode2_f (void)
 {
+	chat_console = false;
 	chat_team = true;
+	cls.key_dest = key_message;
+}
+
+void Con_ConsoleMode_f (void)
+{
+	chat_console = true;
 	cls.key_dest = key_message;
 }
 
@@ -318,6 +326,7 @@ void Con_Init (void)
 	Cmd_AddCommand ("togglechat", Con_ToggleChat_f);
 	Cmd_AddCommand ("messagemode", Con_MessageMode_f);
 	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f);
+	Cmd_AddCommand ("miniconsole", Con_ConsoleMode_f);
 	Cmd_AddCommand ("clear", Con_Clear_f);
 	Cmd_AddCommand ("condump", Con_Dump_f);
 	con.initialized = true;
@@ -528,7 +537,12 @@ void Con_DrawNotify (void)
 
 	if (cls.key_dest == key_message)
 	{
-		if (chat_team)
+		if (chat_console)
+		{
+			DrawString (8, v, "> ");
+			skip = 3;
+		}
+		else if (chat_team)
 		{
 			DrawString (8, v, "say_team:");
 			skip = 11;

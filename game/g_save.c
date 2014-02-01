@@ -203,6 +203,9 @@ void InitGame (void)
 	// dm map list
 	sv_maplist = gi.cvar ("sv_maplist", "", 0);
 
+	// alternate spawnlist
+	sv_alternatespawns = gi.cvar ("sv_alternatespawns", "0", CVAR_ARCHIVE|CVAR_SERVERINFO|CVAR_LATCH);
+
 	// items
 	InitItems ();
 

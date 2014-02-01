@@ -1196,12 +1196,12 @@ void CL_AddPacketEntities (frame_t *frame)
 //PGM
 				if (effects & EF_TRACKER)	// lame... problematic?
 				{
-					CL_BlasterTrail2 (cent->lerp_origin, ent.origin);
+					CL_BlasterTrail2 (&cent->current, cent->lerp_origin, ent.origin);
 					V_AddLight (ent.origin, 200, 0, 1, 0);		
 				}
 				else
 				{
-					CL_BlasterTrail (cent->lerp_origin, ent.origin);
+					CL_BlasterTrail (&cent->current, cent->lerp_origin, ent.origin);
 					V_AddLight (ent.origin, 200, 1, 1, 0);
 				}
 //PGM
@@ -1316,7 +1316,7 @@ void CL_AddPacketEntities (frame_t *frame)
 			{
 				if (effects & EF_ANIM_ALLFAST)
 				{
-					CL_BlasterTrail (cent->lerp_origin, ent.origin);
+					CL_BlasterTrail (&cent->current, cent->lerp_origin, ent.origin);
 				}
 				V_AddLight (ent.origin, 130, 1, 0.5, 0.5);
 			}

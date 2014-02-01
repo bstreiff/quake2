@@ -230,6 +230,7 @@ typedef struct
 #define WEAP_HYPERBLASTER		9 
 #define WEAP_RAILGUN			10
 #define WEAP_BFG				11
+#define WEAP_LIGHTNINGGUN		12
 
 typedef struct gitem_s
 {
@@ -498,6 +499,7 @@ extern	int	body_armor_index;
 #define MOD_TRIGGER_HURT	31
 #define MOD_HIT				32
 #define MOD_TARGET_BLASTER	33
+#define MOD_LIGHTNING		34
 #define MOD_FRIENDLY_FIRE	0x8000000
 
 extern	int	meansOfDeath;
@@ -550,6 +552,8 @@ extern	cvar_t	*flood_persecond;
 extern	cvar_t	*flood_waitdelay;
 
 extern	cvar_t	*sv_maplist;
+
+extern	cvar_t	*sv_alternatespawns;
 
 #define world	(&g_edicts[0])
 
@@ -733,6 +737,7 @@ void fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int s
 void fire_grenade2 (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, qboolean held);
 void fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage);
 void fire_rail (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick);
+void fire_lightning (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int mod);
 void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius);
 
 //

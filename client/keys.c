@@ -387,6 +387,7 @@ void Key_Console (int key)
 //============================================================================
 
 qboolean	chat_team;
+qboolean	chat_console;
 char		chat_buffer[MAXCMDLINE];
 int			chat_bufferlen = 0;
 
@@ -395,12 +396,16 @@ void Key_Message (int key)
 
 	if ( key == K_ENTER || key == K_KP_ENTER )
 	{
-		if (chat_team)
-			Cbuf_AddText ("say_team \"");
-		else
-			Cbuf_AddText ("say \"");
-		Cbuf_AddText(chat_buffer);
-		Cbuf_AddText("\"\n");
+		if (chat_console) {
+			Cbuf_AddText(chat_buffer);
+		} else {
+			if (chat_team)
+				Cbuf_AddText ("say_team \"");
+			else
+				Cbuf_AddText ("say \"");
+			Cbuf_AddText(chat_buffer);
+			Cbuf_AddText("\"\n");
+		}
 
 		cls.key_dest = key_game;
 		chat_bufferlen = 0;

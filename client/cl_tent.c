@@ -117,6 +117,9 @@ struct model_s	*cl_mod_monster_heatbeam;
 struct model_s	*cl_mod_explo4_big;
 
 //ROGUE
+struct sfx_s	*cl_sfx_lightningzap;
+
+
 /*
 =================
 CL_RegisterTEntSounds
@@ -162,6 +165,8 @@ void CL_RegisterTEntSounds (void)
 //	if (name[0] == 'w')
 //		name[0] = 'W';
 //PGM
+	// THP
+	cl_sfx_lightningzap = S_RegisterSound ("weapons/lightzap.wav");
 }	
 
 /*
@@ -712,6 +717,28 @@ void CL_ParseTEnt (void)
 		CL_ParticleEffect (pos, dir, 0xe8, 60);
 		break;
 
+	case TE_LIGHTNING_SPARKS:   // THP lightning splash
+		MSG_ReadPos (&net_message, pos);
+		MSG_ReadDir (&net_message, dir);
+		CL_LightningSpark (pos, dir, 0x0f, 30);
+
+		ex = CL_AllocExplosion ();
+		VectorCopy (pos, ex->ent.origin);
+		ex->ent.angles[0] = acos(dir[2])/M_PI*180;
+		ex->type = ex_flash;
+		// note to self
+		// we need a better no draw flag
+		ex->ent.flags = RF_BEAM;
+		ex->start = cl.frame.servertime - 0.1;
+		ex->light = 75 + (rand()%75);
+		ex->lightcolor[0] = 1.0;
+		ex->lightcolor[1] = 1.0;
+		ex->lightcolor[2] = 1.0;
+		ex->ent.model = cl_mod_flash;
+		ex->frames = 2;
+		S_StartSound (pos, 0, 0, cl_sfx_lightningzap, 1, ATTN_NORM, 0);
+		break;
+
 	case TE_GUNSHOT:			// bullet hitting wall
 	case TE_SPARKS:
 	case TE_BULLET_SPARKS:
@@ -1050,6 +1077,13 @@ void CL_ParseTEnt (void)
 	case TE_LIGHTNING:
 		ent = CL_ParseLightning (cl_mod_lightning);
 		S_StartSound (NULL, ent, CHAN_WEAPON, cl_sfx_lightning, 1, ATTN_NORM, 0);
+		break;
+	
+	case TE_LIGHTNING2:
+		MSG_ReadPos (&net_message, pos);
+		MSG_ReadPos (&net_message, pos2);
+		CL_LightningTrail(pos, pos2);
+		//S_StartSound (NULL, ent, CHAN_WEAPON, cl_sfx_lightning, 1, ATTN_NORM, 0);
 		break;
 
 	case TE_DEBUGTRAIL:
