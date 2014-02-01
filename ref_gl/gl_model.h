@@ -309,6 +309,7 @@ typedef struct
 	size_t		num_glcmds;
 	int*		glcmds;
 
-
+	size_t		num_skins;
+	char**		skins;
 
 } alias_model_t;

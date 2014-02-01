@@ -128,6 +128,9 @@ cvar_t	*gl_texturealphamode;
 cvar_t	*gl_texturesolidmode;
 cvar_t	*gl_lockpvs;
 
+cvar_t	*gl_fixupmodels;
+cvar_t	*gl_fixupmodels_threshold;
+
 cvar_t	*vid_fullscreen;
 cvar_t	*vid_gamma;
 cvar_t	*vid_ref;
@@ -1024,6 +1027,9 @@ void R_Register( void )
 	gl_swapinterval = ri.Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
 
 	gl_saturatelighting = ri.Cvar_Get( "gl_saturatelighting", "0", 0 );
+
+	gl_fixupmodels = ri.Cvar_Get("gl_fixupmodels", "1", CVAR_ARCHIVE);
+	gl_fixupmodels_threshold = ri.Cvar_Get("gl_fixupmodels_threshold", "1.0", CVAR_ARCHIVE);
 
 	vid_fullscreen = ri.Cvar_Get( "vid_fullscreen", "0", CVAR_ARCHIVE );
 	vid_gamma = ri.Cvar_Get( "vid_gamma", "1.0", CVAR_ARCHIVE );

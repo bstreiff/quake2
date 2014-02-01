@@ -236,6 +236,9 @@ extern	cvar_t	*vid_gamma;
 
 extern	cvar_t		*intensity;
 
+extern	cvar_t	*gl_fixupmodels;
+extern	cvar_t	*gl_fixupmodels_threshold;
+
 extern	int		gl_lightmap_format;
 extern	int		gl_solid_format;
 extern	int		gl_alpha_format;

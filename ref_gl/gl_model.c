@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // models.c -- model loading and caching
 
 #include "gl_local.h"
+#include "q_math.h"
 
 model_t	*loadmodel;
 int		modfilelen;
@@ -245,7 +246,7 @@ model_t *Mod_ForName (char *name, qboolean crash)
 	switch (LittleLong(*(unsigned *)buf))
 	{
 	case IDALIASHEADER:
-		loadmodel->extradata = Hunk_Begin (0x400000);
+		loadmodel->extradata = Hunk_Begin (0x800000);
 		Mod_LoadAliasModel (mod, buf);
 		break;
 		
@@ -950,20 +951,194 @@ static int compare_submodel_ids(const void* x, const void* y)
 // You must have at least three points. This is probably not a huge problem,
 // because the minimum possible set would be the three vertices of a single
 // triangle.
+//
+// http://nghiaho.com/?page_id=671
 static void Mod_FixupAliasSubmodel(
 	const char* name,
 	alias_model_t* alias,
 	vertex_submodel_t* begin,
 	vertex_submodel_t* end)
 {
-	Com_Printf("set %d:\n", begin->submodel_id);
+	typedef struct {
+		vec3_t centroid;
+	} frame_info_t;
+	frame_info_t* frame_info;
+	size_t vtxcount = (end - begin);
 
-	for (vertex_submodel_t* submodel_itr = begin; submodel_itr != end; ++submodel_itr)
+	frame_info = (frame_info_t*)malloc(sizeof(frame_info_t)*alias->num_frames);
+	memset(frame_info, 0, sizeof(frame_info_t)*alias->num_frames);
+
+	// Compute the centroids (midpoint of all vertices) for each frame
+	for (int f = 0; f < alias->num_frames; ++f)
 	{
-		alias_model_vertex_t* vtx = &(alias->frames[0].verts[submodel_itr->index]);
-		Com_Printf("   {%f, %f, %f}\n", vtx->v[0], vtx->v[1], vtx->v[2]);
+		vec3_t sum = { 0, 0, 0 };
+		for (vertex_submodel_t* submodel_itr = begin; submodel_itr != end; ++submodel_itr)
+		{
+			alias_model_vertex_t* vtx = &(alias->frames[f].verts[submodel_itr->index]);
+			VectorAdd(vtx->v, sum, sum);
+			//Com_Printf("   {%f, %f, %f}\n", vtx->v[0], vtx->v[1], vtx->v[2]);
+		}
+		//Com_Printf("%d \n", (int)vtxcount);
+		VectorScale(sum, 1.0f / (vec_t)vtxcount, frame_info[f].centroid);
 	}
-	Com_Printf("\n");
+
+	// Accumulate a matrix as per the following:
+	// H = sum across all points (A_i - centroid_A)(B_i - centroid_B)^T
+	// where A_i and B_i are the same indexed vertex in frames A and B.
+	for (int f = 1; f < alias->num_frames; ++f)
+	{
+		mat3x3_t h = { 0 };
+		vec3_t s = { 0 };
+		mat3x3_t v = { 0 };
+		mat3x3_t rotation = { 0 };
+		vec3_t translation = { 0 };
+		double err = 0;
+
+		for (vertex_submodel_t* submodel_itr = begin; submodel_itr != end; ++submodel_itr)
+		{
+			alias_model_vertex_t* src_vtx = &(alias->frames[0].verts[submodel_itr->index]);
+			alias_model_vertex_t* dst_vtx = &(alias->frames[f].verts[submodel_itr->index]);
+			vec3_t src_v;
+			vec3_t dst_v;
+			mat3x3_t tmp;
+
+			VectorCopy(src_vtx->v, src_v);
+			VectorSubtract(src_v, frame_info[0].centroid, src_v);
+			VectorCopy(dst_vtx->v, dst_v);
+			VectorSubtract(dst_v, frame_info[f].centroid, dst_v);
+
+			MatrixMultiplyColumnVectorWithTransposedColumnVector(
+				src_v,
+				dst_v,
+				tmp);
+			MatrixAdd(h, tmp, h);
+		}
+
+		// [ U, S, V ] = SVD(H)
+		// (MatrixSingularValueDcomposition() returns U over its original input variable.)
+		MatrixSingularValueDcomposition(h, s, v);
+
+		// The rotation matrix can be found from:
+		// R = VU^T
+		MatrixTranspose(h);
+		MatrixMultiply(v, h, rotation);
+
+		// There's a reflection case to deal with here. If the determinant is less
+		// than zero, multiply the third column by -1.
+		if (MatrixDeterminant(rotation) < 0)
+		{
+			rotation[0][2] *= -1;
+			rotation[1][2] *= -1;
+			rotation[2][2] *= -1;
+		}
+
+		// The translation is:
+		// t = -R * centroid_A + centroid_B
+		// Reuse 'v' as temporary space.
+		MatrixScale(rotation, -1, v);
+		MatrixMultiplyWithColumnVector(v, frame_info[0].centroid, translation);
+		VectorAdd(translation, frame_info[f].centroid, translation);
+
+		// Compute the error.
+		// err = sum across all points ||R*A_i + t - B_i||^2
+		// where A_i and B_i are the same vertex in frames A and B, and || is the Euclidian distance operator
+		for (vertex_submodel_t* submodel_itr = begin; submodel_itr != end; ++submodel_itr)
+		{
+			alias_model_vertex_t* src_vtx = &(alias->frames[0].verts[submodel_itr->index]);
+			alias_model_vertex_t* dst_vtx = &(alias->frames[f].verts[submodel_itr->index]);
+			vec3_t tmp;
+
+			MatrixMultiplyWithColumnVector(rotation, src_vtx->v, tmp);
+			VectorAdd(tmp, translation, tmp);
+
+			// Find the Euclidian distance (squared) between tmp and B_i
+			// sqrt((a0-b0)^2 + (a1-b1)^2 + (a2-b2)^2)^2
+			// (a0-b0)^2 + (a1-b1)^2 + (a2-b2)^2
+			//
+			// Because we're summing all of these up, we can add them directly to err.
+
+			for (int k = 0; k < 2; ++k)
+				err += (tmp[k] - dst_vtx->v[k]) * (tmp[k] - dst_vtx->v[k]);
+		}
+
+		// If the least-squares error is less than 1.0, than the rotation and translation
+		// is probably a pretty good fit. Apply them to get new vertex values.
+		if (err < gl_fixupmodels_threshold->value)
+		{
+			for (vertex_submodel_t* submodel_itr = begin; submodel_itr != end; ++submodel_itr)
+			{
+				alias_model_vertex_t* src_vtx = &(alias->frames[0].verts[submodel_itr->index]);
+				alias_model_vertex_t* dst_vtx = &(alias->frames[f].verts[submodel_itr->index]);
+
+				MatrixMultiplyWithColumnVector(rotation, src_vtx->v, dst_vtx->v);
+				VectorAdd(dst_vtx->v, translation, dst_vtx->v);
+			}
+		}
+	}
+
+	free(frame_info);
+}
+
+
+// TODO: Figure out how the hell r_avertexnormal_dots is computed so I can
+// figure out how to compute that based on fixed normals, too...
+static void Mod_RecomputeVertexNormals(
+	const char* name,
+	alias_model_t* alias)
+{
+	typedef struct {
+		vec3_t normal_sum;
+		unsigned int normal_count;
+	} computed_normal_t;
+
+	computed_normal_t* normals;
+	normals = (computed_normal_t*)malloc(sizeof(computed_normal_t)*alias->frames[0].num_verts);
+	memset(normals, 0, sizeof(computed_normal_t)*alias->frames[0].num_verts);
+
+	for (int f = 0; f < alias->num_frames; ++f)
+	{
+		alias_model_frame_t* frame = &(alias->frames[f]);
+
+		for (int t = 0; t < alias->num_tris; ++t)
+		{
+			vec3_t vtemp1, vtemp2, normal;
+			float ftemp;
+			alias_model_triangle_t* tri = &(alias->tris[t]);
+
+			VectorSubtract(
+				frame->verts[tri->index_xyz[0]].v,
+				frame->verts[tri->index_xyz[1]].v,
+				vtemp1);
+			VectorSubtract(
+				frame->verts[tri->index_xyz[2]].v,
+				frame->verts[tri->index_xyz[1]].v,
+				vtemp2);
+			CrossProduct(vtemp1, vtemp2, normal);
+			VectorNormalize(normal);
+
+			// Rotate the normal so that the model faces down the positive x axis.
+			ftemp = normal[0];
+			normal[0] = -normal[1];
+			normal[1] = ftemp;
+
+			for (int i = 0; i < 3; ++i)
+			{
+				VectorAdd(normals[tri->index_xyz[i]].normal_sum, normal, normals[tri->index_xyz[i]].normal_sum);
+				normals[tri->index_xyz[i]].normal_count++;
+			}
+		}
+
+		// Average the normals for each vertex.
+		for (int i = 0; i < frame->num_verts; ++i)
+		{
+			vec3_t v;
+			VectorScale(normals[i].normal_sum, 1.0f / normals[i].normal_count, v);
+			VectorNormalize(v);
+			VectorCopy(v, frame->verts[i].lightnormal);
+		}
+	}
+
+	free(normals);
 }
 
 static void Mod_FixupAliasModel(const char* name, alias_model_t *alias)
@@ -977,8 +1152,6 @@ static void Mod_FixupAliasModel(const char* name, alias_model_t *alias)
 	// This transformation only works if we have multiple frames to compare.
 	if (alias->num_frames <= 1)
 		return;
-
-	Com_Printf("Fixing up %s\n", name);
 
 	vtx_submodel_ids = (vertex_submodel_t*)malloc(alias->frames[0].num_verts*sizeof(vertex_submodel_t));
 
@@ -1037,6 +1210,8 @@ static void Mod_FixupAliasModel(const char* name, alias_model_t *alias)
 	}
 
 	free(vtx_submodel_ids);
+
+	Mod_RecomputeVertexNormals(name, alias);
 }
 
 void Mod_LoadAliasModel(model_t *mod, void *buffer)
@@ -1187,9 +1362,15 @@ void Mod_LoadAliasModel(model_t *mod, void *buffer)
 		outmodel->glcmds[i] = LittleLong(pincmd[i]);
 
 	// register all skins
+	outmodel->num_skins = header.num_skins;
+	outmodel->skins = (char**)Hunk_Alloc(header.num_skins * sizeof(char*));
 	for (i = 0; i<header.num_skins; i++)
 	{
-		mod->skins[i] = GL_FindImage((char *)buffer + header.ofs_skins + i*MAX_SKINNAME, it_skin);
+		const char* skinname = (char *)buffer + header.ofs_skins + i*MAX_SKINNAME;
+		outmodel->skins[i] = (char*)Hunk_Alloc(strnlen(skinname, MAX_SKINNAME)*sizeof(char));
+		strncpy(outmodel->skins[i], skinname, MAX_SKINNAME);
+
+		mod->skins[i] = GL_FindImage(outmodel->skins[i], it_skin);
 	}
 
 	mod->mins[0] = -32;
@@ -1200,7 +1381,10 @@ void Mod_LoadAliasModel(model_t *mod, void *buffer)
 	mod->maxs[2] = 32;
 
 	// Fix up vertices.
-	Mod_FixupAliasModel(mod->name, outmodel);
+	if (gl_fixupmodels->value)
+	{
+		Mod_FixupAliasModel(mod->name, outmodel);
+	}
 }
 
 /*
@@ -1308,6 +1492,11 @@ struct model_s *R_RegisterModel (char *name)
 		else if (mod->type == mod_alias)
 		{
 			const alias_model_t* alias = (alias_model_t *)mod->extradata;
+			for (i = 0; i<alias->num_skins; i++)
+			{
+				mod->skins[i] = GL_FindImage(alias->skins[i], it_skin);
+			}
+
 			mod->numframes = alias->num_frames;
 		}
 		else if (mod->type == mod_brush)

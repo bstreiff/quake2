@@ -163,6 +163,7 @@
     <ClCompile Include="..\game\q_shared.c" />
     <ClCompile Include="..\win32\q_shwin.c" />
     <ClCompile Include="..\win32\qgl_win.c" />
+    <ClCompile Include="q_math.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anorms.h" />
@@ -177,6 +178,7 @@
     <ClInclude Include="qmenu.h" />
     <ClInclude Include="..\client\ref.h" />
     <ClInclude Include="ref_gl.h" />
+    <ClInclude Include="q_math.h" />
     <ClInclude Include="warpsin.h" />
     <ClInclude Include="..\win32\winquake.h" />
   </ItemGroup>
