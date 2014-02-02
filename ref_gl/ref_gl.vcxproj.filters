@@ -57,6 +57,12 @@
     <ClCompile Include="q_math.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="xbrz\xbrz.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="xbrz\xbrz_wrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anorms.h">
@@ -99,6 +105,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="q_math.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="xbrz\xbrz.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -164,6 +164,8 @@
     <ClCompile Include="..\win32\q_shwin.c" />
     <ClCompile Include="..\win32\qgl_win.c" />
     <ClCompile Include="q_math.c" />
+    <ClCompile Include="xbrz\xbrz.cpp" />
+    <ClCompile Include="xbrz\xbrz_wrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anorms.h" />
@@ -180,6 +182,7 @@
     <ClInclude Include="q_math.h" />
     <ClInclude Include="warpsin.h" />
     <ClInclude Include="..\win32\winquake.h" />
+    <ClInclude Include="xbrz\xbrz.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="ref_gl.def" />

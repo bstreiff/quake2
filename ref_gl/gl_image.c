@@ -326,8 +326,8 @@ void	GL_ImageList_f (void)
 */
 
 #define	MAX_SCRAPS		1
-#define	BLOCK_WIDTH		256
-#define	BLOCK_HEIGHT	256
+#define	BLOCK_WIDTH		1024
+#define	BLOCK_HEIGHT	1024
 
 int			scrap_allocated[MAX_SCRAPS][BLOCK_WIDTH];
 byte		scrap_texels[MAX_SCRAPS][BLOCK_WIDTH*BLOCK_HEIGHT];
@@ -914,16 +914,25 @@ Returns has_alpha
 int		upload_width, upload_height;
 qboolean uploaded_paletted;
 
+void GL_XBRZ_ResampleTexture(unsigned *in, int inwidth, int inheight, unsigned *out, int outwidth, int outheight);
+
 qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 {
 	int			samples;
 	unsigned	*scaled;
+	float		scale_factor;
 	int			scaled_width, scaled_height;
 	int			i, c;
 	byte		*scan;
 	int comp;
 
 	uploaded_paletted = false;
+
+	scale_factor = gl_texscale->value;
+	if (scale_factor <= 0.0f)
+		scale_factor = 1.0f;
+	else if (scale_factor >= 5.0f)
+		scale_factor = 5.0f;
 
 	for (scaled_width = 1 ; scaled_width < width ; scaled_width<<=1)
 		;
@@ -937,6 +946,10 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 	// let people sample down the world textures for speed
 	if (mipmap)
 	{
+		scaled_width *= scale_factor;
+		scaled_height *= scale_factor;
+
+		// continue to support gl_picmip I guess...
 		scaled_width >>= (int)gl_picmip->value;
 		scaled_height >>= (int)gl_picmip->value;
 	}
@@ -979,19 +992,6 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 	    comp = samples;
 	}
 
-#if 0
-	if (mipmap)
-		gluBuild2DMipmaps (GL_TEXTURE_2D, samples, width, height, GL_RGBA, GL_UNSIGNED_BYTE, trans);
-	else if (scaled_width == width && scaled_height == height)
-		qglTexImage2D (GL_TEXTURE_2D, 0, comp, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, trans);
-	else
-	{
-		gluScaleImage (GL_RGBA, width, height, GL_UNSIGNED_BYTE, trans,
-			scaled_width, scaled_height, GL_UNSIGNED_BYTE, scaled);
-		qglTexImage2D (GL_TEXTURE_2D, 0, comp, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled);
-	}
-#else
-
 	scaled = (unsigned *)malloc(scaled_width*scaled_height*sizeof(unsigned));
 	if (!scaled)
 	{
@@ -1009,7 +1009,13 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 		memcpy (scaled, data, width*height*4);
 	}
 	else
-		GL_ResampleTexture (data, width, height, scaled, scaled_width, scaled_height);
+	{
+		// If we're making it larger, use XBRZ.
+		if (scale_factor > 1.0)
+			GL_XBRZ_ResampleTexture(data, width, height, scaled, scaled_width, scaled_height);
+		else
+			GL_ResampleTexture(data, width, height, scaled, scaled_width, scaled_height);
+	}
 
 	GL_LightScaleTexture (scaled, scaled_width, scaled_height, !mipmap );
 
@@ -1034,7 +1040,6 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 		}
 	}
 done: ;
-#endif
 
 	if (scaled)
 		free(scaled);
@@ -1117,7 +1122,7 @@ qboolean GL_Upload8 (byte *data, int width, int height,  qboolean mipmap, qboole
 		}
 	}
 
-	result = GL_Upload32 (trans, width, height, mipmap);
+	result = GL_Upload32(trans, width, height, mipmap);
 	free(trans);
 	return result;
 }
