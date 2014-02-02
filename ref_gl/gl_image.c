@@ -911,34 +911,13 @@ GL_Upload32
 Returns has_alpha
 ===============
 */
-void GL_BuildPalettedTexture( unsigned char *paletted_texture, unsigned char *scaled, int scaled_width, int scaled_height )
-{
-	int i;
-
-	for ( i = 0; i < scaled_width * scaled_height; i++ )
-	{
-		unsigned int r, g, b, c;
-
-		r = ( scaled[0] >> 3 ) & 31;
-		g = ( scaled[1] >> 2 ) & 63;
-		b = ( scaled[2] >> 3 ) & 31;
-
-		c = r | ( g << 5 ) | ( b << 11 );
-
-		paletted_texture[i] = gl_state.d_16to8table[c];
-
-		scaled += 4;
-	}
-}
-
 int		upload_width, upload_height;
 qboolean uploaded_paletted;
 
 qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 {
 	int			samples;
-	unsigned	scaled[256*256];
-	unsigned char paletted_texture[256*256];
+	unsigned	*scaled;
 	int			scaled_width, scaled_height;
 	int			i, c;
 	byte		*scan;
@@ -962,11 +941,11 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 		scaled_height >>= (int)gl_picmip->value;
 	}
 
-	// don't ever bother with >256 textures
-	if (scaled_width > 256)
-		scaled_width = 256;
-	if (scaled_height > 256)
-		scaled_height = 256;
+	// don't ever bother with >BLOCK_* textures
+	if (scaled_width > BLOCK_WIDTH)
+		scaled_width = BLOCK_WIDTH;
+	if (scaled_height > BLOCK_HEIGHT)
+		scaled_height = BLOCK_HEIGHT;
 
 	if (scaled_width < 1)
 		scaled_width = 1;
@@ -975,9 +954,6 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 
 	upload_width = scaled_width;
 	upload_height = scaled_height;
-
-	if (scaled_width * scaled_height > sizeof(scaled)/4)
-		ri.Sys_Error (ERR_DROP, "GL_Upload32: too big");
 
 	// scan the texture for any non-255 alpha
 	c = width*height;
@@ -1016,6 +992,13 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 	}
 #else
 
+	scaled = (unsigned *)malloc(scaled_width*scaled_height*sizeof(unsigned));
+	if (!scaled)
+	{
+		ri.Sys_Error(ERR_DROP, "GL_Upload32: too big");
+		goto done;
+	}
+
 	if (scaled_width == width && scaled_height == height)
 	{
 		if (!mipmap)
@@ -1053,6 +1036,8 @@ qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
 done: ;
 #endif
 
+	if (scaled)
+		free(scaled);
 
 	if (mipmap)
 	{
@@ -1094,13 +1079,16 @@ static qboolean IsPowerOf2( int value )
 
 qboolean GL_Upload8 (byte *data, int width, int height,  qboolean mipmap, qboolean is_sky )
 {
-	unsigned	trans[512*256];
+	unsigned	*trans;
 	int			i, s;
 	int			p;
+	qboolean	result = false;
 
 	s = width*height;
 
-	if (s > sizeof(trans)/4)
+	trans = (unsigned *)malloc(s*sizeof(unsigned));
+
+	if (!trans)
 		ri.Sys_Error (ERR_DROP, "GL_Upload8: too large");
 
 	for (i=0 ; i<s ; i++)
@@ -1129,7 +1117,9 @@ qboolean GL_Upload8 (byte *data, int width, int height,  qboolean mipmap, qboole
 		}
 	}
 
-	return GL_Upload32 (trans, width, height, mipmap);
+	result = GL_Upload32 (trans, width, height, mipmap);
+	free(trans);
+	return result;
 }
 
 
