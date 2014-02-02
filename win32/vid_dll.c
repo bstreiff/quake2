@@ -32,12 +32,6 @@ refexport_t	re;
 
 cvar_t *win_noalttab;
 
-#ifndef WM_MOUSEWHEEL
-#define WM_MOUSEWHEEL (WM_MOUSELAST+1)  // message that will be supported by the OS 
-#endif
-
-static UINT MSH_MOUSEWHEEL;
-
 // Console variables that we need to access from this module
 cvar_t		*vid_gamma;
 cvar_t		*vid_ref;			// Name of Refresh DLL loaded
@@ -290,37 +284,21 @@ LONG WINAPI MainWndProc (
 {
 	LONG			lRet = 0;
 
-	if ( uMsg == MSH_MOUSEWHEEL )
-	{
-		if ( ( ( int ) wParam ) > 0 )
-		{
-			Key_Event( K_MWHEELUP, true, sys_msg_time );
-			Key_Event( K_MWHEELUP, false, sys_msg_time );
-		}
-		else
-		{
-			Key_Event( K_MWHEELDOWN, true, sys_msg_time );
-			Key_Event( K_MWHEELDOWN, false, sys_msg_time );
-		}
-        return DefWindowProc (hWnd, uMsg, wParam, lParam);
-	}
-
 	switch (uMsg)
 	{
 	case WM_MOUSEWHEEL:
-		/*
-		** this chunk of code theoretically only works under NT4 and Win98
-		** since this message doesn't exist under Win95
-		*/
+	case WM_MOUSEHWHEEL:
 		if ( ( short ) HIWORD( wParam ) > 0 )
 		{
-			Key_Event( K_MWHEELUP, true, sys_msg_time );
-			Key_Event( K_MWHEELUP, false, sys_msg_time );
+			const int key = (uMsg == WM_MOUSEHWHEEL ? K_MWHEELRIGHT : K_MWHEELUP);
+			Key_Event( key, true, sys_msg_time );
+			Key_Event( key, false, sys_msg_time );
 		}
 		else
 		{
-			Key_Event( K_MWHEELDOWN, true, sys_msg_time );
-			Key_Event( K_MWHEELDOWN, false, sys_msg_time );
+			const int key = (uMsg == WM_MOUSEHWHEEL ? K_MWHEELLEFT : K_MWHEELDOWN);
+			Key_Event( key, true, sys_msg_time );
+			Key_Event( key, false, sys_msg_time );
 		}
 		break;
 
@@ -329,8 +307,6 @@ LONG WINAPI MainWndProc (
 
 	case WM_CREATE:
 		cl_hwnd = hWnd;
-
-		MSH_MOUSEWHEEL = RegisterWindowMessage("MSWHEEL_ROLLMSG"); 
         return DefWindowProc (hWnd, uMsg, wParam, lParam);
 
 	case WM_PAINT:
@@ -394,6 +370,8 @@ LONG WINAPI MainWndProc (
 	case WM_RBUTTONUP:
 	case WM_MBUTTONDOWN:
 	case WM_MBUTTONUP:
+	case WM_XBUTTONDOWN:
+	case WM_XBUTTONUP:
 	case WM_MOUSEMOVE:
 		{
 			int	temp;
@@ -408,6 +386,12 @@ LONG WINAPI MainWndProc (
 
 			if (wParam & MK_MBUTTON)
 				temp |= 4;
+
+			if (wParam & MK_XBUTTON1)
+				temp |= 8;
+
+			if (wParam & MK_XBUTTON2)
+				temp |= 16;
 
 			IN_MouseEvent (temp);
 		}

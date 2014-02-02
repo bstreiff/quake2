@@ -163,6 +163,7 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 		return menu_out_sound;
 	case K_KP_UPARROW:
 	case K_UPARROW:
+	case K_MWHEELUP:
 		if ( m )
 		{
 			m->cursor--;
@@ -180,6 +181,7 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 		break;
 	case K_KP_DOWNARROW:
 	case K_DOWNARROW:
+	case K_MWHEELDOWN:
 		if ( m )
 		{
 			m->cursor++;
@@ -189,6 +191,7 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 		break;
 	case K_KP_LEFTARROW:
 	case K_LEFTARROW:
+	case K_MWHEELLEFT:
 		if ( m )
 		{
 			Menu_SlideItem( m, -1 );
@@ -197,6 +200,7 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 		break;
 	case K_KP_RIGHTARROW:
 	case K_RIGHTARROW:
+	case K_MWHEELRIGHT:
 		if ( m )
 		{
 			Menu_SlideItem( m, 1 );
@@ -207,6 +211,8 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 	case K_MOUSE1:
 	case K_MOUSE2:
 	case K_MOUSE3:
+	case K_MOUSE4:
+	case K_MOUSE5:
 	case K_JOY1:
 	case K_JOY2:
 	case K_JOY3:
@@ -443,12 +449,14 @@ const char *M_Main_Key (int key)
 
 	case K_KP_DOWNARROW:
 	case K_DOWNARROW:
+	case K_MWHEELDOWN:
 		if (++m_main_cursor >= MAIN_ITEMS)
 			m_main_cursor = 0;
 		return sound;
 
 	case K_KP_UPARROW:
 	case K_UPARROW:
+	case K_MWHEELUP:
 		if (--m_main_cursor < 0)
 			m_main_cursor = MAIN_ITEMS - 1;
 		return sound;
