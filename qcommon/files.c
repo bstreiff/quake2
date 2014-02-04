@@ -20,17 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "qcommon.h"
 
-// define this to dissalow any data but the demo pak file
-//#define	NO_ADDONS
-
-// if a packfile directory differs from this, it is assumed to be hacked
-// Full version
-#define	PAK0_CHECKSUM	0x40e614e0
-// Demo
-//#define	PAK0_CHECKSUM	0xb2c6d7ea
-// OEM
-//#define	PAK0_CHECKSUM	0x78e135c
-
 /*
 =============================================================================
 
@@ -43,6 +32,8 @@ QUAKE FILESYSTEM
 //
 // in memory
 //
+
+#define MAX_GAMENAME	16
 
 typedef struct
 {
@@ -76,6 +67,7 @@ filelink_t	*fs_links;
 typedef struct searchpath_s
 {
 	char	filename[MAX_OSPATH];
+	char	gamename[MAX_GAMENAME];
 	pack_t	*pack;		// only one of filename / pack will be used
 	struct searchpath_s *next;
 } searchpath_t;
@@ -159,15 +151,8 @@ void FS_FCloseFile (FILE *f)
 int	Developer_searchpath (int who)
 {
 	
-	int		ch;
 	// PMM - warning removal
-//	char	*start;
 	searchpath_t	*search;
-	
-	if (who == 1) // xatrix
-		ch = 'x';
-	else if (who == 2)
-		ch = 'r';
 
 	for (search = fs_searchpaths ; search ; search = search->next)
 	{
@@ -176,15 +161,6 @@ int	Developer_searchpath (int who)
 
 		if (strstr (search->filename, "rogue"))
 			return 2;
-/*
-		start = strchr (search->filename, ch);
-
-		if (start == NULL)
-			continue;
-
-		if (strcmp (start ,"xatrix") == 0)
-			return (1);
-*/
 	}
 	return (0);
 
@@ -199,17 +175,33 @@ Finds the file in the search path.
 returns filesize and an open FILE *
 Used for streaming data out of either a pak file or
 a seperate file.
+
+If filename begins with "xxx:" then looks for it explicitly in paths with a given game tag.
 ===========
 */
 int file_from_pak = 0;
-#ifndef NO_ADDONS
-int FS_FOpenFile (char *filename, FILE **file)
+
+int FS_FOpenFile (const char *filename, FILE **file)
 {
 	searchpath_t	*search;
 	char			netpath[MAX_OSPATH];
+	char			gamename[MAX_GAMENAME];
 	pack_t			*pak;
 	int				i;
 	filelink_t		*link;
+	const char		*pos;
+
+	// figure out gamename, if appropriate
+	if ((pos = strchr(filename, ':')) != NULL)
+	{
+		strncpy(gamename, filename, (pos - filename));
+		gamename[(pos - filename)] = '\0';
+		filename = pos + 1;
+	}
+	else
+	{
+		gamename[0] = '\0';
+	}
 
 	file_from_pak = 0;
 
@@ -234,6 +226,15 @@ int FS_FOpenFile (char *filename, FILE **file)
 //
 	for (search = fs_searchpaths ; search ; search = search->next)
 	{
+		// If we wanted a particular gamename and this isn't it, skip it.
+		if (gamename[0] != '\0')
+		{
+			if (Q_strcasecmp(search->gamename, gamename) != 0)
+			{
+				continue;
+			}
+		}
+		
 	// is the element a pak file?
 		if (search->pack)
 		{
@@ -274,65 +275,6 @@ int FS_FOpenFile (char *filename, FILE **file)
 	*file = NULL;
 	return -1;
 }
-
-#else
-
-// this is just for demos to prevent add on hacking
-
-int FS_FOpenFile (char *filename, FILE **file)
-{
-	searchpath_t	*search;
-	char			netpath[MAX_OSPATH];
-	pack_t			*pak;
-	int				i;
-
-	file_from_pak = 0;
-
-	// get config from directory, everything else from pak
-	if (!strcmp(filename, "config.cfg") || !strncmp(filename, "players/", 8))
-	{
-		Com_sprintf (netpath, sizeof(netpath), "%s/%s",FS_Gamedir(), filename);
-		
-		*file = fopen (netpath, "rb");
-		if (!*file)
-			return -1;
-		
-		Com_DPrintf ("FindFile: %s\n",netpath);
-
-		return FS_filelength (*file);
-	}
-
-	for (search = fs_searchpaths ; search ; search = search->next)
-		if (search->pack)
-			break;
-	if (!search)
-	{
-		*file = NULL;
-		return -1;
-	}
-
-	pak = search->pack;
-	for (i=0 ; i<pak->numfiles ; i++)
-		if (!Q_strcasecmp (pak->files[i].name, filename))
-		{	// found it!
-			file_from_pak = 1;
-			Com_DPrintf ("PackFile: %s : %s\n",pak->filename, filename);
-		// open a new file on the pakfile
-			*file = fopen (pak->filename, "rb");
-			if (!*file)
-				Com_Error (ERR_FATAL, "Couldn't reopen %s", pak->filename);	
-			fseek (*file, pak->files[i].filepos, SEEK_SET);
-			return pak->files[i].filelen;
-		}
-	
-	Com_DPrintf ("FindFile: can't find %s\n", filename);
-	
-	*file = NULL;
-	return -1;
-}
-
-#endif
-
 
 /*
 =================
@@ -391,7 +333,7 @@ Filename are reletive to the quake search path
 a null buffer will just return the file length without loading
 ============
 */
-int FS_LoadFile (char *path, void **buffer)
+int FS_LoadFile (const char *path, void **buffer)
 {
 	FILE	*h;
 	byte	*buf;
@@ -445,7 +387,7 @@ Loads the header and directory, adding the files at the beginning
 of the list so they override previous pack files.
 =================
 */
-pack_t *FS_LoadPackFile (char *packfile)
+pack_t *FS_LoadPackFile (const char *packfile)
 {
 	dpackheader_t	header;
 	int				i;
@@ -479,10 +421,6 @@ pack_t *FS_LoadPackFile (char *packfile)
 // crc the directory to check for modifications
 	checksum = Com_BlockChecksum ((void *)info, header.dirlen);
 
-#ifdef NO_ADDONS
-	if (checksum != PAK0_CHECKSUM)
-		return NULL;
-#endif
 // parse the directory
 	for (i=0 ; i<numpackfiles ; i++)
 	{
@@ -510,20 +448,27 @@ Sets fs_gamedir, adds the directory to the head of the path,
 then loads and adds pak1.pak pak2.pak ... 
 ================
 */
-void FS_AddGameDirectory (char *dir)
+void FS_AddTaggedGameDirectory (const char *dir, const char* game)
 {
 	int				i;
 	searchpath_t	*search;
 	pack_t			*pak;
 	char			pakfile[MAX_OSPATH];
 
-	strcpy (fs_gamedir, dir);
+	strncpy (fs_gamedir, dir, MAX_OSPATH);
+	fs_gamedir[MAX_OSPATH - 1] = '\0';
 
 	//
 	// add the directory to the search path
 	//
 	search = Z_Malloc (sizeof(searchpath_t));
-	strcpy (search->filename, dir);
+	strncpy (search->filename, dir, MAX_OSPATH);
+	search->filename[MAX_OSPATH - 1] = '\0';
+	if (game)
+	{
+		strncpy(search->gamename, game, MAX_GAMENAME);
+		search->gamename[MAX_GAMENAME - 1] = '\0';
+	}
 	search->next = fs_searchpaths;
 	fs_searchpaths = search;
 
@@ -538,11 +483,21 @@ void FS_AddGameDirectory (char *dir)
 			continue;
 		search = Z_Malloc (sizeof(searchpath_t));
 		search->pack = pak;
+		if (game)
+		{
+			strncpy(search->gamename, game, MAX_GAMENAME);
+			search->gamename[MAX_GAMENAME - 1] = '\0';
+		}
 		search->next = fs_searchpaths;
 		fs_searchpaths = search;		
 	}
 
 
+}
+
+void FS_AddGameDirectory(const char* dir)
+{
+	FS_AddTaggedGameDirectory(dir, NULL);
 }
 
 /*
@@ -552,7 +507,7 @@ FS_Gamedir
 Called to find where to write a file (demos, savegames, etc)
 ============
 */
-char *FS_Gamedir (void)
+const char *FS_Gamedir (void)
 {
 	if (*fs_gamedir)
 		return fs_gamedir;
@@ -588,7 +543,7 @@ FS_SetGamedir
 Sets the gamedir and path to a different directory.
 ================
 */
-void FS_SetGamedir (char *dir)
+void FS_SetGamedir (const char *dir)
 {
 	searchpath_t	*next;
 
@@ -735,7 +690,7 @@ char **FS_ListFiles( char *findname, int *numfiles, unsigned musthave, unsigned 
 */
 void FS_Dir_f( void )
 {
-	char	*path = NULL;
+	const char	*path = NULL;
 	char	findname[1024];
 	char	wildcard[1024] = "*.*";
 	char	**dirnames;
@@ -796,6 +751,10 @@ void FS_Path_f (void)
 	{
 		if (s == fs_base_searchpaths)
 			Com_Printf ("----------\n");
+
+		if (s->gamename[0])
+			Com_Printf("[%s] ", s->gamename);
+
 		if (s->pack)
 			Com_Printf ("%s (%i files)\n", s->pack->filename, s->pack->numfiles);
 		else
@@ -814,7 +773,7 @@ FS_NextPath
 Allows enumerating all of the directories in the search path
 ================
 */
-char *FS_NextPath (char *prevpath)
+const char *FS_NextPath (const char *prevpath)
 {
 	searchpath_t	*s;
 	char			*prev;
@@ -875,14 +834,22 @@ void FS_InitFilesystem (void)
 		{
 			char* steamPath = (char*)malloc(steamPathLength*sizeof(char));
 			Sys_GetSteamDirectory(steamPath, steamPathLength);
-			FS_AddGameDirectory(va("%s/SteamApps/common/Quake 2/"BASEDIRNAME, steamPath));
+
+			// Add all of the missionpack data.
+			FS_AddTaggedGameDirectory(va("%s/SteamApps/common/Quake 2/ctf", steamPath), "ctf");
+			FS_AddTaggedGameDirectory(va("%s/SteamApps/common/Quake 2/xatrix", steamPath), "xatrix");
+			FS_AddTaggedGameDirectory(va("%s/SteamApps/common/Quake 2/rogue", steamPath), "rogue");
+			FS_AddTaggedGameDirectory(va("%s/SteamApps/common/Quake 2/baseq2", steamPath), "baseq2");
 			free(steamPath);
 		}
 	}
 #endif
 
-	// default to the current basedir.
-	FS_AddGameDirectory(va("%s/"BASEDIRNAME, fs_basedir->string));
+	// Add all the missionpack data, by default in basedir.
+	FS_AddTaggedGameDirectory(va("%s/ctf", fs_basedir->string), "ctf");
+	FS_AddTaggedGameDirectory(va("%s/xatrix", fs_basedir->string), "xatrix");
+	FS_AddTaggedGameDirectory(va("%s/rogue", fs_basedir->string), "rogue");
+	FS_AddTaggedGameDirectory(va("%s/baseq2", fs_basedir->string), "baseq2");
 
 	// any set gamedirs will be freed up to here
 	fs_base_searchpaths = fs_searchpaths;
