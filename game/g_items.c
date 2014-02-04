@@ -232,6 +232,8 @@ qboolean Pickup_Bandolier (edict_t *ent, edict_t *other)
 		other->client->pers.max_cells = 250;
 	if (other->client->pers.max_slugs < 75)
 		other->client->pers.max_slugs = 75;
+	if (other->client->pers.max_magslug < 75)
+		other->client->pers.max_magslug = 75;
 
 	item = FindItem("Bullets");
 	if (item)
@@ -274,6 +276,8 @@ qboolean Pickup_Pack (edict_t *ent, edict_t *other)
 		other->client->pers.max_cells = 300;
 	if (other->client->pers.max_slugs < 100)
 		other->client->pers.max_slugs = 100;
+	if (other->client->pers.max_magslug < 100)
+		other->client->pers.max_magslug = 100;
 
 	item = FindItem("Bullets");
 	if (item)
@@ -327,6 +331,15 @@ qboolean Pickup_Pack (edict_t *ent, edict_t *other)
 		other->client->pers.inventory[index] += item->quantity;
 		if (other->client->pers.inventory[index] > other->client->pers.max_slugs)
 			other->client->pers.inventory[index] = other->client->pers.max_slugs;
+	}
+
+	item = FindItem("Mag Slug");
+	if (item)
+	{
+		index = ITEM_INDEX(item);
+		other->client->pers.inventory[index] += item->quantity;
+		if (other->client->pers.inventory[index] > other->client->pers.max_magslug)
+			other->client->pers.inventory[index] = other->client->pers.max_magslug;
 	}
 
 	if (!(ent->spawnflags & DROPPED_ITEM) && (deathmatch->value))
@@ -465,6 +478,8 @@ qboolean Add_Ammo (edict_t *ent, gitem_t *item, int count)
 		max = ent->client->pers.max_cells;
 	else if (item->tag == AMMO_SLUGS)
 		max = ent->client->pers.max_slugs;
+	else if (item->tag == AMMO_MAGSLUG)
+		max = ent->client->pers.max_magslug;
 	else
 		return false;
 
@@ -1682,6 +1697,29 @@ always owned, never in the world
 /* precache */ ""
 	},
 
+
+/*QUAKED ammo_magslug (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+	{
+		"ammo_magslug",
+		Pickup_Ammo,
+		NULL,
+		Drop_Ammo,
+		NULL,
+		"misc/am_pkup.wav",
+		"xatrix:models/objects/ammo/tris.md2", 0,
+		NULL,
+/* icon */		"a_mslugs",
+/* pickup */	"Mag Slug",
+/* width */		3,
+		10,
+		NULL,
+		IT_AMMO,
+		0,
+		NULL,
+		AMMO_MAGSLUG,
+/* precache */ ""
+	},
 
 	//
 	// POWERUP ITEMS

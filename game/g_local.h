@@ -103,7 +103,8 @@ typedef enum
 	AMMO_ROCKETS,
 	AMMO_GRENADES,
 	AMMO_CELLS,
-	AMMO_SLUGS
+	AMMO_SLUGS,
+	AMMO_MAGSLUG,
 } ammo_t;
 
 
@@ -857,6 +858,7 @@ typedef struct
 	int			max_grenades;
 	int			max_cells;
 	int			max_slugs;
+	int			max_magslug;
 
 	gitem_t		*weapon;
 	gitem_t		*lastweapon;
