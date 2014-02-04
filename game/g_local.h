@@ -105,6 +105,7 @@ typedef enum
 	AMMO_CELLS,
 	AMMO_SLUGS,
 	AMMO_MAGSLUG,
+	AMMO_TRAP,
 } ammo_t;
 
 
@@ -196,7 +197,8 @@ MOVETYPE_STEP,			// gravity, special edge handling
 MOVETYPE_FLY,
 MOVETYPE_TOSS,			// gravity
 MOVETYPE_FLYMISSILE,	// extra size to monsters
-MOVETYPE_BOUNCE
+MOVETYPE_BOUNCE,
+MOVETYPE_WALLBOUNCE,
 } movetype_t;
 
 
@@ -232,6 +234,8 @@ typedef struct
 #define WEAP_RAILGUN			10
 #define WEAP_BFG				11
 #define WEAP_LIGHTNINGGUN		12
+#define WEAP_PHALANX			13
+#define WEAP_BOOMER				14
 
 typedef struct gitem_s
 {
@@ -501,6 +505,12 @@ extern	int	body_armor_index;
 #define MOD_HIT				32
 #define MOD_TARGET_BLASTER	33
 #define MOD_LIGHTNING		34
+#define MOD_RIPPER				35
+#define MOD_PHALANX				36
+#define MOD_BRAINTENTACLE		37
+#define MOD_BLASTOFF			38
+#define MOD_GEKK				39
+#define MOD_TRAP				40
 #define MOD_FRIENDLY_FIRE	0x8000000
 
 extern	int	meansOfDeath;
@@ -688,6 +698,10 @@ void monster_fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damag
 void monster_fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype);
 void monster_fire_railgun (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int flashtype);
 void monster_fire_bfg (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int kick, float damage_radius, int flashtype);
+void monster_fire_ionripper (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype, int effect);
+void monster_fire_heat (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype);
+void monster_dabeam (edict_t *self);
+void monster_fire_blueblaster (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype, int effect);
 void M_droptofloor (edict_t *ent);
 void monster_think (edict_t *self);
 void walkmonster_start (edict_t *self);
@@ -707,6 +721,8 @@ void ThrowHead (edict_t *self, char *gibname, int damage, int type);
 void ThrowClientHead (edict_t *self, int damage);
 void ThrowGib (edict_t *self, char *gibname, int damage, int type);
 void BecomeExplosion1(edict_t *self);
+void ThrowHeadACID (edict_t *self, char *gibname, int damage, int type);
+void ThrowGibACID (edict_t *self, char *gibname, int damage, int type);
 
 //
 // g_ai.c
@@ -740,6 +756,11 @@ void fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed
 void fire_rail (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick);
 void fire_lightning (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int mod);
 void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius);
+void fire_ionripper (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int effect);
+void fire_heat (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage);
+void fire_blueblaster (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int effect);
+void fire_plasma (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage);
+void fire_trap (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, qboolean held);
 
 //
 // g_ptrail.c
@@ -859,6 +880,7 @@ typedef struct
 	int			max_cells;
 	int			max_slugs;
 	int			max_magslug;
+	int			max_trap;
 
 	gitem_t		*weapon;
 	gitem_t		*lastweapon;
@@ -954,6 +976,9 @@ struct gclient_s
 
 	qboolean	grenade_blew_up;
 	float		grenade_time;
+	float		quadfire_framenum;
+	qboolean	trap_blew_up;
+	float		trap_time;
 	int			silencer_shots;
 	int			weapon_sound;
 
@@ -1117,5 +1142,6 @@ struct edict_s
 	// common data blocks
 	moveinfo_t		moveinfo;
 	monsterinfo_t	monsterinfo;
+	int			orders;
 };
 

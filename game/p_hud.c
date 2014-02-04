@@ -51,6 +51,11 @@ void MoveClientToIntermission (edict_t *ent)
 	ent->client->grenade_blew_up = false;
 	ent->client->grenade_time = 0;
 
+	ent->client->quadfire_framenum = 0;
+	
+	// RAFAEL
+	ent->client->trap_blew_up = false;
+	ent->client->trap_time = 0;
 	ent->viewheight = 0;
 	ent->s.modelindex = 0;
 	ent->s.modelindex2 = 0;
@@ -451,6 +456,13 @@ void G_SetStats (edict_t *ent)
 	{
 		ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex ("p_quad");
 		ent->client->ps.stats[STAT_TIMER] = (ent->client->quad_framenum - level.framenum)/10;
+	}
+	else if (ent->client->quadfire_framenum > level.framenum)
+	{
+		// note to self
+		// need to change imageindex
+		ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex ("p_quadfire");
+		ent->client->ps.stats[STAT_TIMER] = (ent->client->quadfire_framenum - level.framenum)/10;
 	}
 	else if (ent->client->invincible_framenum > level.framenum)
 	{

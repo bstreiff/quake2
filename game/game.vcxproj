@@ -177,12 +177,16 @@
     <ClCompile Include="m_boss3.c" />
     <ClCompile Include="m_boss31.c" />
     <ClCompile Include="m_boss32.c" />
+    <ClCompile Include="m_boss5.c" />
     <ClCompile Include="m_brain.c" />
     <ClCompile Include="m_chick.c" />
+    <ClCompile Include="m_fixbot.c" />
     <ClCompile Include="m_flash.c" />
     <ClCompile Include="m_flipper.c" />
     <ClCompile Include="m_float.c" />
     <ClCompile Include="m_flyer.c" />
+    <ClCompile Include="m_gekk.c" />
+    <ClCompile Include="m_gladb.c" />
     <ClCompile Include="m_gladiator.c" />
     <ClCompile Include="m_gunner.c" />
     <ClCompile Include="m_hover.c" />
@@ -212,9 +216,11 @@
     <ClInclude Include="m_boss32.h" />
     <ClInclude Include="m_brain.h" />
     <ClInclude Include="m_chick.h" />
+    <ClInclude Include="m_fixbot.h" />
     <ClInclude Include="m_flipper.h" />
     <ClInclude Include="m_float.h" />
     <ClInclude Include="m_flyer.h" />
+    <ClInclude Include="m_gekk.h" />
     <ClInclude Include="m_gladiator.h" />
     <ClInclude Include="m_gunner.h" />
     <ClInclude Include="m_hover.h" />
@@ -225,6 +231,7 @@
     <ClInclude Include="m_parasite.h" />
     <ClInclude Include="m_player.h" />
     <ClInclude Include="m_soldier.h" />
+    <ClInclude Include="m_soldierh.h" />
     <ClInclude Include="m_supertank.h" />
     <ClInclude Include="m_tank.h" />
     <ClInclude Include="q_shared.h" />

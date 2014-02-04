@@ -36,6 +36,9 @@ void Weapon_GrenadeLauncher (edict_t *ent);
 void Weapon_Railgun (edict_t *ent);
 void Weapon_BFG (edict_t *ent);
 void Weapon_LightningGun (edict_t *ent);
+void Weapon_Ionripper (edict_t *ent);
+void Weapon_Phalanx (edict_t *ent);
+void Weapon_Trap (edict_t *ent);
 
 gitem_armor_t jacketarmor_info	= { 25,  50, .30, .00, ARMOR_JACKET};
 gitem_armor_t combatarmor_info	= { 50, 100, .60, .30, ARMOR_COMBAT};
@@ -51,7 +54,9 @@ static int	power_shield_index;
 #define HEALTH_TIMED		2
 
 void Use_Quad (edict_t *ent, gitem_t *item);
+void Use_QuadFire (edict_t *ent, gitem_t *item);
 static int	quad_drop_timeout_hack;
+static int	quad_fire_drop_timeout_hack;
 
 //======================================================================
 
@@ -178,6 +183,12 @@ qboolean Pickup_Powerup (edict_t *ent, edict_t *other)
 		{
 			if ((ent->item->use == Use_Quad) && (ent->spawnflags & DROPPED_PLAYER_ITEM))
 				quad_drop_timeout_hack = (ent->nextthink - level.time) / FRAMETIME;
+			ent->item->use (other, ent->item);
+		}
+		else if (((int)dmflags->value & DF_INSTANT_ITEMS) || ((ent->item->use == Use_QuadFire) && (ent->spawnflags & DROPPED_PLAYER_ITEM)))
+		{
+			if ((ent->item->use == Use_QuadFire) && (ent->spawnflags & DROPPED_PLAYER_ITEM))
+				quad_fire_drop_timeout_hack = (ent->nextthink - level.time) / FRAMETIME;
 			ent->item->use (other, ent->item);
 		}
 	}
@@ -375,6 +386,32 @@ void Use_Quad (edict_t *ent, gitem_t *item)
 	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage.wav"), 1, ATTN_NORM, 0);
 }
 
+// =====================================================================
+
+void Use_QuadFire (edict_t *ent, gitem_t *item)
+{
+	int		timeout;
+
+	ent->client->pers.inventory[ITEM_INDEX(item)]--;
+	ValidateSelectedItem (ent);
+
+	if (quad_fire_drop_timeout_hack)
+	{
+		timeout = quad_fire_drop_timeout_hack;
+		quad_fire_drop_timeout_hack = 0;
+	}
+	else
+	{
+		timeout = 300;
+	}
+
+	if (ent->client->quadfire_framenum > level.framenum)
+		ent->client->quadfire_framenum += timeout;
+	else
+		ent->client->quadfire_framenum = level.framenum + timeout;
+
+	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/quadfire1.wav"), 1, ATTN_NORM, 0);
+}
 //======================================================================
 
 void Use_Breather (edict_t *ent, gitem_t *item)
@@ -480,6 +517,8 @@ qboolean Add_Ammo (edict_t *ent, gitem_t *item, int count)
 		max = ent->client->pers.max_slugs;
 	else if (item->tag == AMMO_MAGSLUG)
 		max = ent->client->pers.max_magslug;
+	else if (item->tag == AMMO_TRAP)
+		max = ent->client->pers.max_trap;
 	else
 		return false;
 
@@ -956,9 +995,17 @@ void droptofloor (edict_t *ent)
 	tr = gi.trace (ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
 	if (tr.startsolid)
 	{
-		gi.dprintf ("droptofloor: %s startsolid at %s\n", ent->classname, vtos(ent->s.origin));
-		G_FreeEdict (ent);
-		return;
+		if (strcmp (ent->classname, "foodcube") == 0)
+		{
+			VectorCopy (ent->s.origin, tr.endpos);
+			ent->velocity[2] = 0;
+		}
+		else
+		{
+			gi.dprintf ("droptofloor: %s startsolid at %s\n", ent->classname, vtos(ent->s.origin));
+			G_FreeEdict (ent);
+			return;
+		}
 	}
 
 	VectorCopy (tr.endpos, ent->s.origin);
@@ -1440,6 +1487,31 @@ always owned, never in the world
 /* precache */ "weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav "
 	},
 
+/*QUAKED ammo_trap (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+	{
+		"ammo_trap",
+		Pickup_Ammo,
+		Use_Weapon,
+		Drop_Ammo,
+		Weapon_Trap,
+		"misc/am_pkup.wav",
+		"models/weapons/g_trap/tris.md2", EF_ROTATE,
+		"models/weapons/v_trap/tris.md2",
+/* icon */		"a_trap",
+/* pickup */	"Trap",
+/* width */		3,
+		1,
+		"trap",
+		IT_AMMO|IT_WEAPON,
+		0,
+		NULL,
+		AMMO_TRAP,
+/* precache */ "weapons/trapcock.wav weapons/traploop.wav weapons/trapsuck.wav weapons/trapdown.wav"
+// "weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav "
+	},
+
+	
 /*QUAKED weapon_grenadelauncher (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
@@ -1509,6 +1581,30 @@ always owned, never in the world
 /* precache */ "weapons/hyprbu1a.wav weapons/hyprbl1a.wav weapons/hyprbf1a.wav weapons/hyprbd1a.wav misc/lasfly.wav"
 	},
 
+/*QUAKED weapon_boomer (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+
+	{
+		"weapon_boomer",
+		Pickup_Weapon,
+		Use_Weapon,
+		Drop_Weapon,
+		Weapon_Ionripper,
+		"misc/w_pkup.wav",
+		"models/weapons/g_boom/tris.md2", EF_ROTATE,
+		"models/weapons/v_boomer/tris.md2",
+/* icon */	"w_ripper",
+/* pickup */ "Ionripper",
+		0,
+		2,
+		"Cells",
+		IT_WEAPON,
+		WEAP_BOOMER,
+		NULL,
+		0,
+/* precache */ "weapons/rg_hum.wav weapons/rippfire.wav"
+	},
+
 /*QUAKED weapon_railgun (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
@@ -1530,6 +1626,30 @@ always owned, never in the world
 		NULL,
 		0,
 /* precache */ "weapons/rg_hum.wav"
+	},
+
+/*QUAKED weapon_phalanx (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+
+	{
+		"weapon_phalanx",
+		Pickup_Weapon,
+		Use_Weapon,
+		Drop_Weapon,
+		Weapon_Phalanx,
+		"misc/w_pkup.wav",
+		"models/weapons/g_shotx/tris.md2", EF_ROTATE,
+		"models/weapons/v_shotx/tris.md2",
+/* icon */	"w_phallanx",
+/* pickup */ "Phalanx",
+		0,
+		1,
+		"Mag Slug",
+		IT_WEAPON,
+		WEAP_PHALANX,
+		NULL,
+		0,
+/* precache */ "weapons/plasshot.wav"
 	},
 
 /*QUAKED weapon_bfg (.3 .3 1) (-16 -16 -16) (16 16 16)
@@ -1747,6 +1867,30 @@ always owned, never in the world
 /* precache */ "items/damage.wav items/damage2.wav items/damage3.wav"
 	},
 
+/*QUAKED item_quadfire (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+	{
+		"item_quadfire", 
+		Pickup_Powerup,
+		Use_QuadFire,
+		Drop_General,
+		NULL,
+		"items/pkup.wav",
+		"models/items/quadfire/tris.md2", EF_ROTATE,
+		NULL,
+/* icon */		"p_quadfire",
+/* pickup */	"DualFire Damage",
+/* width */		2,
+		60,
+		NULL,
+		IT_POWERUP,
+		0,
+		NULL,
+		0,
+/* precache */ "items/quadfire1.wav items/quadfire2.wav items/quadfire3.wav"
+	},
+
+	
 /*QUAKED item_invulnerability (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
@@ -2104,6 +2248,32 @@ normal door key - red
 /* precache */ ""
 	},
 
+
+// RAFAEL
+/*QUAKED key_green_key (0 .5 .8) (-16 -16 -16) (16 16 16)
+normal door key - blue
+*/
+	{
+		"key_green_key",
+		Pickup_Key,
+		NULL,
+		Drop_General,
+		NULL,
+		"items/pkup.wav",
+		"models/items/keys/green_key/tris.md2", EF_ROTATE,
+		NULL,
+		"k_green",
+		"Green Key",
+		2,
+		0,
+		NULL,
+		IT_STAY_COOP|IT_KEY,
+		0,
+		NULL,
+		0,
+/* precache */ ""
+	},
+
 /*QUAKED key_commander_head (0 .5 .8) (-16 -16 -16) (16 16 16)
 tank commander's head
 */
@@ -2242,6 +2412,23 @@ void SP_item_health_mega (edict_t *self)
 	SpawnItem (self, FindItem ("Health"));
 	gi.soundindex ("items/m_health.wav");
 	self->style = HEALTH_IGNORE_MAX|HEALTH_TIMED;
+}
+
+
+void SP_item_foodcube (edict_t *self)
+{
+	if ( deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH) )
+	{
+		G_FreeEdict (self);
+		return;
+	}
+
+	self->model = "models/objects/trapfx/tris.md2";
+	SpawnItem (self, FindItem ("Health"));
+	self->spawnflags |= DROPPED_ITEM;
+	self->style = HEALTH_IGNORE_MAX;
+	gi.soundindex ("items/s_health.wav");
+	self->classname = "foodcube";
 }
 
 

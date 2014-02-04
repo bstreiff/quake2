@@ -448,6 +448,14 @@ void SV_CalcBlend (edict_t *ent)
 		if (remaining > 30 || (remaining & 4) )
 			SV_AddBlend (0, 0, 1, 0.08, ent->client->ps.blend);
 	}
+	else if (ent->client->quadfire_framenum > level.framenum)
+	{
+		remaining = ent->client->quadfire_framenum - level.framenum;
+		if (remaining == 30)	// beginning to fade
+			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/quadfire2.wav"), 1, ATTN_NORM, 0);
+		if (remaining > 30 || (remaining & 4) )
+			SV_AddBlend (1, 0.2, 0.5, 0.08, ent->client->ps.blend);
+	}
 	else if (ent->client->invincible_framenum > level.framenum)
 	{
 		remaining = ent->client->invincible_framenum - level.framenum;
@@ -774,6 +782,13 @@ void G_SetClientEffects (edict_t *ent)
 			ent->s.effects |= EF_QUAD;
 	}
 
+	if (ent->client->quadfire_framenum > level.framenum)
+	{
+		remaining = ent->client->quadfire_framenum - level.framenum;
+		if (remaining > 30 || (remaining & 4) )
+			ent->s.effects |= EF_QUAD;
+	}
+
 	if (ent->client->invincible_framenum > level.framenum)
 	{
 		remaining = ent->client->invincible_framenum - level.framenum;
@@ -841,6 +856,8 @@ void G_SetClientSound (edict_t *ent)
 		ent->s.sound = gi.soundindex("weapons/rg_hum.wav");
 	else if (strcmp(weap, "weapon_bfg") == 0)
 		ent->s.sound = gi.soundindex("weapons/bfg_hum.wav");
+	else if (strcmp (weap, "weapon_phalanx") == 0)
+		ent->s.sound = gi.soundindex ("weapons/phaloop.wav");
 	else if (ent->client->weapon_sound)
 		ent->s.sound = ent->client->weapon_sound;
 	else

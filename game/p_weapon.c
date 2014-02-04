@@ -24,10 +24,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 static qboolean	is_quad;
+static qboolean is_quadfire;
 static byte		is_silenced;
 
 
 void weapon_grenade_fire (edict_t *ent, qboolean held);
+void weapon_trap_fire (edict_t *ent, qboolean held);
 
 
 static void P_ProjectSource (gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
@@ -135,7 +137,8 @@ qboolean Pickup_Weapon (edict_t *ent, edict_t *other)
 	{
 		// give them some ammo with it
 		ammo = FindItem (ent->item->ammo);
-		if ( (int)dmflags->value & DF_INFINITE_AMMO )
+		// Don't get infinite ammo with trap
+		if ( ((int)dmflags->value & DF_INFINITE_AMMO) && Q_stricmp(ent->item->pickup_name, "ammo_trap") )
 			Add_Ammo (other, ammo, 1000);
 		else
 			Add_Ammo (other, ammo, ammo->quantity);
@@ -239,6 +242,18 @@ void NoAmmoWeaponChange (edict_t *ent)
 		ent->client->newweapon = FindItem ("railgun");
 		return;
 	}
+	if ( ent->client->pers.inventory[ITEM_INDEX (FindItem ("mag slug"))]
+		&& ent->client->pers.inventory[ITEM_INDEX (FindItem ("phalanx"))])
+	{
+		ent->client->newweapon = FindItem ("phalanx");	
+	}
+	// RAFAEL
+	if ( ent->client->pers.inventory[ITEM_INDEX (FindItem ("cells"))]
+		&& ent->client->pers.inventory[ITEM_INDEX (FindItem ("ionripper"))])
+	{
+		ent->client->newweapon = FindItem ("ionrippergun");	
+	}
+	
 	if ( ent->client->pers.inventory[ITEM_INDEX(FindItem("cells"))]
 		&&  ent->client->pers.inventory[ITEM_INDEX(FindItem("hyperblaster"))] )
 	{
@@ -292,6 +307,7 @@ void Think_Weapon (edict_t *ent)
 	if (ent->client->pers.weapon && ent->client->pers.weapon->weaponthink)
 	{
 		is_quad = (ent->client->quad_framenum > level.framenum);
+		is_quadfire = (ent->client->quadfire_framenum > level.framenum);
 		if (ent->client->silencer_shots)
 			is_silenced = MZ_SILENCED;
 		else
@@ -377,7 +393,7 @@ A generic function to handle the basics of weapon thinking
 #define FRAME_IDLE_FIRST		(FRAME_FIRE_LAST + 1)
 #define FRAME_DEACTIVATE_FIRST	(FRAME_IDLE_LAST + 1)
 
-void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int FRAME_DEACTIVATE_LAST, int *pause_frames, int *fire_frames, void (*fire)(edict_t *ent))
+static void Weapon_Generic_Impl (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int FRAME_DEACTIVATE_LAST, int *pause_frames, int *fire_frames, void (*fire)(edict_t *ent))
 {
 	int		n;
 
@@ -530,6 +546,13 @@ void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST,
 	}
 }
 
+void Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int FRAME_DEACTIVATE_LAST, int *pause_frames, int *fire_frames, void(*fire)(edict_t *ent))
+{
+	Weapon_Generic_Impl(ent, FRAME_ACTIVATE_LAST, FRAME_FIRE_LAST, FRAME_IDLE_LAST, FRAME_DEACTIVATE_LAST, pause_frames, fire_frames, fire);
+
+	if (is_quadfire)
+		Weapon_Generic_Impl(ent, FRAME_ACTIVATE_LAST, FRAME_FIRE_LAST, FRAME_IDLE_LAST, FRAME_DEACTIVATE_LAST, pause_frames, fire_frames, fire);
+}
 
 /*
 ======================================================================
@@ -1539,3 +1562,310 @@ void Weapon_LightningGun (edict_t *ent)
 
 
 //======================================================================
+
+// RAFAEL
+/*
+	RipperGun
+*/
+
+void weapon_ionripper_fire (edict_t *ent)
+{
+	vec3_t	start;
+	vec3_t	forward, right;
+	vec3_t	offset;
+	vec3_t	tempang;
+	int		damage;
+	int		kick;
+
+	if (deathmatch->value)
+	{
+		// tone down for deathmatch
+		damage = 30;
+		kick = 40;
+	}
+	else
+	{
+		damage = 50;
+		kick = 60;
+	}
+	
+	if (is_quad)
+	{
+		damage *= 4;
+		kick *= 4;
+	}
+
+	VectorCopy (ent->client->v_angle, tempang);
+	tempang[YAW] += crandom();
+
+	AngleVectors (tempang, forward, right, NULL);
+	
+	VectorScale (forward, -3, ent->client->kick_origin);
+	ent->client->kick_angles[0] = -3;
+
+	// VectorSet (offset, 0, 7, ent->viewheight - 8);
+	VectorSet (offset, 16, 7, ent->viewheight - 8);
+
+	P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
+
+	fire_ionripper (ent, start, forward, damage, 500, EF_IONRIPPER);
+
+	// send muzzle flash
+	gi.WriteByte (svc_muzzleflash);
+	gi.WriteShort (ent - g_edicts);
+	gi.WriteByte (MZ_IONRIPPER | is_silenced);
+	gi.multicast (ent->s.origin, MULTICAST_PVS);
+
+	ent->client->ps.gunframe++;
+	PlayerNoise (ent, start, PNOISE_WEAPON);
+
+	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
+		ent->client->pers.inventory[ent->client->ammo_index] -= ent->client->pers.weapon->quantity;
+	
+	if (ent->client->pers.inventory[ent->client->ammo_index] < 0)
+		ent->client->pers.inventory[ent->client->ammo_index] = 0;
+}
+
+
+void Weapon_Ionripper (edict_t *ent)
+{
+	static int pause_frames[] = {36, 0};
+	static int fire_frames[] = {5, 0};
+
+	Weapon_Generic (ent, 4, 6, 36, 39, pause_frames, fire_frames, weapon_ionripper_fire);
+}
+
+
+// 
+//	Phalanx
+//
+
+void weapon_phalanx_fire (edict_t *ent)
+{
+	vec3_t		start;
+	vec3_t		forward, right, up;
+	vec3_t		offset;
+	vec3_t		v;
+	int			kick = 12;
+	int			damage;
+	float		damage_radius;
+	int			radius_damage;
+
+	damage = 70 + (int)(random() * 10.0);
+	radius_damage = 120;
+	damage_radius = 120;
+	
+	if (is_quad)
+	{
+		damage *= 4;
+		radius_damage *= 4;
+	}
+
+	AngleVectors (ent->client->v_angle, forward, right, NULL);
+
+	VectorScale (forward, -2, ent->client->kick_origin);
+	ent->client->kick_angles[0] = -2;
+
+	VectorSet(offset, 0, 8,  ent->viewheight-8);
+	P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
+
+	if (ent->client->ps.gunframe == 8)
+	{
+		v[PITCH] = ent->client->v_angle[PITCH];
+		v[YAW]   = ent->client->v_angle[YAW] - 1.5;
+		v[ROLL]  = ent->client->v_angle[ROLL];
+		AngleVectors (v, forward, right, up);
+		
+		radius_damage = 30;
+		damage_radius = 120;
+	
+		fire_plasma (ent, start, forward, damage, 725, damage_radius, radius_damage);
+
+		if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
+			ent->client->pers.inventory[ent->client->ammo_index]--;
+	}
+	else
+	{
+		v[PITCH] = ent->client->v_angle[PITCH];
+		v[YAW]   = ent->client->v_angle[YAW] + 1.5;
+		v[ROLL]  = ent->client->v_angle[ROLL];
+		AngleVectors (v, forward, right, up);
+		fire_plasma (ent, start, forward, damage, 725, damage_radius, radius_damage);
+
+		// send muzzle flash
+		gi.WriteByte (svc_muzzleflash);
+		gi.WriteShort (ent-g_edicts);
+		gi.WriteByte (MZ_PHALANX | is_silenced);
+		gi.multicast (ent->s.origin, MULTICAST_PVS);
+		
+		PlayerNoise(ent, start, PNOISE_WEAPON);
+	}
+	
+	ent->client->ps.gunframe++;
+	
+}
+
+void Weapon_Phalanx (edict_t *ent)
+{
+	static int	pause_frames[]	= {29, 42, 55, 0};
+	static int	fire_frames[]	= {7, 8, 0};
+
+	Weapon_Generic (ent, 5, 20, 58, 63, pause_frames, fire_frames, weapon_phalanx_fire);
+	
+}
+
+/*
+======================================================================
+
+TRAP
+
+======================================================================
+*/
+
+#define TRAP_TIMER			5.0
+#define TRAP_MINSPEED		300
+#define TRAP_MAXSPEED		700
+
+void weapon_trap_fire (edict_t *ent, qboolean held)
+{
+	vec3_t	offset;
+	vec3_t	forward, right;
+	vec3_t	start;
+	int		damage = 125;
+	float	timer;
+	int		speed;
+	float	radius;
+
+	radius = damage+40;
+	if (is_quad)
+		damage *= 4;
+
+	VectorSet(offset, 8, 8, ent->viewheight-8);
+	AngleVectors (ent->client->v_angle, forward, right, NULL);
+	P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
+
+	timer = ent->client->grenade_time - level.time;
+	speed = GRENADE_MINSPEED + (GRENADE_TIMER - timer) * ((GRENADE_MAXSPEED - GRENADE_MINSPEED) / GRENADE_TIMER);
+	// fire_grenade2 (ent, start, forward, damage, speed, timer, radius, held);
+	fire_trap (ent, start, forward, damage, speed, timer, radius, held);
+	
+// you don't get infinite traps!  ZOID
+//	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
+
+	ent->client->pers.inventory[ent->client->ammo_index]--;
+
+	ent->client->grenade_time = level.time + 1.0;
+}
+
+void Weapon_Trap (edict_t *ent)
+{
+	if ((ent->client->newweapon) && (ent->client->weaponstate == WEAPON_READY))
+	{
+		ChangeWeapon (ent);
+		return;
+	}
+
+	if (ent->client->weaponstate == WEAPON_ACTIVATING)
+	{
+		ent->client->weaponstate = WEAPON_READY;
+		ent->client->ps.gunframe = 16;
+		return;
+	}
+
+	if (ent->client->weaponstate == WEAPON_READY)
+	{
+		if ( ((ent->client->latched_buttons|ent->client->buttons) & BUTTON_ATTACK) )
+		{
+			ent->client->latched_buttons &= ~BUTTON_ATTACK;
+			if (ent->client->pers.inventory[ent->client->ammo_index])
+			{
+				ent->client->ps.gunframe = 1;
+				ent->client->weaponstate = WEAPON_FIRING;
+				ent->client->grenade_time = 0;
+			}
+			else
+			{
+				if (level.time >= ent->pain_debounce_time)
+				{
+					gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
+					ent->pain_debounce_time = level.time + 1;
+				}
+				NoAmmoWeaponChange (ent);
+			}
+			return;
+		}
+
+		if ((ent->client->ps.gunframe == 29) || (ent->client->ps.gunframe == 34) || (ent->client->ps.gunframe == 39) || (ent->client->ps.gunframe == 48))
+		{
+			if (rand()&15)
+				return;
+		}
+
+		if (++ent->client->ps.gunframe > 48)
+			ent->client->ps.gunframe = 16;
+		return;
+	}
+
+	if (ent->client->weaponstate == WEAPON_FIRING)
+	{
+		if (ent->client->ps.gunframe == 5)
+			// RAFAEL 16-APR-98
+			// gi.sound(ent, CHAN_WEAPON, gi.soundindex("weapons/hgrena1b.wav"), 1, ATTN_NORM, 0);
+			gi.sound(ent, CHAN_WEAPON, gi.soundindex("weapons/trapcock.wav"), 1, ATTN_NORM, 0);
+			// END 16-APR-98
+
+		if (ent->client->ps.gunframe == 11)
+		{
+			if (!ent->client->grenade_time)
+			{
+				ent->client->grenade_time = level.time + GRENADE_TIMER + 0.2;
+				// RAFAEL 16-APR-98
+				ent->client->weapon_sound = gi.soundindex("weapons/traploop.wav");
+				// END 16-APR-98
+			}
+
+			// they waited too long, detonate it in their hand
+			if (!ent->client->grenade_blew_up && level.time >= ent->client->grenade_time)
+			{
+				ent->client->weapon_sound = 0;
+				weapon_trap_fire (ent, true);
+				ent->client->grenade_blew_up = true;
+			}
+
+			if (ent->client->buttons & BUTTON_ATTACK)
+				return;
+
+			if (ent->client->grenade_blew_up)
+			{
+				if (level.time >= ent->client->grenade_time)
+				{
+					ent->client->ps.gunframe = 15;
+					ent->client->grenade_blew_up = false;
+				}
+				else
+				{
+					return;
+				}
+			}
+		}
+
+		if (ent->client->ps.gunframe == 12)
+		{
+			ent->client->weapon_sound = 0;
+			weapon_trap_fire (ent, false);
+			if (ent->client->pers.inventory[ent->client->ammo_index] == 0)
+				NoAmmoWeaponChange (ent);
+		}
+
+		if ((ent->client->ps.gunframe == 15) && (level.time < ent->client->grenade_time))
+			return;
+
+		ent->client->ps.gunframe++;
+
+		if (ent->client->ps.gunframe == 16)
+		{
+			ent->client->grenade_time = 0;
+			ent->client->weaponstate = WEAPON_READY;
+		}
+	}
+}

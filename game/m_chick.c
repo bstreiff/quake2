@@ -463,7 +463,10 @@ void ChickRocket (edict_t *self)
 	VectorSubtract (vec, start, dir);
 	VectorNormalize (dir);
 
-	monster_fire_rocket (self, start, dir, 50, 500, MZ2_CHICK_ROCKET_1);
+	if (self->s.skinnum > 1)
+		monster_fire_heat (self, start, dir, 50, 500, MZ2_CHICK_ROCKET_1);
+	else
+		monster_fire_rocket (self, start, dir, 50, 500, MZ2_CHICK_ROCKET_1);
 }	
 
 void Chick_PreAttack1 (edict_t *self)
@@ -649,7 +652,7 @@ void SP_monster_chick (edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/bitch/tris.md2");
+	self->s.modelindex = gi.modelindex ("xatrix:models/monsters/bitch/tris.md2");
 	VectorSet (self->mins, -16, -16, 0);
 	VectorSet (self->maxs, 16, 16, 56);
 
@@ -674,4 +677,11 @@ void SP_monster_chick (edict_t *self)
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start (self);
+}
+/*QUAKED monster_chick_heat (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight 
+*/
+void SP_monster_chick_heat (edict_t *self)
+{
+	SP_monster_chick (self);
+	self->s.skinnum = 3;
 }

@@ -145,14 +145,43 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 				}
 				else
 				{
-					if (dz > 8)
-						neworg[2] -= 8;
-					else if (dz > 0)
-						neworg[2] -= dz;
-					else if (dz < -8)
-						neworg[2] += 8;
+					// RAFAEL
+					if (strcmp (ent->classname , "monster_fixbot") == 0)
+					{
+						if (ent->s.frame >= 105 && ent->s.frame <= 120)
+						{
+							if (dz > 12)
+								neworg[2] --;
+							else if (dz < -12)
+								neworg[2] ++;
+						}
+						else if (ent->s.frame >= 31 && ent->s.frame <= 88)
+						{
+							if (dz > 12)
+								neworg[2] -= 12;
+							else if (dz < -12)
+								neworg[2] += 12;
+						}
+						else
+						{
+							if (dz > 12)
+								neworg[2] -= 8;
+							else if (dz < -12)
+								neworg[2] += 8;
+						}
+					}
+					// RAFAEL ( else )
 					else
-						neworg[2] += dz;
+					{
+						if (dz > 8)
+							neworg[2] -= 8;
+						else if (dz > 0)
+							neworg[2] -= dz;
+						else if (dz < -8)
+							neworg[2] += 8;
+						else
+							neworg[2] += dz;
+					}
 				}
 			}
 			trace = gi.trace (ent->s.origin, ent->mins, ent->maxs, neworg, ent, MASK_MONSTERSOLID);

@@ -226,6 +226,115 @@ void ThrowHead (edict_t *self, char *gibname, int damage, int type)
 }
 
 
+void ThrowGibACID (edict_t *self, char *gibname, int damage, int type)
+{
+	edict_t *gib;
+	vec3_t vd;
+	vec3_t origin;
+	vec3_t size;
+	float vscale;
+
+	gib = G_Spawn();
+
+	VectorScale (self->size, 0.5, size);
+	VectorAdd (self->absmin, size, origin);
+	gib->s.origin[0] = origin[0] + crandom() * size[0];
+	gib->s.origin[1] = origin[1] + crandom() * size[1];
+	gib->s.origin[2] = origin[2] + crandom() * size[2];
+
+	// gi.setmodel (gib, gibname);
+	gib->s.modelindex = gi.modelindex (gibname);
+
+	gib->clipmask = MASK_SHOT;
+	gib->solid = SOLID_BBOX;
+ 
+	gib->s.effects |= EF_GREENGIB;
+	// note to self check this
+	gib->s.renderfx |= RF_FULLBRIGHT;
+	gib->flags |= FL_NO_KNOCKBACK;
+	gib->takedamage = DAMAGE_YES;
+	gib->die = gib_die;
+	gib->dmg = 2;
+
+	if (type == GIB_ORGANIC)
+	{
+		gib->movetype = MOVETYPE_TOSS;
+		// RAFAEL 24-APR-98
+		// removed acid damage
+		//gib->touch = gib_touchacid;
+		vscale = 3.0;
+	}
+	else
+	{
+		gib->movetype = MOVETYPE_BOUNCE;
+		vscale = 1.0;
+	}
+
+	VelocityForDamage (damage, vd);
+	VectorMA (self->velocity, vscale, vd, gib->velocity);
+	ClipGibVelocity (gib);
+	gib->avelocity[0] = random()*600;
+	gib->avelocity[1] = random()*600;
+	gib->avelocity[2] = random()*600;
+
+	gib->think = G_FreeEdict;
+	gib->nextthink = level.time + 10 + random()*10;
+
+	gi.linkentity (gib);
+}
+
+// RAFAEL
+void ThrowHeadACID (edict_t *self, char *gibname, int damage, int type)
+{
+	vec3_t vd;
+	float vscale;
+
+	self->s.skinnum = 0;
+	self->s.frame = 0;
+	VectorClear (self->mins);
+	VectorClear (self->maxs);
+
+	self->s.modelindex2 = 0;
+	gi.setmodel (self, gibname);
+ 
+	self->clipmask = MASK_SHOT;
+	self->solid = SOLID_BBOX;
+  
+	self->s.effects |= EF_GREENGIB;
+	self->s.effects &= ~EF_FLIES;
+	self->s.effects |= RF_FULLBRIGHT;
+	self->s.sound = 0;
+	self->flags |= FL_NO_KNOCKBACK;
+	self->svflags &= ~SVF_MONSTER;
+	self->takedamage = DAMAGE_YES;
+	self->die = gib_die;
+	self->dmg = 2;
+
+	if (type == GIB_ORGANIC)
+	{
+		self->movetype = MOVETYPE_TOSS;
+		// RAFAEL 24-APR-98
+		// removed acid damage
+		// self->touch = gib_touchacid;
+		vscale = 0.5;
+	}
+	else
+	{
+		self->movetype = MOVETYPE_BOUNCE;
+		vscale = 1.0;
+	}
+
+	VelocityForDamage (damage, vd);
+	VectorMA (self->velocity, vscale, vd, self->velocity);
+	ClipGibVelocity (self);
+
+	self->avelocity[YAW] = crandom()*600;
+
+	self->think = G_FreeEdict;
+	self->nextthink = level.time + 10 + random()*10;
+
+	gi.linkentity (self);
+}
 void ThrowClientHead (edict_t *self, int damage)
 {
 	vec3_t	vd;
@@ -1309,6 +1418,37 @@ void SP_misc_viper (edict_t *ent)
 	gi.linkentity (ent);
 }
 
+/*QUAKED misc_crashviper (1 .5 0) (-176 -120 -24) (176 120 72) 
+This is a large viper about to crash
+*/
+void SP_misc_crashviper (edict_t *ent)
+{
+	if (!ent->target)
+	{
+		gi.dprintf ("misc_viper without a target at %s\n", vtos(ent->absmin));
+		G_FreeEdict (ent);
+		return;
+	}
+
+	if (!ent->speed)
+		ent->speed = 300;
+
+	ent->movetype = MOVETYPE_PUSH;
+	ent->solid = SOLID_NOT;
+	ent->s.modelindex = gi.modelindex ("models/ships/bigviper/tris.md2");
+	VectorSet (ent->mins, -16, -16, 0);
+	VectorSet (ent->maxs, 16, 16, 32);
+
+
+	ent->think = func_train_find;
+	ent->nextthink = level.time + FRAMETIME;
+	ent->use = misc_viper_use;
+	ent->svflags |= SVF_NOCLIENT;
+	ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = ent->speed;
+
+	gi.linkentity (ent);
+}
+
 
 /*QUAKED misc_bigviper (1 .5 0) (-176 -120 -24) (176 120 72) 
 This is a large stationary viper as seen in Paul's intro
@@ -1394,6 +1534,56 @@ void SP_misc_viper_bomb (edict_t *self)
 }
 
 
+/*QUAKED misc_viper_missile (1 0 0) (-8 -8 -8) (8 8 8)
+"dmg"	how much boom should the bomb make? the default value is 250
+*/
+
+void misc_viper_missile_use (edict_t *self, edict_t *other, edict_t *activator)
+{
+	
+	vec3_t	forward, right, up;
+	vec3_t	start, dir;
+	vec3_t	vec;
+	
+	AngleVectors (self->s.angles, forward, right, up);
+	
+	self->enemy = G_Find (NULL, FOFS(targetname), self->target);
+	
+	VectorCopy (self->enemy->s.origin, vec);
+	vec[2] + 16;
+	
+	VectorCopy (self->s.origin, start);
+	VectorSubtract (vec, start, dir);
+	VectorNormalize (dir);
+	
+	monster_fire_rocket (self, start, dir, self->dmg, 500, MZ2_CHICK_ROCKET_1);
+	
+	self->nextthink = level.time + 0.1;
+	self->think = G_FreeEdict;
+
+	
+}
+
+
+void SP_misc_viper_missile (edict_t *self)
+{
+	self->movetype = MOVETYPE_NONE;
+	self->solid = SOLID_NOT;
+	VectorSet (self->mins, -8, -8, -8);
+	VectorSet (self->maxs, 8, 8, 8);
+
+	if (!self->dmg)
+		self->dmg = 250;
+
+	self->s.modelindex = gi.modelindex ("models/objects/bomb/tris.md2");
+
+	self->use = misc_viper_missile_use;
+	self->svflags |= SVF_NOCLIENT;
+
+	gi.linkentity (self);
+}
+
+
 /*QUAKED misc_strogg_ship (1 .5 0) (-16 -16 0) (16 16 32)
 This is a Storgg ship for the flybys.
 It is trigger_spawned, so you must have something use it for it to show up.
@@ -1439,6 +1629,43 @@ void SP_misc_strogg_ship (edict_t *ent)
 	gi.linkentity (ent);
 }
 
+
+/*QUAKED misc_transport (1 0 0) (-8 -8 -8) (8 8 8) TRIGGER_SPAWN
+Maxx's transport at end of game
+*/
+void SP_misc_transport (edict_t *ent)
+{
+	
+	if (!ent->target)
+	{
+		gi.dprintf ("%s without a target at %s\n", ent->classname, vtos(ent->absmin));
+		G_FreeEdict (ent);
+		return;
+	}
+
+	if (!ent->speed)
+		ent->speed = 300;
+
+	ent->movetype = MOVETYPE_PUSH;
+	ent->solid = SOLID_NOT;
+	ent->s.modelindex = gi.modelindex ("models/objects/ship/tris.md2");
+
+	VectorSet (ent->mins, -16, -16, 0);
+	VectorSet (ent->maxs, 16, 16, 32);
+
+	ent->think = func_train_find;
+	ent->nextthink = level.time + FRAMETIME;
+	ent->use = misc_strogg_ship_use;
+	ent->svflags |= SVF_NOCLIENT;
+	ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = ent->speed;
+
+	if (!(ent->spawnflags & 1))
+	{
+		ent->spawnflags |= 1;
+	}
+	
+	gi.linkentity (ent);
+}
 
 /*QUAKED misc_satellite_dish (1 .5 0) (-64 -64 0) (64 64 128)
 */
@@ -1876,3 +2103,50 @@ void SP_misc_teleporter_dest (edict_t *ent)
 	gi.linkentity (ent);
 }
 
+/*QUAKED misc_amb4 (1 0 0) (-16 -16 -16) (16 16 16)
+Mal's amb4 loop entity
+*/
+static int amb4sound;
+
+void amb4_think (edict_t *ent)
+{
+	ent->nextthink = level.time + 2.7;
+	gi.sound(ent, CHAN_VOICE, amb4sound, 1, ATTN_NONE, 0);
+}
+
+void SP_misc_amb4 (edict_t *ent)
+{
+	ent->think = amb4_think;
+	ent->nextthink = level.time + 1;
+	amb4sound = gi.soundindex ("world/amb4.wav");
+	gi.linkentity (ent);
+}
+
+/*QUAKED misc_nuke (1 0 0) (-16 -16 -16) (16 16 16)
+*/
+
+void use_nuke (edict_t *self, edict_t *other, edict_t *activator)
+{
+	edict_t *from = g_edicts;
+
+	for ( ; from < &g_edicts[globals.num_edicts]; from++)
+	{
+		if (from == self)
+			continue;
+		if (from->client)
+		{
+			T_Damage (from, self, self, vec3_origin, from->s.origin, vec3_origin, 100000, 1, 0, MOD_TRAP);
+		}
+		else if (from->svflags & SVF_MONSTER)
+		{
+			G_FreeEdict (from);
+		}
+	}
+
+	self->use = NULL;
+}
+
+void SP_misc_nuke (edict_t *ent)
+{
+	ent->use = use_nuke;
+}

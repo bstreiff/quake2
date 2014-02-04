@@ -263,6 +263,10 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 		case MOD_TRIGGER_HURT:
 			message = "was in the wrong place";
 			break;
+		case MOD_GEKK:
+		case MOD_BRAINTENTACLE:
+			message = "that's gotta hurt";
+			break;
 		}
 		if (attacker == self)
 		{
@@ -290,6 +294,9 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 				break;
 			case MOD_BFG_BLAST:
 				message = "should have used a smaller gun";
+				break;
+			case MOD_TRAP:
+			 	message = "sucked into his own trap";
 				break;
 			default:
 				if (IsNeutral(self))
@@ -386,6 +393,16 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 			case MOD_LIGHTNING:
 				message = "was electrocuted by";
 				break;
+			case MOD_RIPPER:
+				message = "ripped to shreds by";
+				message2 = "'s ripper gun";
+				break;
+			case MOD_PHALANX:
+				message = "was evaporated by";
+				break;
+			case MOD_TRAP:
+				message = "caught in trap by";
+				break;
 			}
 			if (message)
 			{
@@ -415,6 +432,7 @@ void TossClientWeapon (edict_t *self)
 	gitem_t		*item;
 	edict_t		*drop;
 	qboolean	quad;
+	qboolean	quadfire;
 	float		spread;
 
 	if (!deathmatch->value)
@@ -431,8 +449,14 @@ void TossClientWeapon (edict_t *self)
 	else
 		quad = (self->client->quad_framenum > (level.framenum + 10));
 
+	if (!((int)(dmflags->value) & DF_QUADFIRE_DROP))
+		quadfire = false;
+	else
+		quadfire = (self->client->quadfire_framenum > (level.framenum + 10));
 	if (item && quad)
 		spread = 22.5;
+	else if (item && quadfire)
+		spread = 12.5;
 	else
 		spread = 0.0;
 
@@ -453,6 +477,18 @@ void TossClientWeapon (edict_t *self)
 
 		drop->touch = Touch_Item;
 		drop->nextthink = level.time + (self->client->quad_framenum - level.framenum) * FRAMETIME;
+		drop->think = G_FreeEdict;
+	}
+
+	if (quadfire)
+	{
+		self->client->v_angle[YAW] += spread;
+		drop = Drop_Item (self, FindItemByClassname ("item_quadfire"));
+		self->client->v_angle[YAW] -= spread;
+		drop->spawnflags |= DROPPED_PLAYER_ITEM;
+
+		drop->touch = Touch_Item;
+		drop->nextthink = level.time + (self->client->quadfire_framenum - level.framenum) * FRAMETIME;
 		drop->think = G_FreeEdict;
 	}
 }
@@ -550,6 +586,8 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	self->client->enviro_framenum = 0;
 	self->flags &= ~FL_POWER_ARMOR;
 
+	// RAFAEL
+	self->client->quadfire_framenum = 0;
 	if (self->health < -40)
 	{	// gib
 		gi.sound (self, CHAN_BODY, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -629,6 +667,8 @@ void InitClientPersistant (gclient_t *client)
 	client->pers.max_cells		= 200;
 	client->pers.max_slugs		= 50;
 
+	client->pers.max_magslug	= 50;
+	client->pers.max_trap		= 5;
 	client->pers.connected = true;
 }
 

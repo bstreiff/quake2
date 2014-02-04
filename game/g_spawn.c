@@ -149,6 +149,23 @@ void SP_turret_breach (edict_t *self);
 void SP_turret_base (edict_t *self);
 void SP_turret_driver (edict_t *self);
 
+void SP_monster_soldier_hypergun (edict_t *self);
+void SP_monster_soldier_lasergun (edict_t *self);
+void SP_monster_soldier_ripper (edict_t *self);
+void SP_monster_fixbot (edict_t *self);
+void SP_monster_gekk (edict_t *self);
+void SP_monster_chick_heat (edict_t *self);
+void SP_monster_gladb (edict_t *self);
+void SP_monster_boss5 (edict_t *self);
+void SP_rotating_light (edict_t *self);
+void SP_object_repair (edict_t *self);
+void SP_misc_crashviper (edict_t *ent);
+void SP_misc_viper_missile (edict_t *self);
+void SP_misc_amb4 (edict_t *ent);
+void SP_target_mal_laser (edict_t *ent);
+void SP_misc_transport (edict_t *ent);
+
+void SP_misc_nuke (edict_t *ent);
 
 spawn_t	spawns[] = {
 	{"item_health", SP_item_health},
@@ -178,6 +195,8 @@ spawn_t	spawns[] = {
 	{"func_explosive", SP_func_explosive},
 	{"func_killbox", SP_func_killbox},
 
+	{"func_object_repair", SP_object_repair},
+	{"rotating_light", SP_rotating_light},
 	{"trigger_always", SP_trigger_always},
 	{"trigger_once", SP_trigger_once},
 	{"trigger_multiple", SP_trigger_multiple},
@@ -209,6 +228,7 @@ spawn_t	spawns[] = {
 	{"target_character", SP_target_character},
 	{"target_string", SP_target_string},
 
+	{"target_mal_laser", SP_target_mal_laser},
 	{"worldspawn", SP_worldspawn},
 	{"viewthing", SP_viewthing},
 
@@ -241,6 +261,13 @@ spawn_t	spawns[] = {
 	{"misc_easterchick", SP_misc_easterchick},
 	{"misc_easterchick2", SP_misc_easterchick2},
 
+	{"misc_crashviper", SP_misc_crashviper},
+	{"misc_viper_missile", SP_misc_viper_missile},
+	{"misc_amb4", SP_misc_amb4},
+
+	{"misc_transport", SP_misc_transport},
+
+	{"misc_nuke", SP_misc_nuke},
 	{"monster_berserk", SP_monster_berserk},
 	{"monster_gladiator", SP_monster_gladiator},
 	{"monster_gunner", SP_monster_gunner},
@@ -266,6 +293,14 @@ spawn_t	spawns[] = {
 
 	{"monster_commander_body", SP_monster_commander_body},
 
+	{"monster_soldier_hypergun", SP_monster_soldier_hypergun},
+	{"monster_soldier_lasergun", SP_monster_soldier_lasergun},
+	{"monster_soldier_ripper",	SP_monster_soldier_ripper},
+	{"monster_fixbot", SP_monster_fixbot},
+	{"monster_gekk", SP_monster_gekk},
+	{"monster_chick_heat", SP_monster_chick_heat},
+	{"monster_gladb", SP_monster_gladb},
+	{"monster_boss5", SP_monster_boss5},
 	{"turret_breach", SP_turret_breach},
 	{"turret_base", SP_turret_base},
 	{"turret_driver", SP_turret_driver},
@@ -913,19 +948,24 @@ void SP_worldspawn (edict_t *ent)
 
 	// sexed models
 	// THIS ORDER MUST MATCH THE DEFINES IN g_local.h
-	// you can add more, max 15
-	gi.modelindex ("#w_blaster.md2");
-	gi.modelindex ("#w_shotgun.md2");
-	gi.modelindex ("#w_sshotgun.md2");
-	gi.modelindex ("#w_machinegun.md2");
-	gi.modelindex ("#w_chaingun.md2");
-	gi.modelindex ("#a_grenades.md2");
-	gi.modelindex ("#w_glauncher.md2");
-	gi.modelindex ("#w_rlauncher.md2");
-	gi.modelindex ("#w_hyperblaster.md2");
-	gi.modelindex ("#w_railgun.md2");
-	gi.modelindex ("#w_bfg.md2");
-	gi.modelindex ("#w_lightninggun.md2");
+	// you can add more, max 20 (MAX_CLIENTWEAPONMODELS)
+	if (coop->value || deathmatch->value)
+	{
+		gi.modelindex ("#w_blaster.md2");
+		gi.modelindex ("#w_shotgun.md2");
+		gi.modelindex ("#w_sshotgun.md2");
+		gi.modelindex ("#w_machinegun.md2");
+		gi.modelindex ("#w_chaingun.md2");
+		gi.modelindex ("#a_grenades.md2");
+		gi.modelindex ("#w_glauncher.md2");
+		gi.modelindex ("#w_rlauncher.md2");
+		gi.modelindex ("#w_hyperblaster.md2");
+		gi.modelindex ("#w_railgun.md2");
+		gi.modelindex ("#w_bfg.md2");
+		gi.modelindex ("#w_lightninggun.md2");
+		gi.modelindex ("#w_phalanx.md2");
+		gi.modelindex ("#w_ripper.md2");
+	}
 
 	//-------------------
 

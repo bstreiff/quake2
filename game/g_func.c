@@ -2046,3 +2046,189 @@ void SP_func_killbox (edict_t *ent)
 	ent->svflags = SVF_NOCLIENT;
 }
 
+/*QUAKED rotating_light (0 .5 .8) (-8 -8 -8) (8 8 8) START_OFF ALARM
+"health"	if set, the light may be killed.
+*/
+
+// RAFAEL 
+// note to self
+// the lights will take damage from explosions
+// this could leave a player in total darkness very bad
+ 
+#define START_OFF	1
+
+void rotating_light_alarm (edict_t *self)
+{
+	if (self->spawnflags & START_OFF)
+	{
+		self->think = NULL;
+		self->nextthink = 0;	
+	}
+	else
+	{
+		gi.sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self->moveinfo.sound_start, 1, ATTN_STATIC, 0);
+		self->nextthink = level.time + 1;
+	}
+}
+
+void rotating_light_killed (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+{
+	
+	gi.WriteByte (svc_temp_entity);
+	gi.WriteByte (TE_WELDING_SPARKS);
+	gi.WriteByte (30);
+	gi.WritePosition (self->s.origin);
+	gi.WriteDir (vec3_origin);
+	gi.WriteByte (0xe0 + (rand()&7));
+	gi.multicast (self->s.origin, MULTICAST_PVS);
+
+	self->s.effects &= ~EF_SPINNINGLIGHTS;
+	self->use = NULL;
+
+	self->think = G_FreeEdict;	
+	self->nextthink = level.time + 0.1;
+	
+}
+
+static void rotating_light_use (edict_t *self, edict_t *other, edict_t *activator)
+{
+	if (self->spawnflags & START_OFF)
+	{
+		self->spawnflags &= ~START_OFF;
+		self->s.effects |= EF_SPINNINGLIGHTS;
+
+		if (self->spawnflags & 2)
+		{
+			self->think = rotating_light_alarm;
+			self->nextthink = level.time + 0.1;
+		}
+	}
+	else
+	{
+		self->spawnflags |= START_OFF;
+		self->s.effects &= ~EF_SPINNINGLIGHTS;
+	}
+}
+	
+
+void SP_rotating_light (edict_t *self)
+{
+
+	self->movetype = MOVETYPE_STOP;
+	self->solid = SOLID_BBOX;
+	
+	self->s.modelindex = gi.modelindex ("models/objects/light/tris.md2");
+	
+	self->s.frame = 0;
+		
+	self->use = rotating_light_use;
+	
+	if (self->spawnflags & START_OFF)
+		self->s.effects &= ~EF_SPINNINGLIGHTS;
+	else
+	{
+		self->s.effects |= EF_SPINNINGLIGHTS;
+	}
+
+	if (!self->speed)
+		self->speed = 32;
+	// this is a real cheap way
+	// to set the radius of the light
+	// self->s.frame = self->speed;
+
+	if (!self->health)
+	{
+		self->health = 10;
+		self->max_health = self->health;
+		self->die = rotating_light_killed;
+		self->takedamage = DAMAGE_YES;
+	}
+	else
+	{
+		self->max_health = self->health;
+		self->die = rotating_light_killed;
+		self->takedamage = DAMAGE_YES;
+	}
+	
+	if (self->spawnflags & 2)
+	{
+		self->moveinfo.sound_start = gi.soundindex ("misc/alarm.wav");	
+	}
+	
+	gi.linkentity (self);
+
+}
+
+
+/*QUAKED func_object_repair (1 .5 0) (-8 -8 -8) (8 8 8) 
+object to be repaired.
+The default delay is 1 second
+"delay" the delay in seconds for spark to occur
+*/
+
+void object_repair_fx (edict_t *ent)
+{
+ 
+ 
+	ent->nextthink = level.time + ent->delay;
+
+	if (ent->health <= 100)
+		ent->health++;
+ 	else
+	{
+		gi.WriteByte (svc_temp_entity);
+		gi.WriteByte (TE_WELDING_SPARKS);
+		gi.WriteByte (10);
+		gi.WritePosition (ent->s.origin);
+		gi.WriteDir (vec3_origin);
+		gi.WriteByte (0xe0 + (rand()&7));
+		gi.multicast (ent->s.origin, MULTICAST_PVS);
+	}
+	
+}
+
+
+void object_repair_dead (edict_t *ent)
+{
+	G_UseTargets (ent, ent);
+	ent->nextthink = level.time + 0.1;
+	ent->think = object_repair_fx;
+}
+
+void object_repair_sparks (edict_t *ent)
+{
+ 
+	if (ent->health < 0)
+	{
+		ent->nextthink = level.time + 0.1;
+		ent->think = object_repair_dead;
+		return;
+	}
+
+	ent->nextthink = level.time + ent->delay;
+	
+	gi.WriteByte (svc_temp_entity);
+	gi.WriteByte (TE_WELDING_SPARKS);
+	gi.WriteByte (10);
+	gi.WritePosition (ent->s.origin);
+	gi.WriteDir (vec3_origin);
+	gi.WriteByte (0xe0 + (rand()&7));
+	gi.multicast (ent->s.origin, MULTICAST_PVS);
+	
+}
+
+void SP_object_repair (edict_t *ent)
+{
+	ent->movetype = MOVETYPE_NONE;
+	ent->solid = SOLID_BBOX;
+	ent->classname = "object_repair";
+	VectorSet (ent->mins, -8, -8, 8);
+	VectorSet (ent->maxs, 8, 8, 8);
+	ent->think = object_repair_sparks;
+	ent->nextthink = level.time + 1.0;
+	ent->health = 100;
+	if (!ent->delay)
+		ent->delay = 1.0;
+	
+}
+

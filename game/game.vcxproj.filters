@@ -159,6 +159,18 @@
     <ClCompile Include="q_shared.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="m_boss5.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="m_fixbot.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="m_gekk.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="m_gladb.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="g_local.h">
@@ -234,6 +246,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="q_shared.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="m_fixbot.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="m_gekk.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="m_soldierh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
