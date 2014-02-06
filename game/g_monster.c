@@ -58,6 +58,39 @@ void monster_fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, 
 	gi.multicast (start, MULTICAST_PVS);
 }	
 
+//ROGUE
+void monster_fire_blaster2 (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype, int effect)
+{
+	fire_blaster2 (self, start, dir, damage, speed, effect, false);
+
+	gi.WriteByte (svc_muzzleflash2);
+	gi.WriteShort (self - g_edicts);
+	gi.WriteByte (flashtype);
+	gi.multicast (start, MULTICAST_PVS);
+}
+
+// FIXME -- add muzzle flash
+void monster_fire_tracker (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, edict_t *enemy, int flashtype)
+{
+	fire_tracker (self, start, dir, damage, speed, enemy);
+
+	gi.WriteByte (svc_muzzleflash2);
+	gi.WriteShort (self - g_edicts);
+	gi.WriteByte (flashtype);
+	gi.multicast (start, MULTICAST_PVS);
+}
+
+void monster_fire_heat_beam (edict_t *self, vec3_t start, vec3_t dir, vec3_t offset, int damage, int kick, int flashtype)
+{
+	fire_heat_beam (self, start, dir, offset, damage, kick, true);
+
+	gi.WriteByte (svc_muzzleflash2);
+	gi.WriteShort (self - g_edicts);
+	gi.WriteByte (flashtype);
+	gi.multicast (start, MULTICAST_PVS);
+}
+//ROGUE
+
 // RAFAEL
 void monster_fire_blueblaster (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype, int effect)
 {
@@ -81,9 +114,9 @@ void monster_fire_ionripper (edict_t *self, vec3_t start, vec3_t dir, int damage
 }
 
 // RAFAEL
-void monster_fire_heat (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype)
+void monster_fire_heat_rocket (edict_t *self, vec3_t start, vec3_t dir, vec3_t offset, int damage, int speed, int flashtype)
 {
-	fire_heat (self, start, dir, damage, speed, damage, damage);
+	fire_heat_rocket (self, start, dir, offset, damage, speed, damage, damage);
 
 	gi.WriteByte (svc_muzzleflash2);
 	gi.WriteShort (self - g_edicts);
@@ -221,7 +254,9 @@ void monster_fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, i
 
 void monster_fire_railgun (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int flashtype)
 {
-	fire_rail (self, start, aimdir, damage, kick);
+	// PMM
+	if (!(gi.pointcontents (start) & MASK_SOLID))
+		fire_rail (self, start, aimdir, damage, kick);
 
 	gi.WriteByte (svc_muzzleflash2);
 	gi.WriteShort (self - g_edicts);
@@ -245,13 +280,13 @@ void monster_fire_bfg (edict_t *self, vec3_t start, vec3_t aimdir, int damage, i
 // Monster utility functions
 //
 
-static void M_FliesOff (edict_t *self)
+void M_FliesOff (edict_t *self)
 {
 	self->s.effects &= ~EF_FLIES;
 	self->s.sound = 0;
 }
 
-static void M_FliesOn (edict_t *self)
+void M_FliesOn (edict_t *self)
 {
 	if (self->waterlevel)
 		return;
@@ -287,7 +322,7 @@ void M_CheckGround (edict_t *ent)
 	if (ent->flags & (FL_SWIM|FL_FLY))
 		return;
 
-	if (ent->velocity[2] > 100)
+	if ((ent->velocity[2] * ent->gravityVector[2]) < -100)		// PGM
 	{
 		ent->groundentity = NULL;
 		return;
@@ -296,16 +331,29 @@ void M_CheckGround (edict_t *ent)
 // if the hull point one-quarter unit down is solid the entity is on ground
 	point[0] = ent->s.origin[0];
 	point[1] = ent->s.origin[1];
-	point[2] = ent->s.origin[2] - 0.25;
+	point[2] = ent->s.origin[2] + (0.25 * ent->gravityVector[2]);	//PGM
 
 	trace = gi.trace (ent->s.origin, ent->mins, ent->maxs, point, ent, MASK_MONSTERSOLID);
 
 	// check steepness
-	if ( trace.plane.normal[2] < 0.7 && !trace.startsolid)
+//PGM
+	if ( ent->gravityVector[2] < 0)		// normal gravity
 	{
-		ent->groundentity = NULL;
-		return;
+		if ( trace.plane.normal[2] < 0.7 && !trace.startsolid)
+		{
+			ent->groundentity = NULL;
+			return;
+		}
 	}
+	else								// inverted gravity
+	{
+		if ( trace.plane.normal[2] > -0.7 && !trace.startsolid)
+		{
+			ent->groundentity = NULL;
+			return;
+		}
+	}
+//PGM
 
 //	ent->groundentity = trace.ent;
 //	ent->groundentity_linkcount = trace.ent->linkcount;
@@ -453,9 +501,20 @@ void M_droptofloor (edict_t *ent)
 	vec3_t		end;
 	trace_t		trace;
 
-	ent->s.origin[2] += 1;
-	VectorCopy (ent->s.origin, end);
-	end[2] -= 256;
+//PGM
+	if(ent->gravityVector[2] < 0)
+	{
+		ent->s.origin[2] += 1;
+		VectorCopy (ent->s.origin, end);
+		end[2] -= 256;
+	}
+	else
+	{
+		ent->s.origin[2] -= 1;
+		VectorCopy (ent->s.origin, end);
+		end[2] += 256;
+	}
+//PGM
 	
 	trace = gi.trace (ent->s.origin, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID);
 
@@ -472,8 +531,10 @@ void M_droptofloor (edict_t *ent)
 
 void M_SetEffects (edict_t *ent)
 {
-	ent->s.effects &= ~(EF_COLOR_SHELL|EF_POWERSCREEN);
-	ent->s.renderfx &= ~(RF_SHELL_RED|RF_SHELL_GREEN|RF_SHELL_BLUE);
+	int remaining;
+
+	ent->s.effects &= ~(EF_COLOR_SHELL|EF_POWERSCREEN|EF_DOUBLE|EF_QUAD|EF_PENT);
+	ent->s.renderfx &= ~(RF_SHELL_RED|RF_SHELL_GREEN|RF_SHELL_BLUE|RF_SHELL_DOUBLE);
 
 	if (ent->monsterinfo.aiflags & AI_RESURRECTING)
 	{
@@ -496,6 +557,81 @@ void M_SetEffects (edict_t *ent)
 			ent->s.renderfx |= RF_SHELL_GREEN;
 		}
 	}
+	// PMM - new monster powerups
+	if (ent->monsterinfo.quad_framenum > level.framenum)
+	{
+		remaining = ent->monsterinfo.quad_framenum - level.framenum;
+		if (remaining > 30 || (remaining & 4) )
+			ent->s.effects |= EF_QUAD;
+	}
+	else
+		ent->s.effects &= ~EF_QUAD;
+
+	if (ent->monsterinfo.double_framenum > level.framenum)
+	{
+		remaining = ent->monsterinfo.double_framenum - level.framenum;
+		if (remaining > 30 || (remaining & 4) )
+			ent->s.effects |= EF_DOUBLE;
+	}
+	else
+		ent->s.effects &= ~EF_DOUBLE;
+
+	if (ent->monsterinfo.invincible_framenum > level.framenum)
+	{
+		remaining = ent->monsterinfo.invincible_framenum - level.framenum;
+		if (remaining > 30 || (remaining & 4) )
+			ent->s.effects |= EF_PENT;
+	}
+	else
+		ent->s.effects &= ~EF_PENT;
+
+	// PMM
+	// PMM - testing
+//	ent->s.effects |= EF_COLOR_SHELL;
+//	ent->s.renderfx |= RF_SHELL_HALF_DAM;
+/*
+	if (fmod (level.time, 4.0) > 2.0)
+	{
+		gi.dprintf ("invulnerable ");
+		ent->s.renderfx |= RF_SHELL_RED;
+	}
+	else
+		ent->s.renderfx &= ~RF_SHELL_RED;
+
+	if (fmod (level.time, 8.0) > 4.0)
+	{
+		gi.dprintf ("shield ");
+		ent->s.renderfx |= RF_SHELL_GREEN;
+	}
+	else
+		ent->s.renderfx &= ~RF_SHELL_GREEN;
+
+	if (fmod (level.time, 16.0) > 8.0)
+	{
+		gi.dprintf ("quad ");
+		ent->s.renderfx |= RF_SHELL_BLUE;\
+	}
+	else
+		ent->s.renderfx &= ~RF_SHELL_BLUE;
+
+	if (fmod (level.time, 32.0) > 16.0)
+	{
+		gi.dprintf ("double ");
+		ent->s.renderfx |= RF_SHELL_DOUBLE;
+	}
+	else
+		ent->s.renderfx &= ~RF_SHELL_DOUBLE;
+
+	if (fmod (level.time, 64.0) > 32.0)
+	{
+		gi.dprintf ("half ");
+		ent->s.renderfx |= RF_SHELL_HALF_DAM;
+	}
+	else
+		ent->s.renderfx &= ~RF_SHELL_HALF_DAM;
+
+	gi.dprintf ("\n");
+*/
 }
 
 
@@ -615,14 +751,20 @@ void monster_triggered_spawn (edict_t *self)
 	{
 		if (self->spawnflags &16 || self->spawnflags &8 || self->spawnflags &4)
 		{
-			self->enemy = NULL;
+			if(!(self->enemy->flags & FL_DISGUISED))		// PGM
+				FoundTarget (self);
+			else // PMM - just in case, make sure to clear the enemy so FindTarget doesn't get confused
+				self->enemy = NULL;
 			return;
 		}
 	}
 	
 	if (self->enemy && !(self->spawnflags & 1) && !(self->enemy->flags & FL_NOTARGET))
 	{
-		FoundTarget (self);
+		if(!(self->enemy->flags & FL_DISGUISED))		// PGM
+			FoundTarget (self);
+		else // PMM - just in case, make sure to clear the enemy so FindTarget doesn't get confused
+			self->enemy = NULL;
 	}
 	else
 	{
@@ -696,7 +838,7 @@ qboolean monster_start (edict_t *self)
 //		gi.dprintf("fixed spawnflags on %s at %s\n", self->classname, vtos(self->s.origin));
 	}
 
-	if (!(self->monsterinfo.aiflags & AI_GOOD_GUY))
+	if ((!(self->monsterinfo.aiflags & AI_GOOD_GUY)) && (!(self->monsterinfo.aiflags & AI_DO_NOT_COUNT)))
 		level.total_monsters++;
 
 	self->nextthink = level.time + FRAMETIME;
@@ -726,6 +868,14 @@ qboolean monster_start (edict_t *self)
 	// randomize what frame they start on
 	if (self->monsterinfo.currentmove)
 		self->s.frame = self->monsterinfo.currentmove->firstframe + (rand() % (self->monsterinfo.currentmove->lastframe - self->monsterinfo.currentmove->firstframe + 1));
+
+	// PMM - get this so I don't have to do it in all of the monsters
+	self->monsterinfo.base_height = self->maxs[2];
+
+	// PMM - clear these
+	self->monsterinfo.quad_framenum = 0;
+	self->monsterinfo.double_framenum = 0;
+	self->monsterinfo.invincible_framenum = 0;
 
 	return true;
 }
@@ -831,7 +981,11 @@ void walkmonster_start_go (edict_t *self)
 	
 	if (!self->yaw_speed)
 		self->yaw_speed = 20;
-	self->viewheight = 25;
+	// PMM - stalkers are too short for this
+	if (!(strcmp(self->classname, "monster_stalker")))
+		self->viewheight = 15;
+	else
+		self->viewheight = 25;
 
 	monster_start_go (self);
 
@@ -888,3 +1042,85 @@ void swimmonster_start (edict_t *self)
 	self->think = swimmonster_start_go;
 	monster_start (self);
 }
+
+//ROGUE
+
+void stationarymonster_start_go (edict_t *self);
+
+void stationarymonster_triggered_spawn (edict_t *self)
+{
+	KillBox (self);
+
+	self->solid = SOLID_BBOX;
+	self->movetype = MOVETYPE_NONE;
+	self->svflags &= ~SVF_NOCLIENT;
+	self->air_finished = level.time + 12;
+	gi.linkentity (self);
+
+	// FIXME - why doesn't this happen with real monsters?
+	self->spawnflags &= ~2;
+
+	stationarymonster_start_go (self);
+
+	if (self->enemy && !(self->spawnflags & 1) && !(self->enemy->flags & FL_NOTARGET))
+	{
+		if(!(self->enemy->flags & FL_DISGUISED))		// PGM
+			FoundTarget (self);
+		else // PMM - just in case, make sure to clear the enemy so FindTarget doesn't get confused
+			self->enemy = NULL;
+	}
+	else
+	{
+		self->enemy = NULL;
+	}
+}
+
+void stationarymonster_triggered_spawn_use (edict_t *self, edict_t *other, edict_t *activator)
+{
+	// we have a one frame delay here so we don't telefrag the guy who activated us
+	self->think = stationarymonster_triggered_spawn;
+	self->nextthink = level.time + FRAMETIME;
+	if (activator->client)
+		self->enemy = activator;
+	self->use = monster_use;
+}
+
+void stationarymonster_triggered_start (edict_t *self)
+{
+	self->solid = SOLID_NOT;
+	self->movetype = MOVETYPE_NONE;
+	self->svflags |= SVF_NOCLIENT;
+	self->nextthink = 0;
+	self->use = stationarymonster_triggered_spawn_use;
+}
+
+void stationarymonster_start_go (edict_t *self)
+{
+// PGM - only turrets use this, so remove the error message. They're supposed to be in solid.
+
+//	if (!M_walkmove (self, 0, 0))
+//		gi.dprintf ("%s in solid at %s\n", self->classname, vtos(self->s.origin));
+	
+	if (!self->yaw_speed)
+		self->yaw_speed = 20;
+//	self->viewheight = 25;
+
+	monster_start_go (self);
+
+	if (self->spawnflags & 2)
+		stationarymonster_triggered_start (self);
+}
+
+void stationarymonster_start (edict_t *self)
+{
+	self->think = stationarymonster_start_go;
+	monster_start (self);
+}
+
+void monster_done_dodge (edict_t *self)
+{
+//	if ((g_showlogic) && (g_showlogic->value))
+//		gi.dprintf ("%s done dodging\n", self->classname);
+	self->monsterinfo.aiflags &= ~AI_DODGING;
+}
+//ROGUE

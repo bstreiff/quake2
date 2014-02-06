@@ -29,7 +29,7 @@ a non-instant attack weapon.  It checks to see if a
 monster's dodge function should be called.
 =================
 */
-static void check_dodge (edict_t *self, vec3_t start, vec3_t dir, int speed)
+void check_dodge (edict_t *self, vec3_t start, vec3_t dir, int speed)
 {
 	vec3_t	end;
 	vec3_t	v;
@@ -48,7 +48,7 @@ static void check_dodge (edict_t *self, vec3_t start, vec3_t dir, int speed)
 	{
 		VectorSubtract (tr.endpos, start, v);
 		eta = (VectorLength(v) - tr.ent->maxs[0]) / speed;
-		tr.ent->monsterinfo.dodge (tr.ent, self, eta);
+		tr.ent->monsterinfo.dodge (tr.ent, self, eta, &tr);
 	}
 }
 
@@ -316,7 +316,8 @@ void blaster_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *
 		return;
 	}
 
-	if (self->owner->client)
+	// PMM - crash prevention
+	if (self->owner && self->owner->client)
 		PlayerNoise(self->owner, self->s.origin, PNOISE_IMPACT);
 
 	if (other->takedamage)
@@ -436,7 +437,7 @@ void fire_blueblaster (edict_t *self, vec3_t start, vec3_t dir, int damage, int 
 fire_grenade
 =================
 */
-static void Grenade_Explode (edict_t *ent)
+void Grenade_Explode (edict_t *ent)
 {
 	vec3_t		origin;
 	int			mod;
@@ -723,6 +724,7 @@ void fire_rail (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick
 		{
 			//ZOID--added so rail goes through SOLID_BBOX entities (gibs, etc)
 			if ((tr.ent->svflags & SVF_MONSTER) || (tr.ent->client) ||
+				(tr.ent->svflags & SVF_DAMAGEABLE) ||
 				(tr.ent->solid == SOLID_BBOX))
 				ignore = tr.ent;
 			else
@@ -788,8 +790,9 @@ void bfg_explode (edict_t *self)
 			VectorSubtract (self->s.origin, v, v);
 			dist = VectorLength(v);
 			points = self->radius_dmg * (1.0 - sqrt(dist/self->dmg_radius));
-			if (ent == self->owner)
-				points = points * 0.5;
+// PMM - happened to notice this copy/paste bug
+//			if (ent == self->owner)
+//				points = points * 0.5;
 
 			gi.WriteByte (svc_temp_entity);
 			gi.WriteByte (TE_BFG_EXPLOSION);
@@ -872,7 +875,8 @@ void bfg_think (edict_t *self)
 		if (!ent->takedamage)
 			continue;
 
-		if (!(ent->svflags & SVF_MONSTER) && (!ent->client) && (strcmp(ent->classname, "misc_explobox") != 0))
+		//ROGUE - make tesla hurt by bfg
+		if (!(ent->svflags & SVF_MONSTER) && !(ent->svflags & SVF_DAMAGEABLE) && (!ent->client) && (strcmp(ent->classname, "misc_explobox") != 0))
 			continue;
 
 		VectorMA (ent->absmin, 0.5, ent->size, point);
@@ -895,7 +899,7 @@ void bfg_think (edict_t *self)
 				T_Damage (tr.ent, self, self->owner, dir, tr.endpos, vec3_origin, dmg, 1, DAMAGE_ENERGY, MOD_BFG_LASER);
 
 			// if we hit something that's not a monster or player we're done
-			if (!(tr.ent->svflags & SVF_MONSTER) && (!tr.ent->client))
+			if (!(tr.ent->svflags & SVF_MONSTER) && !(tr.ent->svflags & SVF_DAMAGEABLE) && (!tr.ent->client))
 			{
 				gi.WriteByte (svc_temp_entity);
 				gi.WriteByte (TE_LASER_SPARKS);
@@ -1225,7 +1229,7 @@ void heat_think (edict_t *self)
 }
 
 // RAFAEL
-void fire_heat (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage)
+void fire_heat_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage)
 {
 	edict_t *heat;
 

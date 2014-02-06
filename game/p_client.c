@@ -163,6 +163,18 @@ void SP_info_player_coop(edict_t *self)
 	}
 }
 
+/*QUAKED info_player_coop_lava (1 0 1) (-16 -16 -24) (16 16 32)
+potential spawning position for coop games on rmine2 where lava level
+needs to be checked
+*/
+void SP_info_player_coop_lava(edict_t *self)
+{
+	if (!coop->value)
+	{
+		G_FreeEdict (self);
+		return;
+	}
+}
 
 /*QUAKED info_player_intermission (1 0 1) (-16 -16 -24) (16 16 32)
 The deathmatch intermission point will be at one of these
@@ -298,6 +310,16 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 			case MOD_TRAP:
 			 	message = "sucked into his own trap";
 				break;
+//ROGUE
+			case MOD_DOPPLE_EXPLODE:
+				if (IsNeutral(self))
+					message = "got caught in it's own trap";
+				else if (IsFemale(self))
+					message = "got caught in her own trap";
+				else
+					message = "got caught in his own trap";
+				break;
+//ROGUE
 			default:
 				if (IsNeutral(self))
 					message = "killed itself";
@@ -403,10 +425,82 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 			case MOD_TRAP:
 				message = "caught in trap by";
 				break;
+//===============
+//ROGUE
+			case MOD_CHAINFIST:
+				message = "was shredded by";
+				message2 = "'s ripsaw";
+				break;
+			case MOD_DISINTEGRATOR:
+				message = "lost his grip courtesy of";
+				message2 = "'s disintegrator";
+				break;
+			case MOD_ETF_RIFLE:
+				message = "was perforated by";
+				break;
+			case MOD_HEATBEAM:
+				message = "was scorched by";
+				message2 = "'s plasma beam";
+				break;
+			case MOD_TESLA:
+				message = "was enlightened by";
+				message2 = "'s tesla mine";
+				break;
+			case MOD_PROX:
+				message = "got too close to";
+				message2 = "'s proximity mine";
+				break;
+			case MOD_NUKE:
+				message = "was nuked by";
+				message2 = "'s antimatter bomb";
+				break;
+			case MOD_VENGEANCE_SPHERE:
+				message = "was purged by";
+				message2 = "'s vengeance sphere";
+				break;
+			case MOD_DEFENDER_SPHERE:
+				message = "had a blast with";
+				message2 = "'s defender sphere";
+				break;
+			case MOD_HUNTER_SPHERE:
+				message = "was killed like a dog by";
+				message2 = "'s hunter sphere";
+				break;
+			case MOD_TRACKER:
+				message = "was annihilated by";
+				message2 = "'s disruptor";
+				break;
+			case MOD_DOPPLE_EXPLODE:
+				message = "was blown up by";
+				message2 = "'s doppleganger";
+				break;
+			case MOD_DOPPLE_VENGEANCE:
+				message = "was purged by";
+				message2 = "'s doppleganger";
+				break;
+			case MOD_DOPPLE_HUNTER:
+				message = "was hunted down by";
+				message2 = "'s doppleganger";
+				break;
+//ROGUE
+//===============
 			}
 			if (message)
 			{
 				gi.bprintf (PRINT_MEDIUM,"%s %s %s%s\n", self->client->pers.netname, message, attacker->client->pers.netname, message2);
+//ROGUE
+				if (gamerules && gamerules->value)
+				{
+					if(DMGame.Score)
+					{
+						if(ff)		
+							DMGame.Score(attacker, self, -1);
+						else
+							DMGame.Score(attacker, self, 1);
+					}
+					return;
+				}
+//ROGUE
 				if (deathmatch->value)
 				{
 					if (ff)
@@ -421,7 +515,20 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 
 	gi.bprintf (PRINT_MEDIUM,"%s died.\n", self->client->pers.netname);
 	if (deathmatch->value)
-		self->client->resp.score--;
+//ROGUE
+	{
+		if (gamerules && gamerules->value)
+		{
+			if(DMGame.Score)
+			{
+				DMGame.Score(self, self, -1);
+			}
+			return;
+		}
+		else
+			self->client->resp.score--;
+	}
+//ROGUE
 }
 
 
@@ -579,6 +686,12 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 		}
 	}
 
+	if(gamerules && gamerules->value)	// if we're in a dm game, alert the game
+	{
+		if(DMGame.PlayerDeath)
+			DMGame.PlayerDeath(self, inflictor, attacker);
+	}
+
 	// remove powerups
 	self->client->quad_framenum = 0;
 	self->client->invincible_framenum = 0;
@@ -588,11 +701,65 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 
 	// RAFAEL
 	self->client->quadfire_framenum = 0;
+//==============
+// ROGUE stuff
+	self->client->double_framenum = 0;
+
+	// if there's a sphere around, let it know the player died.
+	// vengeance and hunter will die if they're not attacking,
+	// defender should always die
+	if(self->client->owned_sphere)
+	{
+		edict_t *sphere;
+
+		sphere = self->client->owned_sphere;
+		sphere->die(sphere, self, self, 0, vec3_origin);
+	}
+
+	// if we've been killed by the tracker, GIB!
+	if((meansOfDeath & ~MOD_FRIENDLY_FIRE) == MOD_TRACKER)
+	{
+		self->health = -100;
+		damage = 400;
+	}
+
+	// make sure no trackers are still hurting us.
+	if(self->client->tracker_pain_framenum)
+	{
+		RemoveAttackingPainDaemons (self);
+	}
+	
+	// if we got obliterated by the nuke, don't gib
+	if ((self->health < -80) && (meansOfDeath == MOD_NUKE))
+		self->flags |= FL_NOGIB;
+
+// ROGUE
+//==============
+
 	if (self->health < -40)
-	{	// gib
-		gi.sound (self, CHAN_BODY, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
-		for (n= 0; n < 4; n++)
-			ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
+	{
+		// PMM
+		// don't toss gibs if we got vaped by the nuke
+		if (!(self->flags & FL_NOGIB))
+		{
+		// pmm
+			// gib
+			gi.sound (self, CHAN_BODY, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+			
+			// more meaty gibs for your dollar!
+			if((deathmatch->value) && (self->health < -80))
+			{
+				for (n= 0; n < 4; n++)
+					ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
+			}
+
+			for (n= 0; n < 4; n++)
+				ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
+		// PMM	
+		}
+		self->flags &= ~FL_NOGIB;
+		// pmm
+
 		ThrowClientHead (self, damage);
 
 		self->takedamage = DAMAGE_NO;
@@ -669,6 +836,12 @@ void InitClientPersistant (gclient_t *client)
 
 	client->pers.max_magslug	= 50;
 	client->pers.max_trap		= 5;
+//ROGUE
+	client->pers.max_prox		= 50;
+	client->pers.max_tesla		= 50;
+	client->pers.max_flechettes = 200;
+	client->pers.max_rounds     = 100;
+//ROGUE
 	client->pers.connected = true;
 }
 
@@ -870,12 +1043,109 @@ edict_t *SelectDeathmatchSpawnPoint (void)
 		return SelectRandomDeathmatchSpawnPoint ();
 }
 
+//===============
+//ROGUE
+edict_t *SelectLavaCoopSpawnPoint (edict_t *ent)
+{
+	int		index;
+	edict_t	*spot = NULL;
+	float	lavatop;
+	edict_t	*lava;
+	edict_t *pointWithLeastLava;
+	float	lowest;
+	edict_t *spawnPoints [64];
+	vec3_t	center;
+	int		numPoints;
+	edict_t *highestlava;
+
+	lavatop = -99999;
+	highestlava = NULL;
+
+	// first, find the highest lava
+	// remember that some will stop moving when they've filled their
+	// areas...
+	lava = NULL;
+	while (1)
+	{
+		lava = G_Find (lava, FOFS(classname), "func_door");
+		if(!lava)
+			break;
+		
+		VectorAdd (lava->absmax, lava->absmin, center);
+		VectorScale (center, 0.5, center);
+
+		if(lava->spawnflags & 2 && (gi.pointcontents(center) & MASK_WATER))
+		{
+			if (lava->absmax[2] > lavatop)
+			{
+				lavatop = lava->absmax[2];
+				highestlava = lava;
+			}
+		}
+	}
+
+	// if we didn't find ANY lava, then return NULL
+	if (!highestlava)
+		return NULL;
+
+	// find the top of the lava and include a small margin of error (plus bbox size)
+	lavatop = highestlava->absmax[2] + 64;
+
+	// find all the lava spawn points and store them in spawnPoints[]
+	spot = NULL;
+	numPoints = 0;
+	while(spot = G_Find (spot, FOFS(classname), "info_player_coop_lava"))
+	{
+		if(numPoints == 64)
+			break;
+
+		spawnPoints[numPoints++] = spot;
+	}
+
+	if(numPoints < 1)
+		return NULL;
+
+	// walk up the sorted list and return the lowest, open, non-lava spawn point
+	spot = NULL;
+	lowest = 999999;
+	pointWithLeastLava = NULL;
+	for (index = 0; index < numPoints; index++)
+	{
+		if(spawnPoints[index]->s.origin[2] < lavatop)
+			continue;
+
+		if(PlayersRangeFromSpot(spawnPoints[index]) > 32)
+		{
+			if(spawnPoints[index]->s.origin[2] < lowest)
+			{
+				// save the last point
+				pointWithLeastLava = spawnPoints[index];
+				lowest = spawnPoints[index]->s.origin[2];
+			}
+		}
+	}
+
+	// FIXME - better solution????
+	// well, we may telefrag someone, but oh well...
+	if(pointWithLeastLava)
+		return pointWithLeastLava;
+
+	return NULL;
+}
+//ROGUE
+//===============
 
 edict_t *SelectCoopSpawnPoint (edict_t *ent)
 {
 	int		index;
 	edict_t	*spot = NULL;
 	char	*target;
+
+//ROGUE
+	// rogue hack, but not too gross...
+	if (!Q_stricmp(level.mapname, "rmine2p") || !Q_stricmp(level.mapname, "rmine2"))
+		return SelectLavaCoopSpawnPoint (ent);
+//ROGUE
 
 	index = ent->client - game.clients;
 
@@ -1024,7 +1294,7 @@ void respawn (edict_t *self)
 {
 	if (deathmatch->value || coop->value)
 	{
-		// spectator's don't leave bodies
+		// spectators don't leave bodies
 		if (self->movetype != MOVETYPE_NOCLIP)
 			CopyToBodyQue (self);
 		self->svflags &= ~SVF_NOCLIENT;
@@ -1151,7 +1421,10 @@ void PutClientInServer (edict_t *ent)
 	// find a spawn point
 	// do it before setting health back up, so farthest
 	// ranging doesn't count this client
-	SelectSpawnPoint (ent, spawn_origin, spawn_angles);
+	if(gamerules && gamerules->value && DMGame.SelectSpawnPoint)		// PGM
+		DMGame.SelectSpawnPoint (ent, spawn_origin, spawn_angles);		// PGM
+	else																// PGM
+		SelectSpawnPoint (ent, spawn_origin, spawn_angles);
 
 	index = ent-g_edicts-1;
 	client = ent->client;
@@ -1223,6 +1496,8 @@ void PutClientInServer (edict_t *ent)
 	ent->flags &= ~FL_NO_KNOCKBACK;
 	ent->svflags &= ~SVF_DEADMONSTER;
 
+	ent->flags &= ~FL_SAM_RAIMI;		// PGM - turn off sam raimi flag
+
 	VectorCopy (mins, ent->mins);
 	VectorCopy (maxs, ent->maxs);
 	VectorClear (ent->velocity);
@@ -1247,7 +1522,12 @@ void PutClientInServer (edict_t *ent)
 			client->ps.fov = 160;
 	}
 
-	client->ps.gunindex = gi.modelindex(client->pers.weapon->view_model);
+//PGM
+	if (client->pers.weapon)
+		client->ps.gunindex = gi.modelindex(client->pers.weapon->view_model);
+	else 
+		client->ps.gunindex = 0;
+//PGM
 
 	// clear entity state values
 	ent->s.effects = 0;
@@ -1295,6 +1575,22 @@ void PutClientInServer (edict_t *ent)
 
 	gi.linkentity (ent);
 
+	// my tribute to cash's level-specific hacks. I hope I live
+	// up to his trailblazing cheese.
+	if(Q_stricmp(level.mapname, "rboss") == 0)
+	{
+		// if you get on to rboss in single player or coop, ensure
+		// the player has the nuke key. (not in DM)
+		if(!(deathmatch->value))
+		{
+			gitem_t		*item;
+
+			item = FindItem("Antimatter Bomb");
+			client->pers.selected_item = ITEM_INDEX(item);
+			client->pers.inventory[client->pers.selected_item] = 1;
+		}
+	}
+
 	// force the current weapon up
 	client->newweapon = client->pers.weapon;
 	ChangeWeapon (ent);
@@ -1314,7 +1610,14 @@ void ClientBeginDeathmatch (edict_t *ent)
 
 	InitClientResp (ent->client);
 
-	// locate ent at a spawn point
+	//PGM
+	if(gamerules && gamerules->value && DMGame.ClientBegin)	
+	{
+		DMGame.ClientBegin (ent);
+	}
+	//PGM
+
+		// locate ent at a spawn point
 	PutClientInServer (ent);
 
 	if (level.intermissiontime)
@@ -1563,6 +1866,27 @@ void ClientDisconnect (edict_t *ent)
 
 	gi.bprintf (PRINT_HIGH, "%s disconnected\n", ent->client->pers.netname);
 
+//============
+//ROGUE
+	// make sure no trackers are still hurting us.
+	if(ent->client->tracker_pain_framenum)
+		RemoveAttackingPainDaemons (ent);
+
+	if (ent->client->owned_sphere)
+	{
+		if(ent->client->owned_sphere->inuse)
+			G_FreeEdict (ent->client->owned_sphere);
+		ent->client->owned_sphere = NULL;
+	}
+
+	if (gamerules && gamerules->value)
+	{
+		if(DMGame.PlayerDisconnect)
+			DMGame.PlayerDisconnect(ent);
+	}
+//ROGUE
+//============
+
 	// send effect
 	gi.WriteByte (svc_muzzleflash);
 	gi.WriteShort (ent-g_edicts);
@@ -1662,7 +1986,10 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 		else
 			client->ps.pmove.pm_type = PM_NORMAL;
 
-		client->ps.pmove.gravity = sv_gravity->value;
+	//PGM	trigger_gravity support
+	//	client->ps.pmove.gravity = sv_gravity->value;
+		client->ps.pmove.gravity = sv_gravity->value * ent->gravity;
+	//PGM
 		pm.s = client->ps.pmove;
 
 		for (i=0 ; i<3 ; i++)
@@ -1708,7 +2035,13 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 			PlayerNoise(ent, ent->s.origin, PNOISE_SELF);
 		}
 
-		ent->viewheight = pm.viewheight;
+	//ROGUE sam raimi cam support
+		if(ent->flags & FL_SAM_RAIMI)
+			ent->viewheight = 8;
+		else
+			ent->viewheight = pm.viewheight;
+	//ROGUE
+
 		ent->waterlevel = pm.waterlevel;
 		ent->watertype = pm.watertype;
 		ent->groundentity = pm.groundentity;
@@ -1729,6 +2062,9 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 
 		gi.linkentity (ent);
 
+	//PGM trigger_gravity support
+		ent->gravity = 1.0;
+	//PGM
 		if (ent->movetype != MOVETYPE_NOCLIP)
 			G_TouchTriggers (ent);
 
@@ -1855,4 +2191,28 @@ void ClientBeginServerFrame (edict_t *ent)
 			PlayerTrail_Add (ent->s.old_origin);
 
 	client->latched_buttons = 0;
+}
+
+/*
+==============
+RemoveAttackingPainDaemons
+
+This is called to clean up the pain daemons that the disruptor attaches
+to clients to damage them.
+==============
+*/
+void RemoveAttackingPainDaemons (edict_t *self)
+{
+	edict_t *tracker;
+
+	tracker = G_Find (NULL, FOFS(classname), "pain daemon");
+	while(tracker)
+	{
+		if(tracker->enemy == self)
+			G_FreeEdict(tracker);
+		tracker = G_Find (tracker, FOFS(classname), "pain daemon");
+	}
+
+	if(self->client)
+		self->client->tracker_pain_framenum = 0;
 }

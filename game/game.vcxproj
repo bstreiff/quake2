@@ -153,6 +153,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="dm_ball.c" />
+    <ClCompile Include="dm_tag.c" />
     <ClCompile Include="g_ai.c" />
     <ClCompile Include="g_chase.c" />
     <ClCompile Include="g_cmds.c" />
@@ -162,9 +164,16 @@
     <ClCompile Include="g_main.c" />
     <ClCompile Include="g_misc.c" />
     <ClCompile Include="g_monster.c" />
+    <ClCompile Include="g_newai.c" />
+    <ClCompile Include="g_newdm.c" />
+    <ClCompile Include="g_newfnc.c" />
+    <ClCompile Include="g_newtarg.c" />
+    <ClCompile Include="g_newtrig.c" />
+    <ClCompile Include="g_newweap.c" />
     <ClCompile Include="g_phys.c" />
     <ClCompile Include="g_save.c" />
     <ClCompile Include="g_spawn.c" />
+    <ClCompile Include="g_sphere.c" />
     <ClCompile Include="g_svcmds.c" />
     <ClCompile Include="g_target.c" />
     <ClCompile Include="g_trigger.c" />
@@ -179,6 +188,7 @@
     <ClCompile Include="m_boss32.c" />
     <ClCompile Include="m_boss5.c" />
     <ClCompile Include="m_brain.c" />
+    <ClCompile Include="m_carrier.c" />
     <ClCompile Include="m_chick.c" />
     <ClCompile Include="m_fixbot.c" />
     <ClCompile Include="m_flash.c" />
@@ -197,8 +207,12 @@
     <ClCompile Include="m_mutant.c" />
     <ClCompile Include="m_parasite.c" />
     <ClCompile Include="m_soldier.c" />
+    <ClCompile Include="m_stalker.c" />
     <ClCompile Include="m_supertank.c" />
     <ClCompile Include="m_tank.c" />
+    <ClCompile Include="m_turret.c" />
+    <ClCompile Include="m_widow.c" />
+    <ClCompile Include="m_widow2.c" />
     <ClCompile Include="p_client.c" />
     <ClCompile Include="p_hud.c" />
     <ClCompile Include="p_trail.c" />
@@ -215,6 +229,7 @@
     <ClInclude Include="m_boss31.h" />
     <ClInclude Include="m_boss32.h" />
     <ClInclude Include="m_brain.h" />
+    <ClInclude Include="m_carrier.h" />
     <ClInclude Include="m_chick.h" />
     <ClInclude Include="m_fixbot.h" />
     <ClInclude Include="m_flipper.h" />
@@ -232,8 +247,12 @@
     <ClInclude Include="m_player.h" />
     <ClInclude Include="m_soldier.h" />
     <ClInclude Include="m_soldierh.h" />
+    <ClInclude Include="m_stalker.h" />
     <ClInclude Include="m_supertank.h" />
     <ClInclude Include="m_tank.h" />
+    <ClInclude Include="m_turret.h" />
+    <ClInclude Include="m_widow.h" />
+    <ClInclude Include="m_widow2.h" />
     <ClInclude Include="q_shared.h" />
   </ItemGroup>
   <ItemGroup>

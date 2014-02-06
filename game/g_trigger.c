@@ -19,6 +19,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include "g_local.h"
 
+//PGM - some of these are mine, some id's. I added the define's.
+#define TRIGGER_MONSTER		0x01
+#define TRIGGER_NOT_PLAYER	0x02
+#define TRIGGER_TRIGGERED	0x04
+#define TRIGGER_TOGGLE		0x08
+//PGM
 
 void InitTrigger (edict_t *self)
 {
@@ -65,8 +71,21 @@ void multi_trigger (edict_t *ent)
 
 void Use_Multi (edict_t *ent, edict_t *other, edict_t *activator)
 {
-	ent->activator = activator;
-	multi_trigger (ent);
+//PGM
+	if(ent->spawnflags & TRIGGER_TOGGLE)
+	{
+		if(ent->solid == SOLID_TRIGGER)
+			ent->solid = SOLID_NOT;
+		else
+			ent->solid = SOLID_TRIGGER;
+		gi.linkentity (ent);
+	}
+	else
+	{
+		ent->activator = activator;
+		multi_trigger (ent);
+	}
+//PGM
 }
 
 void Touch_Multi (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
@@ -97,10 +116,13 @@ void Touch_Multi (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *su
 	multi_trigger (self);
 }
 
-/*QUAKED trigger_multiple (.5 .5 .5) ? MONSTER NOT_PLAYER TRIGGERED
+/*QUAKED trigger_multiple (.5 .5 .5) ? MONSTER NOT_PLAYER TRIGGERED TOGGLE
 Variable sized repeatable trigger.  Must be targeted at one or more entities.
 If "delay" is set, the trigger waits some time after activating before firing.
 "wait" : Seconds between triggerings. (.2 default)
+
+TOGGLE - using this trigger will activate/deactivate it. trigger will begin inactive.
+
 sounds
 1)	secret
 2)	beep beep
@@ -130,8 +152,8 @@ void SP_trigger_multiple (edict_t *ent)
 	ent->movetype = MOVETYPE_NONE;
 	ent->svflags |= SVF_NOCLIENT;
 
-
-	if (ent->spawnflags & 4)
+//PGM
+	if (ent->spawnflags & (TRIGGER_TRIGGERED | TRIGGER_TOGGLE))
 	{
 		ent->solid = SOLID_NOT;
 		ent->use = trigger_enable;
@@ -141,6 +163,7 @@ void SP_trigger_multiple (edict_t *ent)
 		ent->solid = SOLID_TRIGGER;
 		ent->use = Use_Multi;
 	}
+//PGM
 
 	if (!VectorCompare(ent->s.angles, vec3_origin))
 		G_SetMovedir (ent->s.angles, ent->movedir);
@@ -387,8 +410,14 @@ trigger_push
 ==============================================================================
 */
 
-#define PUSH_ONCE		1
-#define PUSH_PLUS		2
+// rogue maps expect 2 is PUSH_START_OFF.
+// xatrix maps expect that 2 is PUSH_PLUS.
+// Since we handle both, we need to figure out which case we're in.
+#define PUSH_ONCE		0x01
+#define PUSH_NEEDS_ROGUE_OR_XATRIX_FIXUP 0x02
+#define PUSH_SILENT		0x04
+#define PUSH_PLUS		0x08
+#define PUSH_START_OFF	0x10
 
 static int windsound;
 
@@ -406,7 +435,7 @@ void trigger_push_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 		{
 			// don't take falling damage immediately from this
 			VectorCopy (other->velocity, other->client->oldvelocity);
-			if (other->fly_sound_debounce_time < level.time)
+			if (!(self->spawnflags & PUSH_SILENT) && (other->fly_sound_debounce_time < level.time))
 			{
 				other->fly_sound_debounce_time = level.time + 1.5;
 				gi.sound (other, CHAN_AUTO, windsound, 1, ATTN_NORM, 0);
@@ -417,11 +446,28 @@ void trigger_push_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 		G_FreeEdict (self);
 }
 
+//======
+//PGM
+void trigger_push_use (edict_t *self, edict_t *other, edict_t *activator)
+{
+	if (self->solid == SOLID_NOT)
+		self->solid = SOLID_TRIGGER;
+	else
+		self->solid = SOLID_NOT;
+	gi.linkentity (self);
+}
+//PGM
+//======
 
-/*QUAKED trigger_push (.5 .5 .5) ? PUSH_ONCE
+/*QUAKED trigger_push (.5 .5 .5) ? PUSH_ONCE PLUS_OR_START_OFF SILENT PLUS START_OFF
 Pushes the player
 "speed"		defaults to 1000
 "wait"  defaults to 10 must use PUSH_PLUS  used for on
+
+If targeted, it will toggle on and off when used.
+
+START_OFF - toggled trigger_push begins in off setting
+SILENT - doesn't make wind noise
 */
 void trigger_push_active (edict_t *self);
 
@@ -482,6 +528,26 @@ void SP_trigger_push (edict_t *self)
 {
 	InitTrigger (self);
 	windsound = gi.soundindex ("misc/windfly.wav");
+
+	// Figure out what spawnflag 2 is supposed to be given map context.
+	if (self->spawnflags & PUSH_NEEDS_ROGUE_OR_XATRIX_FIXUP)
+	{
+		if (IsRogueMap(level.mapname))
+		{
+			self->spawnflags |= PUSH_START_OFF;
+			self->spawnflags &= ~PUSH_NEEDS_ROGUE_OR_XATRIX_FIXUP;
+		}
+		else if (IsXatrixMap(level.mapname))
+		{
+			self->spawnflags |= PUSH_PLUS;
+			self->spawnflags &= ~PUSH_NEEDS_ROGUE_OR_XATRIX_FIXUP;
+		}
+		else
+		{
+			gi.dprintf("trigger_push with spawnflag 2 but unknown map type");
+		}
+	}
+
 	self->touch = trigger_push_touch;
 	if (self->spawnflags & PUSH_PLUS)
 	{
@@ -494,6 +560,24 @@ void SP_trigger_push (edict_t *self)
 	}
 	if (!self->speed)
 		self->speed = 1000;
+
+//PGM
+	if(self->targetname)		// toggleable
+	{
+		self->use = trigger_push_use;
+		if(self->spawnflags & PUSH_START_OFF)
+			self->solid = SOLID_NOT;
+	}
+	else if(self->spawnflags & PUSH_START_OFF)
+	{
+		gi.dprintf ("trigger_push is START_OFF but not targeted.\n");
+		self->svflags = 0;
+		self->touch = NULL;
+		self->solid = SOLID_BSP;
+		self->movetype = MOVETYPE_PUSH;
+	}
+//PGM
+
 	gi.linkentity (self);
 }
 
@@ -589,17 +673,30 @@ trigger_gravity
 ==============================================================================
 */
 
-/*QUAKED trigger_gravity (.5 .5 .5) ?
-Changes the touching entites gravity to
-the value of "gravity".  1.0 is standard
-gravity for the level.
-*/
+//PGM
+void trigger_gravity_use (edict_t *self, edict_t *other, edict_t *activator)
+{
+	if (self->solid == SOLID_NOT)
+		self->solid = SOLID_TRIGGER;
+	else
+		self->solid = SOLID_NOT;
+	gi.linkentity (self);
+}
+//PGM
 
 void trigger_gravity_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
 	other->gravity = self->gravity;
 }
 
+/*QUAKED trigger_gravity (.5 .5 .5) ? TOGGLE START_OFF
+Changes the touching entites gravity to
+the value of "gravity".  1.0 is standard
+gravity for the level.
+
+TOGGLE - trigger_gravity can be turned on and off
+START_OFF - trigger_gravity starts turned off (implies TOGGLE)
+*/
 void SP_trigger_gravity (edict_t *self)
 {
 	if (st.gravity == 0)
@@ -610,8 +707,24 @@ void SP_trigger_gravity (edict_t *self)
 	}
 
 	InitTrigger (self);
-	self->gravity = atoi(st.gravity);
+
+//PGM
+//	self->gravity = atoi(st.gravity);
+	self->gravity = atof(st.gravity);
+
+	if(self->spawnflags & 1)				// TOGGLE
+		self->use = trigger_gravity_use;
+
+	if(self->spawnflags & 2)				// START_OFF
+	{
+		self->use = trigger_gravity_use;
+		self->solid = SOLID_NOT;
+	}
+
 	self->touch = trigger_gravity_touch;
+//PGM
+
+	gi.linkentity (self);
 }
 
 

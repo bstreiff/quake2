@@ -250,6 +250,8 @@ void Cmd_Give_f (edict_t *ent)
 			it = itemlist + i;
 			if (!it->pickup)
 				continue;
+			if (it->flags & IT_NOT_GIVEABLE)
+				continue;
 			if (it->flags & (IT_ARMOR|IT_WEAPON|IT_AMMO))
 				continue;
 			ent->client->pers.inventory[i] = 1;
@@ -275,6 +277,12 @@ void Cmd_Give_f (edict_t *ent)
 		return;
 	}
 
+	if (it->flags & IT_NOT_GIVEABLE)		
+	{
+		gi.dprintf ("item cannot be given\n");
+		return;							
+	}
+
 	index = ITEM_INDEX(it);
 
 	if (it->flags & IT_AMMO)
@@ -289,6 +297,8 @@ void Cmd_Give_f (edict_t *ent)
 		it_ent = G_Spawn();
 		it_ent->classname = it->classname;
 		SpawnItem (it_ent, it);
+		if (!it_ent->inuse)
+			return;
 		Touch_Item (it_ent, ent, NULL, NULL);
 		if (it_ent->inuse)
 			G_FreeEdict(it_ent);
@@ -652,6 +662,17 @@ void Cmd_Kill_f (edict_t *ent)
 	ent->flags &= ~FL_GODMODE;
 	ent->health = 0;
 	meansOfDeath = MOD_SUICIDE;
+
+	// make sure no trackers are still hurting us.
+	if(ent->client->tracker_pain_framenum)
+		RemoveAttackingPainDaemons (ent);
+
+	if (ent->client->owned_sphere)
+	{
+		G_FreeEdict(ent->client->owned_sphere);
+		ent->client->owned_sphere = NULL;
+	}
+
 	player_die (ent, ent, ent, 100000, vec3_origin);
 }
 
@@ -868,6 +889,21 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 		gi.cprintf(other, PRINT_CHAT, "%s", text);
 	}
 }
+void Cmd_Ent_Count_f (edict_t *ent)
+{
+	int		x;
+	edict_t	*e;
+
+	x=0;
+
+	for (e=g_edicts;e < &g_edicts[globals.num_edicts] ; e++)
+	{
+		if(e->inuse)
+			x++;
+	}
+
+	gi.dprintf("%d entities active\n", x);
+}
 
 void Cmd_PlayerList_f(edict_t *ent)
 {
@@ -987,6 +1023,12 @@ void ClientCommand (edict_t *ent)
 		Cmd_Wave_f (ent);
 	else if (Q_stricmp(cmd, "playerlist") == 0)
 		Cmd_PlayerList_f(ent);
+	else if (Q_stricmp (cmd, "entcount") == 0)		// PGM
+		Cmd_Ent_Count_f (ent);						// PGM
+	else if (Q_stricmp (cmd, "disguise") == 0)		// PGM
+	{
+		ent->flags |= FL_DISGUISED;
+	}
 	else	// anything that doesn't match a command will be a chat
 		Cmd_Say_f (ent, false, true);
 }

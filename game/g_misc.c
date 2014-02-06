@@ -177,6 +177,10 @@ void ThrowGib (edict_t *self, char *gibname, int damage, int type)
 	gib->think = G_FreeEdict;
 	gib->nextthink = level.time + 10 + random()*10;
 
+//PGM
+	gib->s.renderfx |= RF_IR_VISIBLE;
+//PGM
+
 	gi.linkentity (gib);
 }
 
@@ -838,12 +842,15 @@ void SP_func_object (edict_t *self)
 }
 
 
-/*QUAKED func_explosive (0 .5 .8) ? Trigger_Spawn ANIMATED ANIMATED_FAST
+/*QUAKED func_explosive (0 .5 .8) ? Trigger_Spawn ANIMATED ANIMATED_FAST INACTIVE
 Any brush that you want to explode or break apart.  If you want an
 ex0plosion, set dmg and it will do a radius explosion of that amount
 at the center of the bursh.
 
 If targeted it will not be shootable.
+
+INACTIVE - specifies that the entity is not explodable until triggered. If you use this you must
+target the entity you want to trigger it. This is the only entity approved to activate it.
 
 health defaults to 100.
 
@@ -858,6 +865,8 @@ void func_explosive_explode (edict_t *self, edict_t *inflictor, edict_t *attacke
 	vec3_t	size;
 	int		count;
 	int		mass;
+	edict_t	*master;
+	qboolean	done = false;
 
 	// bmodel origins are (0 0 0), we need to adjust that here
 	VectorScale (self->size, 0.5, size);
@@ -907,6 +916,40 @@ void func_explosive_explode (edict_t *self, edict_t *inflictor, edict_t *attacke
 		ThrowDebris (self, "models/objects/debris2/tris.md2", 2, chunkorigin);
 	}
 
+	// PMM - if we're part of a train, clean ourselves out of it
+	if (self->flags & FL_TEAMSLAVE)
+	{
+//		if ((g_showlogic) && (g_showlogic->value))
+//			gi.dprintf ("Removing func_explosive from train!\n");
+
+		if (self->teammaster)
+		{
+			master = self->teammaster;
+			if(master && master->inuse)		// because mappers (other than jim (usually)) are stupid....
+			{
+				while (!done)
+				{
+					if (master->teamchain == self)
+					{
+						master->teamchain = self->teamchain;
+						done = true;
+					}
+					master = master->teamchain;
+					if (!master)
+					{
+//						if ((g_showlogic) && (g_showlogic->value))
+//							gi.dprintf ("Couldn't find myself in master's chain, ignoring!\n");
+					}
+				}
+			}
+		}
+		else
+		{
+//			if ((g_showlogic) && (g_showlogic->value))
+//				gi.dprintf ("No master to free myself from, ignoring!\n");
+		}
+	}
+
 	G_UseTargets (self, attacker);
 
 	if (self->dmg)
@@ -919,6 +962,45 @@ void func_explosive_use(edict_t *self, edict_t *other, edict_t *activator)
 {
 	func_explosive_explode (self, self, other, self->health, vec3_origin);
 }
+
+//PGM
+void func_explosive_activate(edict_t *self, edict_t *other, edict_t *activator)
+{
+	int approved;
+
+	approved = 0;
+	// PMM - looked like target and targetname were flipped here
+	if (other != NULL && other->target)
+	{
+		if(!strcmp(other->target, self->targetname))
+			approved = 1;
+	}
+	if (!approved && activator!=NULL && activator->target)
+	{
+		if(!strcmp(activator->target, self->targetname))
+			approved = 1;
+	}
+
+	if (!approved)
+	{
+//		gi.dprintf("func_explosive_activate: incorrect activator\n");
+		return;
+	}
+
+	// PMM - according to mappers, they don't need separate cases for blowupable and triggerable
+//	if (self->target)
+//	{
+		self->use = func_explosive_use;
+//	}
+//	else
+//	{
+		if (!self->health)
+			self->health = 100;
+		self->die = func_explosive_explode;
+		self->takedamage = DAMAGE_YES;
+//	}
+}
+//PGM
 
 void func_explosive_spawn (edict_t *self, edict_t *other, edict_t *activator)
 {
@@ -950,6 +1032,14 @@ void SP_func_explosive (edict_t *self)
 		self->solid = SOLID_NOT;
 		self->use = func_explosive_spawn;
 	}
+//PGM
+	else if(self->spawnflags & 8)
+	{
+		self->solid = SOLID_BSP;
+		if(self->targetname)
+			self->use = func_explosive_activate;
+	}
+//PGM
 	else
 	{
 		self->solid = SOLID_BSP;
@@ -962,7 +1052,9 @@ void SP_func_explosive (edict_t *self)
 	if (self->spawnflags & 4)
 		self->s.effects |= EF_ANIM_ALLFAST;
 
-	if (self->use != func_explosive_use)
+//PGM
+	if ((self->use != func_explosive_use) && (self->use != func_explosive_activate))
+//PGM
 	{
 		if (!self->health)
 			self->health = 100;
@@ -1080,6 +1172,29 @@ void barrel_delay (edict_t *self, edict_t *inflictor, edict_t *attacker, int dam
 	self->activator = attacker;
 }
 
+//=========
+//PGM  - change so barrels will think and hence, blow up
+void barrel_think (edict_t *self)
+{
+	// the think needs to be first since later stuff may override.
+	self->think = barrel_think;
+	self->nextthink = level.time + FRAMETIME;
+
+	M_CatagorizePosition (self);
+	self->flags |= FL_IMMUNE_SLIME;
+	self->air_finished = level.time + 100;
+	M_WorldEffects (self);
+}
+
+void barrel_start (edict_t *self)
+{
+	M_droptofloor(self);
+	self->think = barrel_think;
+	self->nextthink = level.time + FRAMETIME;
+}
+//PGM
+//=========
+
 void SP_misc_explobox (edict_t *self)
 {
 	if (deathmatch->value)
@@ -1113,8 +1228,10 @@ void SP_misc_explobox (edict_t *self)
 
 	self->touch = barrel_touch;
 
-	self->think = M_droptofloor;
+//PGM - change so barrels will think and hence, blow up
+	self->think = barrel_start;
 	self->nextthink = level.time + 2 * FRAMETIME;
+//PGM
 
 	gi.linkentity (self);
 }
@@ -1327,7 +1444,8 @@ void misc_deadsoldier_die (edict_t *self, edict_t *inflictor, edict_t *attacker,
 {
 	int		n;
 
-	if (self->health > -80)
+//	if (self->health > -80)
+	if (self->health > -30)
 		return;
 
 	gi.sound (self, CHAN_BODY, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -2150,3 +2268,27 @@ void SP_misc_nuke (edict_t *ent)
 {
 	ent->use = use_nuke;
 }
+
+
+//======================
+//ROGUE
+void misc_nuke_core_use (edict_t *self, edict_t *other, edict_t *activator)
+{
+	if(self->svflags & SVF_NOCLIENT)
+		self->svflags &= ~SVF_NOCLIENT;
+	else
+		self->svflags |= SVF_NOCLIENT;
+}
+
+/*QUAKED misc_nuke_core (1 0 0) (-16 -16 -16) (16 16 16)
+toggles visible/not visible. starts visible.
+*/
+void SP_misc_nuke_core (edict_t *ent)
+{
+	gi.setmodel (ent, "models/objects/core/tris.md2");
+	gi.linkentity (ent);
+
+	ent->use = misc_nuke_core_use;
+}
+//ROGUE
+//======================

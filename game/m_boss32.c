@@ -865,6 +865,10 @@ void SP_monster_makron (edict_t *self)
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);
+
+	//PMM
+	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
+	//pmm
 }
 
 

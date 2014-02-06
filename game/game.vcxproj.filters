@@ -171,6 +171,48 @@
     <ClCompile Include="m_gladb.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dm_tag.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dm_ball.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="m_turret.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="m_widow.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="m_widow2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="m_stalker.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="m_carrier.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="g_newai.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="g_newdm.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="g_newfnc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="g_newtarg.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="g_newtrig.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="g_newweap.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="g_sphere.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="g_local.h">
@@ -255,6 +297,21 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="m_soldierh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="m_carrier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="m_stalker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="m_turret.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="m_widow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="m_widow2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

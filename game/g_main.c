@@ -74,6 +74,12 @@ cvar_t	*sv_maplist;
 
 cvar_t	*sv_alternatespawns;
 
+cvar_t	*g_showlogic;
+cvar_t	*gamerules;
+cvar_t	*huntercam;
+cvar_t	*strong_mines;
+cvar_t	*randomrespawn;
+
 void SpawnEntities (char *mapname, char *entities, char *spawnpoint);
 void ClientThink (edict_t *ent, usercmd_t *cmd);
 qboolean ClientConnect (edict_t *ent, char *userinfo);
@@ -313,6 +319,16 @@ void CheckDMRules (void)
 
 	if (!deathmatch->value)
 		return;
+
+//=======
+//ROGUE
+	if (gamerules && gamerules->value && DMGame.CheckDMRules)
+	{
+		if(DMGame.CheckDMRules())
+			return;
+	}
+//ROGUE
+//=======
 
 	if (timelimit->value)
 	{

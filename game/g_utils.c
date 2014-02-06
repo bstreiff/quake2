@@ -29,6 +29,12 @@ void G_ProjectSource (vec3_t point, vec3_t distance, vec3_t forward, vec3_t righ
 	result[2] = point[2] + forward[2] * distance[0] + right[2] * distance[1] + distance[2];
 }
 
+void G_ProjectSource2 (vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t up, vec3_t result)
+{
+	result[0] = point[0] + forward[0] * distance[0] + right[0] * distance[1] + up[0] * distance[2];
+	result[1] = point[1] + forward[1] * distance[0] + right[1] * distance[1] + up[1] * distance[2];
+	result[2] = point[2] + forward[2] * distance[0] + right[2] * distance[1] + up[2] * distance[2];
+}
 
 /*
 =============
@@ -89,6 +95,49 @@ edict_t *findradius (edict_t *from, vec3_t org, float rad)
 		if (!from->inuse)
 			continue;
 		if (from->solid == SOLID_NOT)
+			continue;
+		for (j=0 ; j<3 ; j++)
+			eorg[j] = org[j] - (from->s.origin[j] + (from->mins[j] + from->maxs[j])*0.5);
+		if (VectorLength(eorg) > rad)
+			continue;
+		return from;
+	}
+
+	return NULL;
+}
+
+/*
+=================
+findradius2
+
+Returns entities that have origins within a spherical area
+
+ROGUE - tweaks for performance for tesla specific code
+only returns entities that can be damaged
+only returns entities that are SVF_DAMAGEABLE
+
+findradius2 (origin, radius)
+=================
+*/
+edict_t *findradius2 (edict_t *from, vec3_t org, float rad)
+{
+	// rad must be positive
+	vec3_t	eorg;
+	int		j;
+
+	if (!from)
+		from = g_edicts;
+	else
+		from++;
+	for ( ; from < &g_edicts[globals.num_edicts]; from++)
+	{
+		if (!from->inuse)
+			continue;
+		if (from->solid == SOLID_NOT)
+			continue;
+		if (!from->takedamage)
+			continue;
+		if (!(from->svflags & SVF_DAMAGEABLE))
 			continue;
 		for (j=0 ; j<3 ; j++)
 			eorg[j] = org[j] - (from->s.origin[j] + (from->mins[j] + from->maxs[j])*0.5);
@@ -173,6 +222,8 @@ match (string)self.target and call their .use function
 void G_UseTargets (edict_t *ent, edict_t *activator)
 {
 	edict_t		*t;
+	edict_t		*master;
+	qboolean	done = false;
 
 //
 // check for a delay
@@ -214,6 +265,37 @@ void G_UseTargets (edict_t *ent, edict_t *activator)
 		t = NULL;
 		while ((t = G_Find (t, FOFS(targetname), ent->killtarget)))
 		{
+			// PMM - if this entity is part of a train, cleanly remove it
+			if (t->flags & FL_TEAMSLAVE)
+			{
+//				if ((g_showlogic) && (g_showlogic->value))
+//					gi.dprintf ("Removing %s from train!\n", t->classname);
+
+				if (t->teammaster)
+				{
+					master = t->teammaster;
+					while (!done)
+					{
+						if (master->teamchain == t)
+						{
+							master->teamchain = t->teamchain;
+							done = true;
+						}
+						master = master->teamchain;
+						if (!master)
+						{
+//							if ((g_showlogic) && (g_showlogic->value))
+//								gi.dprintf ("Couldn't find myself in master's chain, ignoring!\n");
+						}
+					}
+				}
+				else
+				{
+//					if ((g_showlogic) && (g_showlogic->value))
+//						gi.dprintf ("No master to free myself from, ignoring!\n");
+				}
+			}
+			// PMM
 			G_FreeEdict (t);
 			if (!ent->inuse)
 			{
@@ -334,17 +416,40 @@ float vectoyaw (vec3_t vec)
 {
 	float	yaw;
 	
-	if (/*vec[YAW] == 0 &&*/ vec[PITCH] == 0) 
-	{
-		yaw = 0;
-		if (vec[YAW] > 0)
+	// PMM - fixed to correct for pitch of 0
+	if (/*vec[YAW] == 0 &&*/ vec[PITCH] == 0)
+		if (vec[YAW] == 0)
+			yaw = 0;
+		else if (vec[YAW] > 0)
 			yaw = 90;
-		else if (vec[YAW] < 0)
-			yaw = -90;
-	} 
+		else
+			yaw = 270;
 	else
 	{
 		yaw = (int) (atan2(vec[YAW], vec[PITCH]) * 180 / M_PI);
+		if (yaw < 0)
+			yaw += 360;
+	}
+
+	return yaw;
+}
+
+		yaw = 0;
+float vectoyaw2 (vec3_t vec)
+{
+	float	yaw;
+	
+	// PMM - fixed to correct for pitch of 0
+	if (/*vec[YAW] == 0 &&*/ vec[PITCH] == 0)
+		if (vec[YAW] == 0)
+			yaw = 0;
+		else if (vec[YAW] > 0)
+			yaw = 90;
+		else
+			yaw = 270;
+	else
+	{
+		yaw = (atan2(vec[YAW], vec[PITCH]) * 180 / M_PI);
 		if (yaw < 0)
 			yaw += 360;
 	}
@@ -368,17 +473,55 @@ void vectoangles (vec3_t value1, vec3_t angles)
 	}
 	else
 	{
+	// PMM - fixed to correct for pitch of 0
 		if (value1[0])
 			yaw = (int) (atan2(value1[1], value1[0]) * 180 / M_PI);
 		else if (value1[1] > 0)
 			yaw = 90;
 		else
-			yaw = -90;
+			yaw = 270;
 		if (yaw < 0)
 			yaw += 360;
 
 		forward = sqrt (value1[0]*value1[0] + value1[1]*value1[1]);
 		pitch = (int) (atan2(value1[2], forward) * 180 / M_PI);
+		if (pitch < 0)
+			pitch += 360;
+	}
+
+	angles[PITCH] = -pitch;
+	angles[YAW] = yaw;
+	angles[ROLL] = 0;
+}
+
+void vectoangles2 (vec3_t value1, vec3_t angles)
+{
+	float	forward;
+	float	yaw, pitch;
+	
+	if (value1[1] == 0 && value1[0] == 0)
+	{
+		yaw = 0;
+		if (value1[2] > 0)
+			pitch = 90;
+		else
+			pitch = 270;
+	}
+	else
+	{
+	// PMM - fixed to correct for pitch of 0
+		if (value1[0])
+			yaw = (atan2(value1[1], value1[0]) * 180 / M_PI);
+		else if (value1[1] > 0)
+			yaw = 90;
+		else
+			yaw = 270;
+
+		if (yaw < 0)
+			yaw += 360;
+
+		forward = sqrt (value1[0]*value1[0] + value1[1]*value1[1]);
+		pitch = (atan2(value1[2], forward) * 180 / M_PI);
 		if (pitch < 0)
 			pitch += 360;
 	}
@@ -400,10 +543,27 @@ char *G_CopyString (char *in)
 
 void G_InitEdict (edict_t *e)
 {
+	// ROGUE
+	// FIXME -
+	//   this fixes a bug somewhere that is settling "nextthink" for an entity that has
+	//   already been released.  nextthink is being set to FRAMETIME after level.time, 
+	//   since freetime = nextthink - 0.1
+	if (e->nextthink)
+	{
+		e->nextthink = 0;
+	}
+	// ROGUE
+
 	e->inuse = true;
 	e->classname = "noclass";
 	e->gravity = 1.0;
 	e->s.number = e - g_edicts;
+
+//PGM - do this before calling the spawn function so it can be overridden.
+	e->gravityVector[0] =  0.0;
+	e->gravityVector[1] =  0.0;
+	e->gravityVector[2] = -1.0;
+//PGM
 }
 
 /*
@@ -565,4 +725,54 @@ qboolean KillBox (edict_t *ent)
 	}
 
 	return true;		// all clear
+}
+
+static const char* const s_rogueMapNames[] =
+{
+	"rammo1", "rammo2", "rbase1", "rbase2", "rboss", "rdm1", "rdm2",
+	"rdm3", "rdm4", "rdm5", "rdm6", "rdm7", "rdm8", "rdm9", "rdm10",
+	"rdm11", "rdm12", "rdm13", "rdm14", "rhangar1", "rhangar2",
+	"rlava1", "rlava2", "rmine1", "rmine2",	"rsewer1", "rsewer2",
+	"runit2", "runit3", "runit4", "rware1", "rware2"
+};
+static const size_t s_rogueMapCount = sizeof(s_rogueMapNames) / sizeof(s_rogueMapNames[0]);
+
+static const char* const s_xatrixMapNames[] =
+{
+	"badlands", "industry", "outbase", "refinery", "w_treat", "xcompnd1",
+	"xcompnd2", "xdm1", "xdm2", "xdm3", "xdm4", "xdm5", "xdm6", "xdm7",
+	"xhangar1", "xhangar2", "xintell", "xmoon1", "xmoon2", "xreactor",
+	"xsewer1", "xsewer2", "xship", "xswamp", "xware"
+};
+static const size_t s_xatrixMapCount = sizeof(s_xatrixMapNames) / sizeof(s_xatrixMapNames[0]);
+
+qboolean IsRogueMap(const char* name)
+{
+	const char** begin = s_rogueMapNames;
+	const char** end = (s_rogueMapNames + s_rogueMapCount);
+
+	// All the rogue maps begin with r, so this is a very quick check.
+	if (name[0] != 'r')
+		return false;
+
+	while (begin != end)
+	{
+		if (!Q_stricmp(*begin, name))
+			return true;
+		++begin;
+	}
+	return false;
+}
+
+qboolean IsXatrixMap(const char* name)
+{
+	const char** begin = s_xatrixMapNames;
+	const char** end = (s_xatrixMapNames + s_xatrixMapCount);
+	while (begin != end)
+	{
+		if (!Q_stricmp(*begin, name))
+			return true;
+		++begin;
+	}
+	return false;
 }

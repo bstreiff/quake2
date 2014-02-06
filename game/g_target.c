@@ -392,6 +392,8 @@ void use_target_spawner (edict_t *self, edict_t *other, edict_t *activator)
 	gi.linkentity (ent);
 	if (self->speed)
 		VectorCopy (self->movedir, ent->velocity);
+
+	ent->s.renderfx |= RF_IR_VISIBLE;		//PGM
 }
 
 void SP_target_spawner (edict_t *self)
@@ -488,10 +490,25 @@ void SP_target_crosslevel_target (edict_t *self)
 
 //==========================================================
 
-/*QUAKED target_laser (0 .5 .8) (-8 -8 -8) (8 8 8) START_ON RED GREEN BLUE YELLOW ORANGE FAT
+/*QUAKED target_laser (0 .5 .8) (-8 -8 -8) (8 8 8) START_ON RED GREEN BLUE YELLOW ORANGE FAT WINDOWSTOP
 When triggered, fires a laser.  You can either set a target
 or a direction.
+
+WINDOWSTOP - stops at CONTENTS_WINDOW
 */
+
+//======
+// PGM
+#define LASER_ON			0x0001
+#define LASER_RED			0x0002
+#define LASER_GREEN			0x0004
+#define LASER_BLUE			0x0008
+#define LASER_YELLOW		0x0010
+#define LASER_ORANGE		0x0020
+#define LASER_FAT			0x0040
+#define LASER_STOPWINDOW	0x0080
+// PGM
+//======
 
 void target_laser_think (edict_t *self)
 {
@@ -523,7 +540,14 @@ void target_laser_think (edict_t *self)
 	VectorMA (start, 2048, self->movedir, end);
 	while(1)
 	{
-		tr = gi.trace (start, NULL, NULL, end, ignore, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_DEADMONSTER);
+//======
+// PGM
+		if(self->spawnflags & LASER_STOPWINDOW)
+			tr = gi.trace (start, NULL, NULL, end, ignore, MASK_SHOT);
+		else
+			tr = gi.trace (start, NULL, NULL, end, ignore, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_DEADMONSTER);
+// PGM
+//======
 
 		if (!tr.ent)
 			break;
@@ -533,7 +557,7 @@ void target_laser_think (edict_t *self)
 			T_Damage (tr.ent, self, self->activator, self->movedir, tr.endpos, vec3_origin, self->dmg, 1, DAMAGE_ENERGY, MOD_TARGET_LASER);
 
 		// if we hit something that's not a monster or player or is immune to lasers, we're done
-		if (!(tr.ent->svflags & SVF_MONSTER) && (!tr.ent->client))
+		if (!(tr.ent->svflags & SVF_MONSTER) && (!tr.ent->client) && !(tr.ent->svflags & SVF_DAMAGEABLE))
 		{
 			if (self->spawnflags & 0x80000000)
 			{
@@ -835,7 +859,7 @@ void SP_target_lightramp (edict_t *self)
 
 //==========================================================
 
-/*QUAKED target_earthquake (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED target_earthquake (1 0 0) (-8 -8 -8) (8 8 8) SILENT
 When triggered, this initiates a level-wide earthquake.
 All players and monsters are affected.
 "speed"		severity of the quake (default:200)
@@ -847,11 +871,14 @@ void target_earthquake_think (edict_t *self)
 	int		i;
 	edict_t	*e;
 
-	if (self->last_move_time < level.time)
-	{
-		gi.positioned_sound (self->s.origin, self, CHAN_AUTO, self->noise_index, 1.0, ATTN_NONE, 0);
-		self->last_move_time = level.time + 0.5;
-	}
+	if(!(self->spawnflags & 1))					// PGM
+	{											// PGM
+		if (self->last_move_time < level.time)
+		{
+			gi.positioned_sound (self->s.origin, self, CHAN_AUTO, self->noise_index, 1.0, ATTN_NONE, 0);
+			self->last_move_time = level.time + 0.5;
+		}
+	}											// PGM
 
 	for (i=1, e=g_edicts+i; i < globals.num_edicts; i++,e++)
 	{
@@ -895,5 +922,6 @@ void SP_target_earthquake (edict_t *self)
 	self->think = target_earthquake_think;
 	self->use = target_earthquake_use;
 
-	self->noise_index = gi.soundindex ("world/quake.wav");
+	if(!(self->spawnflags & 1))									// PGM
+		self->noise_index = gi.soundindex ("world/quake.wav");
 }

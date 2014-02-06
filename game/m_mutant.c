@@ -602,6 +602,85 @@ void mutant_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 }
 
 
+
+//================
+//ROGUE
+void mutant_jump_down (edict_t *self)
+{
+	vec3_t	forward,up;
+
+	AngleVectors (self->s.angles, forward, NULL, up);
+	VectorMA(self->velocity, 100, forward, self->velocity);
+	VectorMA(self->velocity, 300, up, self->velocity);
+}
+
+void mutant_jump_up (edict_t *self)
+{
+	vec3_t	forward,up;
+
+	AngleVectors (self->s.angles, forward, NULL, up);
+	VectorMA(self->velocity, 200, forward, self->velocity);
+	VectorMA(self->velocity, 450, up, self->velocity);
+}
+
+void mutant_jump_wait_land (edict_t *self)
+{
+	if(self->groundentity == NULL)
+		self->monsterinfo.nextframe = self->s.frame;
+	else 
+		self->monsterinfo.nextframe = self->s.frame + 1;
+}
+
+mframe_t mutant_frames_jump_up [] =
+{
+	ai_move, -8, NULL,
+	ai_move, -8, mutant_jump_up,
+	ai_move, 0, mutant_jump_wait_land,
+	ai_move, 0, NULL,
+	ai_move, 0, NULL
+};
+mmove_t mutant_move_jump_up = { FRAME_jump01, FRAME_jump05, mutant_frames_jump_up, mutant_run };
+
+mframe_t mutant_frames_jump_down [] =
+{
+	ai_move, 0, NULL,
+	ai_move, 0, mutant_jump_down,
+	ai_move, 0, mutant_jump_wait_land,
+	ai_move, 0, NULL,
+	ai_move, 0, NULL
+};
+mmove_t mutant_move_jump_down = { FRAME_jump01, FRAME_jump05, mutant_frames_jump_down, mutant_run };
+
+void mutant_jump_updown (edict_t *self)
+{
+	if(!self->enemy)
+		return;
+
+	if(self->enemy->s.origin[2] > self->s.origin[2])
+		self->monsterinfo.currentmove = &mutant_move_jump_up;
+	else
+		self->monsterinfo.currentmove = &mutant_move_jump_down;
+}
+
+/*
+===
+Blocked
+===
+*/
+qboolean mutant_blocked (edict_t *self, float dist)
+{
+	if(blocked_checkjump (self, dist, 256, 68))
+	{
+		mutant_jump_updown (self);
+		return true;
+	}
+
+	if(blocked_checkplat (self, dist))
+		return true;
+}
+//ROGUE
+//================
+
 //
 // SPAWN
 //
@@ -632,7 +711,7 @@ void SP_monster_mutant (edict_t *self)
 	
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex ("models/monsters/mutant/tris.md2");
+	self->s.modelindex = gi.modelindex ("rogue:models/monsters/mutant/tris.md2");
 	VectorSet (self->mins, -32, -32, -24);
 	VectorSet (self->maxs, 32, 32, 48);
 
@@ -653,6 +732,7 @@ void SP_monster_mutant (edict_t *self)
 	self->monsterinfo.search = mutant_search;
 	self->monsterinfo.idle = mutant_idle;
 	self->monsterinfo.checkattack = mutant_checkattack;
+	self->monsterinfo.blocked = mutant_blocked;			// PGM
 
 	gi.linkentity (self);
 	

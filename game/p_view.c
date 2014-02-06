@@ -238,8 +238,16 @@ void SV_CalcViewOffset (edict_t *ent)
 	{
 		VectorClear (angles);
 
-		ent->client->ps.viewangles[ROLL] = 40;
-		ent->client->ps.viewangles[PITCH] = -15;
+		if(ent->flags & FL_SAM_RAIMI)
+		{
+			ent->client->ps.viewangles[ROLL] = 0;
+			ent->client->ps.viewangles[PITCH] = 0;
+		}
+		else
+		{
+			ent->client->ps.viewangles[ROLL] = 40;
+			ent->client->ps.viewangles[PITCH] = -15;
+		}
 		ent->client->ps.viewangles[YAW] = ent->client->killer_yaw;
 	}
 	else
@@ -346,34 +354,51 @@ void SV_CalcGunOffset (edict_t *ent)
 {
 	int		i;
 	float	delta;
+	//ROGUE
+	static gitem_t	*heatbeam;
 
-	// gun angles from bobbing
-	ent->client->ps.gunangles[ROLL] = xyspeed * bobfracsin * 0.005;
-	ent->client->ps.gunangles[YAW] = xyspeed * bobfracsin * 0.01;
-	if (bobcycle & 1)
+	if (!heatbeam)
+		heatbeam = FindItemByClassname ("weapon_plasmabeam");
+
+	//ROGUE - heatbeam shouldn't bob so the beam looks right
+	if (ent->client->pers.weapon != heatbeam)
 	{
-		ent->client->ps.gunangles[ROLL] = -ent->client->ps.gunangles[ROLL];
-		ent->client->ps.gunangles[YAW] = -ent->client->ps.gunangles[YAW];
+	// ROGUE
+		// gun angles from bobbing
+		ent->client->ps.gunangles[ROLL] = xyspeed * bobfracsin * 0.005;
+		ent->client->ps.gunangles[YAW] = xyspeed * bobfracsin * 0.01;
+		if (bobcycle & 1)
+		{
+			ent->client->ps.gunangles[ROLL] = -ent->client->ps.gunangles[ROLL];
+			ent->client->ps.gunangles[YAW] = -ent->client->ps.gunangles[YAW];
+		}
+
+		ent->client->ps.gunangles[PITCH] = xyspeed * bobfracsin * 0.005;
+
+		// gun angles from delta movement
+		for (i=0 ; i<3 ; i++)
+		{
+			delta = ent->client->oldviewangles[i] - ent->client->ps.viewangles[i];
+			if (delta > 180)
+				delta -= 360;
+			if (delta < -180)
+				delta += 360;
+			if (delta > 45)
+				delta = 45;
+			if (delta < -45)
+				delta = -45;
+			if (i == YAW)
+				ent->client->ps.gunangles[ROLL] += 0.1*delta;
+			ent->client->ps.gunangles[i] += 0.2 * delta;
+		}
 	}
-
-	ent->client->ps.gunangles[PITCH] = xyspeed * bobfracsin * 0.005;
-
-	// gun angles from delta movement
-	for (i=0 ; i<3 ; i++)
+	// ROGUE
+	else
 	{
-		delta = ent->client->oldviewangles[i] - ent->client->ps.viewangles[i];
-		if (delta > 180)
-			delta -= 360;
-		if (delta < -180)
-			delta += 360;
-		if (delta > 45)
-			delta = 45;
-		if (delta < -45)
-			delta = -45;
-		if (i == YAW)
-			ent->client->ps.gunangles[ROLL] += 0.1*delta;
-		ent->client->ps.gunangles[i] += 0.2 * delta;
+		for (i=0; i<3; i++)
+			ent->client->ps.gunangles[i] = 0;
 	}
+	//ROGUE
 
 	// gun height
 	VectorClear (ent->client->ps.gunoffset);
@@ -456,6 +481,16 @@ void SV_CalcBlend (edict_t *ent)
 		if (remaining > 30 || (remaining & 4) )
 			SV_AddBlend (1, 0.2, 0.5, 0.08, ent->client->ps.blend);
 	}
+	// PMM - double damage
+	else if (ent->client->double_framenum > level.framenum)
+	{
+		remaining = ent->client->double_framenum - level.framenum;
+		if (remaining == 30)	// beginning to fade
+			gi.sound(ent, CHAN_ITEM, gi.soundindex("misc/ddamage2.wav"), 1, ATTN_NORM, 0);
+		if (remaining > 30 || (remaining & 4) )
+			SV_AddBlend (0.9, 0.7, 0, 0.08, ent->client->ps.blend);
+	}
+	// PMM
 	else if (ent->client->invincible_framenum > level.framenum)
 	{
 		remaining = ent->client->invincible_framenum - level.framenum;
@@ -480,6 +515,30 @@ void SV_CalcBlend (edict_t *ent)
 		if (remaining > 30 || (remaining & 4) )
 			SV_AddBlend (0.4, 1, 0.4, 0.04, ent->client->ps.blend);
 	}
+
+//PGM
+	if(ent->client->nuke_framenum > level.framenum)
+	{
+		float brightness;
+		brightness = (ent->client->nuke_framenum - level.framenum) / 20.0;
+		SV_AddBlend (1, 1, 1, brightness, ent->client->ps.blend);
+	}
+	if (ent->client->ir_framenum > level.framenum)
+	{
+		remaining = ent->client->ir_framenum - level.framenum;
+		if(remaining > 30 || (remaining & 4))
+		{
+			ent->client->ps.rdflags |= RDF_IRGOGGLES;
+			SV_AddBlend (1, 0, 0, 0.2, ent->client->ps.blend);
+		}
+		else
+			ent->client->ps.rdflags &= ~RDF_IRGOGGLES;
+	}
+	else
+	{
+		ent->client->ps.rdflags &= ~RDF_IRGOGGLES;
+	}
+//PGM
 
 	// add for damage
 	if (ent->client->damage_alpha > 0)
@@ -756,10 +815,25 @@ void G_SetClientEffects (edict_t *ent)
 	int		remaining;
 
 	ent->s.effects = 0;
-	ent->s.renderfx = 0;
+
+	// PGM - player is always ir visible, even dead.
+	ent->s.renderfx = RF_IR_VISIBLE;
 
 	if (ent->health <= 0 || level.intermissiontime)
 		return;
+
+//=========
+//PGM
+	if(ent->flags & FL_DISGUISED)
+		ent->s.renderfx |= RF_USE_DISGUISE;
+
+	if (gamerules && gamerules->value)
+	{
+		if(DMGame.PlayerEffects)
+			DMGame.PlayerEffects(ent);
+	}
+//PGM
+//=========
 
 	if (ent->powerarmor_time > level.time)
 	{
@@ -788,6 +862,25 @@ void G_SetClientEffects (edict_t *ent)
 		if (remaining > 30 || (remaining & 4) )
 			ent->s.effects |= EF_QUAD;
 	}
+
+//=======
+//ROGUE
+	if (ent->client->double_framenum > level.framenum)
+	{
+		remaining = ent->client->double_framenum - level.framenum;
+		if (remaining > 30 || (remaining & 4) )
+			ent->s.effects |= EF_DOUBLE;
+	}
+	if ((ent->client->owned_sphere) && (ent->client->owned_sphere->spawnflags == 1))
+	{
+		ent->s.effects |= EF_HALF_DAMAGE;
+	}
+	if (ent->client->tracker_pain_framenum > level.framenum)
+	{
+		ent->s.effects |= EF_TRACKERTRAIL;
+	}
+//ROGUE
+//=======
 
 	if (ent->client->invincible_framenum > level.framenum)
 	{

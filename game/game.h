@@ -27,6 +27,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	SVF_NOCLIENT			0x00000001	// don't send entity to clients, even if it has effects
 #define	SVF_DEADMONSTER			0x00000002	// treat as CONTENTS_DEADMONSTER for collision
 #define	SVF_MONSTER				0x00000004	// treat as CONTENTS_MONSTER for collision
+//ROGUE -- added for things that are damageable, but not monsters
+// right now, only the tesla has this
+#define SVF_DAMAGEABLE			0x00000008
+//ROGUE end
 
 // edict->solid values
 

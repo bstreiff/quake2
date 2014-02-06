@@ -33,6 +33,7 @@ field_t fields[] = {
 	{"decel", FOFS(decel), F_FLOAT},
 	{"target", FOFS(target), F_LSTRING},
 	{"targetname", FOFS(targetname), F_LSTRING},
+	{"tagetname", FOFS(targetname), F_LSTRING}, // rogue rsewer2. seriously?
 	{"pathtarget", FOFS(pathtarget), F_LSTRING},
 	{"deathtarget", FOFS(deathtarget), F_LSTRING},
 	{"killtarget", FOFS(killtarget), F_LSTRING},
@@ -115,6 +116,24 @@ field_t fields[] = {
 	{"maxpitch", STOFS(maxpitch), F_FLOAT, FFL_SPAWNTEMP},
 	{"nextmap", STOFS(nextmap), F_LSTRING, FFL_SPAWNTEMP},
 
+	// ROGUE
+	{"bad_area", FOFS(bad_area), F_EDICT},
+	// while the hint_path stuff could be reassembled on the fly, no reason to be different
+	{"hint_chain", FOFS(hint_chain), F_EDICT},
+	{"monster_hint_chain", FOFS(monster_hint_chain), F_EDICT},
+	{"target_hint_chain", FOFS(target_hint_chain), F_EDICT},
+	//
+	{"goal_hint", FOFS(monsterinfo.goal_hint), F_EDICT},
+	{"badMedic1", FOFS(monsterinfo.badMedic1), F_EDICT},
+	{"badMedic2", FOFS(monsterinfo.badMedic2), F_EDICT},
+	{"last_player_enemy", FOFS(monsterinfo.last_player_enemy), F_EDICT},
+	{"commander", FOFS(monsterinfo.commander), F_EDICT},
+	{"blocked", FOFS(monsterinfo.blocked), F_MMOVE, FFL_NOSPAWN},
+	{"duck", FOFS(monsterinfo.duck), F_MMOVE, FFL_NOSPAWN},
+	{"unduck", FOFS(monsterinfo.unduck), F_MMOVE, FFL_NOSPAWN},
+	{"sidestep", FOFS(monsterinfo.sidestep), F_MMOVE, FFL_NOSPAWN},
+	// ROGUE	
+
 	{0, 0, 0, 0}
 
 };
@@ -128,6 +147,10 @@ field_t		levelfields[] =
 	{"sound_entity", LLOFS(sound_entity), F_EDICT},
 	{"sound2_entity", LLOFS(sound2_entity), F_EDICT},
 
+	// ROGUE
+	{"disguise_violator", LLOFS(disguise_violator), F_EDICT},
+	// ROGUE
+
 	{NULL, 0, F_INT}
 };
 
@@ -136,6 +159,9 @@ field_t		clientfields[] =
 	{"pers.weapon", CLOFS(pers.weapon), F_ITEM},
 	{"pers.lastweapon", CLOFS(pers.lastweapon), F_ITEM},
 	{"newweapon", CLOFS(newweapon), F_ITEM},
+	// ROGUE
+	{"owned_sphere", CLOFS(owned_sphere), F_EDICT},
+	// ROGUE
 
 	{NULL, 0, F_INT}
 };
@@ -163,6 +189,13 @@ void InitGame (void)
 	sv_maxvelocity = gi.cvar ("sv_maxvelocity", "2000", 0);
 	sv_gravity = gi.cvar ("sv_gravity", "800", 0);
 
+//ROGUE
+	g_showlogic = gi.cvar ("g_showlogic", "0", 0);
+	huntercam = gi.cvar ("huntercam", "1", CVAR_SERVERINFO|CVAR_LATCH);
+	strong_mines = gi.cvar ("strong_mines", "0", 0);
+	randomrespawn = gi.cvar ("randomrespawn", "0", 0);
+//ROGUE
+
 	// noset vars
 	dedicated = gi.cvar ("dedicated", "0", CVAR_NOSET);
 
@@ -177,6 +210,7 @@ void InitGame (void)
 	coop = gi.cvar ("coop", "0", CVAR_LATCH);
 	skill = gi.cvar ("skill", "1", CVAR_LATCH);
 	maxentities = gi.cvar ("maxentities", "1024", CVAR_LATCH);
+	gamerules = gi.cvar ("gamerules", "0", CVAR_LATCH);			//PGM
 
 	// change anytime vars
 	dmflags = gi.cvar ("dmflags", "0", CVAR_SERVERINFO);
@@ -223,6 +257,15 @@ void InitGame (void)
 	game.maxclients = maxclients->value;
 	game.clients = gi.TagMalloc (game.maxclients * sizeof(game.clients[0]), TAG_GAME);
 	globals.num_edicts = game.maxclients+1;
+
+//======
+//ROGUE
+	if(gamerules)
+	{
+		InitGameRules();	// if there are game rules to set up, do so now.
+	}
+//ROGUE
+//======
 }
 
 //=========================================================
@@ -671,7 +714,7 @@ void WriteLevel (char *filename)
 =================
 ReadLevel
 
-SpawnEntities will allready have been called on the
+SpawnEntities will already have been called on the
 level the same way it was when the level was saved.
 
 That is necessary to get the baselines
