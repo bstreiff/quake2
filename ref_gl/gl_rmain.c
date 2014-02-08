@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // r_main.c
 #include "gl_local.h"
+#include "SDL.h"
 
 void R_Clear (void);
 
@@ -1218,12 +1219,12 @@ int R_Init( void *hinstance, void *hWnd )
 	/*
 	** grab extensions
 	*/
-	if ( strstr( gl_config.extensions_string, "GL_EXT_compiled_vertex_array" ) || 
-		 strstr( gl_config.extensions_string, "GL_SGI_compiled_vertex_array" ) )
+	if (SDL_GL_ExtensionSupported("GL_EXT_compiled_vertex_array") ||
+		SDL_GL_ExtensionSupported("GL_SGI_compiled_vertex_array"))
 	{
 		ri.Con_Printf( PRINT_ALL, "...enabling GL_EXT_compiled_vertex_array\n" );
-		qglLockArraysEXT = ( void * ) qwglGetProcAddress( "glLockArraysEXT" );
-		qglUnlockArraysEXT = ( void * ) qwglGetProcAddress( "glUnlockArraysEXT" );
+		qglLockArraysEXT = (void *)SDL_GL_GetProcAddress("glLockArraysEXT");
+		qglUnlockArraysEXT = (void *)SDL_GL_GetProcAddress("glUnlockArraysEXT");
 	}
 	else
 	{
@@ -1231,6 +1232,7 @@ int R_Init( void *hinstance, void *hWnd )
 	}
 
 #ifdef _WIN32
+	/*
 	if ( strstr( gl_config.extensions_string, "WGL_EXT_swap_control" ) )
 	{
 		qwglSwapIntervalEXT = ( BOOL (WINAPI *)(int)) qwglGetProcAddress( "wglSwapIntervalEXT" );
@@ -1240,14 +1242,15 @@ int R_Init( void *hinstance, void *hWnd )
 	{
 		ri.Con_Printf( PRINT_ALL, "...WGL_EXT_swap_control not found\n" );
 	}
+	*/
 #endif
 
-	if ( strstr( gl_config.extensions_string, "GL_EXT_point_parameters" ) )
+	if (SDL_GL_ExtensionSupported("GL_EXT_point_parameters"))
 	{
 		if ( gl_ext_pointparameters->value )
 		{
-			qglPointParameterfEXT = ( void (APIENTRY *)( GLenum, GLfloat ) ) qwglGetProcAddress( "glPointParameterfEXT" );
-			qglPointParameterfvEXT = ( void (APIENTRY *)( GLenum, const GLfloat * ) ) qwglGetProcAddress( "glPointParameterfvEXT" );
+			qglPointParameterfEXT = (void (APIENTRY *)(GLenum, GLfloat)) SDL_GL_GetProcAddress("glPointParameterfEXT");
+			qglPointParameterfvEXT = (void (APIENTRY *)(GLenum, const GLfloat *)) SDL_GL_GetProcAddress("glPointParameterfvEXT");
 			ri.Con_Printf( PRINT_ALL, "...using GL_EXT_point_parameters\n" );
 		}
 		else
@@ -1266,7 +1269,7 @@ int R_Init( void *hinstance, void *hWnd )
 		if ( gl_ext_palettedtexture->value )
 		{
 			ri.Con_Printf( PRINT_ALL, "...using 3DFX_set_global_palette\n" );
-			qgl3DfxSetPaletteEXT = ( void ( APIENTRY * ) (GLuint *) )qwglGetProcAddress( "gl3DfxSetPaletteEXT" );
+			qgl3DfxSetPaletteEXT = ( void ( APIENTRY * ) (GLuint *) )SDL_GL_GetProcAddress( "gl3DfxSetPaletteEXT" );
 			qglColorTableEXT = Fake_glColorTableEXT;
 		}
 		else
@@ -1280,14 +1283,14 @@ int R_Init( void *hinstance, void *hWnd )
 	}
 #endif
 
-	if ( strstr( gl_config.extensions_string, "GL_ARB_multitexture" ) )
+	if (SDL_GL_ExtensionSupported("GL_ARB_multitexture"))
 	{
 		if ( gl_ext_multitexture->value )
 		{
 			ri.Con_Printf( PRINT_ALL, "...using GL_ARB_multitexture\n" );
-			qglMultiTexCoord2fARB = ( void * ) qwglGetProcAddress( "glMultiTexCoord2fARB" );
-			qglActiveTextureARB = ( void * ) qwglGetProcAddress( "glActiveTextureARB" );
-			qglClientActiveTextureARB = ( void * ) qwglGetProcAddress( "glClientActiveTextureARB" );
+			qglMultiTexCoord2fARB = (void *)SDL_GL_GetProcAddress("glMultiTexCoord2fARB");
+			qglActiveTextureARB = (void *)SDL_GL_GetProcAddress("glActiveTextureARB");
+			qglClientActiveTextureARB = (void *)SDL_GL_GetProcAddress("glClientActiveTextureARB");
 			GL_TEXTURE0 = GL_TEXTURE0_ARB;
 			GL_TEXTURE1 = GL_TEXTURE1_ARB;
 		}
@@ -1318,6 +1321,8 @@ int R_Init( void *hinstance, void *hWnd )
 	err = qglGetError();
 	if ( err != GL_NO_ERROR )
 		ri.Con_Printf (PRINT_ALL, "glGetError() = 0x%x\n", err);
+
+	return 0;
 }
 
 /*

@@ -31,6 +31,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "../ref_gl/gl_local.h"
 #include "glw_win.h"
 
+/*
 int   ( WINAPI * qwglChoosePixelFormat )(HDC, CONST PIXELFORMATDESCRIPTOR *);
 int   ( WINAPI * qwglDescribePixelFormat) (HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
 int   ( WINAPI * qwglGetPixelFormat)(HDC);
@@ -59,6 +60,7 @@ int  ( WINAPI * qwglGetLayerPaletteEntries)(HDC, int, int, int,
                                                 COLORREF *);
 BOOL ( WINAPI * qwglRealizeLayerPalette)(HDC, int, BOOL);
 BOOL ( WINAPI * qwglSwapLayerBuffers)(HDC, UINT);
+*/
 
 void ( APIENTRY * qglAccum )(GLenum op, GLfloat value);
 void ( APIENTRY * qglAlphaFunc )(GLenum func, GLclampf ref);
@@ -2641,13 +2643,14 @@ static void APIENTRY logViewport(GLint x, GLint y, GLsizei width, GLsizei height
 */
 void QGL_Shutdown( void )
 {
-	if ( glw_state.hinstOpenGL )
+	SDL_GL_UnloadLibrary();
+	/*if ( glw_state.hinstOpenGL )
 	{
 		FreeLibrary( glw_state.hinstOpenGL );
 		glw_state.hinstOpenGL = NULL;
 	}
 
-	glw_state.hinstOpenGL = NULL;
+	glw_state.hinstOpenGL = NULL;*/
 
 	qglAccum                     = NULL;
 	qglAlphaFunc                 = NULL;
@@ -2985,7 +2988,7 @@ void QGL_Shutdown( void )
 	qglVertex4sv                 = NULL;
 	qglVertexPointer             = NULL;
 	qglViewport                  = NULL;
-
+	/*
 	qwglCopyContext              = NULL;
 	qwglCreateContext            = NULL;
 	qwglCreateLayerContext       = NULL;
@@ -3008,6 +3011,7 @@ void QGL_Shutdown( void )
 	qwglGetPixelFormat           = NULL;
 	qwglSetPixelFormat           = NULL;
 	qwglSwapBuffers              = NULL;
+	*/
 
 	qwglSwapIntervalEXT	= NULL;
 
@@ -3016,7 +3020,7 @@ void QGL_Shutdown( void )
 }
 
 #	pragma warning (disable : 4113 4133 4047 )
-#	define GPA( a ) GetProcAddress( glw_state.hinstOpenGL, a )
+#	define GPA( a ) SDL_GL_GetProcAddress( a )
 
 /*
 ** QGL_Init
@@ -3030,23 +3034,11 @@ void QGL_Shutdown( void )
 */
 qboolean QGL_Init( const char *dllname )
 {
-	// update 3Dfx gamma irrespective of underlying DLL
+	if (SDL_GL_LoadLibrary(NULL) != 0)
 	{
-		char envbuffer[1024];
-		float g;
+		const char *buf = SDL_GetError();
 
-		g = 2.00 * ( 0.8 - ( vid_gamma->value - 0.5 ) ) + 1.0F;
-		Com_sprintf( envbuffer, sizeof(envbuffer), "SSTV2_GAMMA=%f", g );
-		putenv( envbuffer );
-		Com_sprintf( envbuffer, sizeof(envbuffer), "SST_GAMMA=%f", g );
-		putenv( envbuffer );
-	}
-
-	if ( ( glw_state.hinstOpenGL = LoadLibrary( dllname ) ) == 0 )
-	{
-		char *buf = NULL;
-
-		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR) &buf, 0, NULL);
+		//FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, SDL_GetError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR) &buf, 0, NULL);
 		ri.Con_Printf( PRINT_ALL, "%s\n", buf );
 		return false;
 	}
@@ -3390,6 +3382,7 @@ qboolean QGL_Init( const char *dllname )
 	qglVertexPointer             = 	dllVertexPointer             = GPA( "glVertexPointer" );
 	qglViewport                  = 	dllViewport                  = GPA( "glViewport" );
 
+	/*
 	qwglCopyContext              = GPA( "wglCopyContext" );
 	qwglCreateContext            = GPA( "wglCreateContext" );
 	qwglCreateLayerContext       = GPA( "wglCreateLayerContext" );
@@ -3411,7 +3404,7 @@ qboolean QGL_Init( const char *dllname )
 	qwglDescribePixelFormat      = GPA( "wglDescribePixelFormat" );
 	qwglGetPixelFormat           = GPA( "wglGetPixelFormat" );
 	qwglSetPixelFormat           = GPA( "wglSetPixelFormat" );
-	qwglSwapBuffers              = GPA( "wglSwapBuffers" );
+	qwglSwapBuffers              = GPA( "wglSwapBuffers" );*/
 
 	qwglSwapIntervalEXT = 0;
 	qglPointParameterfEXT = 0;

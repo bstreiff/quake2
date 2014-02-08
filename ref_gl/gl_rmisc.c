@@ -231,8 +231,9 @@ void GL_UpdateSwapInterval( void )
 		if ( !gl_state.stereo_enabled ) 
 		{
 #ifdef _WIN32
-			if ( qwglSwapIntervalEXT )
-				qwglSwapIntervalEXT( gl_swapinterval->value );
+			//if ( qwglSwapIntervalEXT )
+			//	qwglSwapIntervalEXT( gl_swapinterval->value );
+			SDL_GL_SetSwapInterval(gl_swapinterval->value);
 #endif
 		}
 	}

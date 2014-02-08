@@ -31,6 +31,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <conio.h>
 #include "../win32/conproc.h"
 
+#include "SDL.h"
+
 #define MINIMUM_WIN_MEMORY	0x0a00000
 #define MAXIMUM_WIN_MEMORY	0x1000000
 
@@ -636,7 +638,7 @@ WinMain
 ==================
 */
 HINSTANCE	global_hInstance;
-
+#if 0
 int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     MSG				msg;
@@ -704,4 +706,145 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	// never gets here
     return TRUE;
+}
+#endif
+
+// http://blogs.msdn.com/b/oldnewthing/archive/2004/10/25/247180.aspx
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+#define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
+
+extern cvar_t		*vid_xpos;			// X coordinate of window position
+extern cvar_t		*vid_ypos;			// Y coordinate of window position
+extern cvar_t		*vid_fullscreen;
+
+void Sys_HandleWindowEvent(const SDL_Event* ev)
+{
+	switch (ev->window.event)
+	{
+		case SDL_WINDOWEVENT_SHOWN:
+		{
+			break;
+		}
+		case SDL_WINDOWEVENT_MOVED:
+		{
+			int		xPos, yPos;
+			RECT r;
+			int		style;
+
+			if (!vid_fullscreen->value)
+			{
+				xPos = ev->window.data1;
+				yPos = ev->window.data2;
+
+				r.left = 0;
+				r.top = 0;
+				r.right = 1;
+				r.bottom = 1;
+
+				/*style = GetWindowLong(hWnd, GWL_STYLE);
+				AdjustWindowRect(&r, style, FALSE);*/
+
+				Cvar_SetValue("vid_xpos", xPos + r.left);
+				Cvar_SetValue("vid_ypos", yPos + r.top);
+				vid_xpos->modified = false;
+				vid_ypos->modified = false;
+				if (ActiveApp)
+					IN_Activate(true);
+			}
+			break;
+		}
+		default:
+			break;
+	}
+}
+
+static int QuakeKeyFromSDLKeySym(const SDL_Keysym* keysym)
+{
+	return (int)keysym->sym;
+}
+
+void Key_Event(int key, qboolean down, unsigned time);
+
+void Sys_HandleKeyboardEvent(const SDL_Event* ev)
+{
+	switch (ev->key.type)
+	{
+		case SDL_KEYDOWN:
+			Key_Event(QuakeKeyFromSDLKeySym(&(ev->key.keysym)), true, ev->key.timestamp);
+			break;
+		case SDL_KEYUP:
+			Key_Event(QuakeKeyFromSDLKeySym(&(ev->key.keysym)), false, ev->key.timestamp);
+			break;
+		default:
+			break;
+
+	}
+}
+
+int main(int argc, char* argv[])
+{
+	MSG				msg;
+	int				time, oldtime, newtime;
+	char			*cddir;
+	SDL_Event		ev;
+
+	global_hInstance = HINST_THISCOMPONENT;
+	SDL_Init(SDL_INIT_EVERYTHING);
+
+	//ParseCommandLine(lpCmdLine);
+
+	Qcommon_Init(argc, argv);
+	oldtime = Sys_Milliseconds();
+
+	/* main window message loop */
+	while (1)
+	{
+		// if at a full screen console, don't update unless needed
+		if (Minimized || (dedicated && dedicated->value))
+		{
+			Sleep(1);
+		}
+
+		/*
+		while (PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE))
+		{
+			if (!GetMessage(&msg, NULL, 0, 0))
+				Com_Quit();
+			sys_msg_time = msg.time;
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		*/
+		while (SDL_PollEvent(&ev))
+		{
+			switch (ev.type)
+			{
+				case SDL_QUIT:
+					Com_Quit();
+					return;
+				case SDL_KEYDOWN:
+				case SDL_KEYUP:
+					Sys_HandleKeyboardEvent(&ev);
+					break;
+				case SDL_WINDOWEVENT:
+					Sys_HandleWindowEvent(&ev);
+				default:
+					break;
+			}
+		}
+
+		do
+		{
+			newtime = Sys_Milliseconds();
+			time = newtime - oldtime;
+		} while (time < 1);
+		//			Con_Printf ("time:%5.2f - %5.2f = %5.2f\n", newtime, oldtime, time);
+
+		Qcommon_Frame(time);
+
+		oldtime = newtime;
+	}
+
+	// never gets here
+	return TRUE;
 }

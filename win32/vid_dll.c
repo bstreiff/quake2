@@ -496,7 +496,7 @@ qboolean VID_GetModeInfo( int *width, int *height, int mode )
 */
 void VID_UpdateWindowPosAndSize( int x, int y )
 {
-	RECT r;
+	/*RECT r;
 	int		style;
 	int		w, h;
 
@@ -511,7 +511,8 @@ void VID_UpdateWindowPosAndSize( int x, int y )
 	w = r.right - r.left;
 	h = r.bottom - r.top;
 
-	MoveWindow( cl_hwnd, vid_xpos->value, vid_ypos->value, w, h, TRUE );
+	MoveWindow( cl_hwnd, vid_xpos->value, vid_ypos->value, w, h, TRUE );*/
+
 }
 
 /*
