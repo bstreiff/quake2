@@ -91,7 +91,7 @@ void Sys_Error (char *error, ...)
 
 void Sys_Quit (void)
 {
-	timeEndPeriod( 1 );
+	//timeEndPeriod( 1 );
 
 	CL_Shutdown();
 	Qcommon_Shutdown ();
@@ -138,44 +138,7 @@ Sys_ScanForCD
 */
 char *Sys_ScanForCD (void)
 {
-	static char	cddir[MAX_OSPATH];
-	static qboolean	done;
-#ifndef DEMO
-	char		drive[4];
-	FILE		*f;
-	char		test[MAX_QPATH];
-
-	if (done)		// don't re-check
-		return cddir;
-
-	// no abort/retry/fail errors
-	SetErrorMode (SEM_FAILCRITICALERRORS);
-
-	drive[0] = 'c';
-	drive[1] = ':';
-	drive[2] = '\\';
-	drive[3] = 0;
-
-	done = true;
-
-	// scan the drives
-	for (drive[0] = 'c' ; drive[0] <= 'z' ; drive[0]++)
-	{
-		// where activision put the stuff...
-		sprintf (cddir, "%sinstall\\data", drive);
-		sprintf (test, "%sinstall\\data\\quake2.exe", drive);
-		f = fopen(test, "r");
-		if (f)
-		{
-			fclose (f);
-			if (GetDriveType (drive) == DRIVE_CDROM)
-				return cddir;
-		}
-	}
-#endif
-
-	cddir[0] = 0;
-	
+	// Nobody has CD drives anymore.
 	return NULL;
 }
 
@@ -189,7 +152,7 @@ Sys_Init
 */
 void Sys_Init (void)
 {
-	OSVERSIONINFO	vinfo;
+	//OSVERSIONINFO	vinfo;
 
 #if 0
 	// allocate a named semaphore on the client so the
@@ -211,8 +174,9 @@ void Sys_Init (void)
         "qwcl"); /* Semaphore name      */
 #endif
 
-	timeBeginPeriod( 1 );
+	//timeBeginPeriod( 1 );
 
+	/*
 	vinfo.dwOSVersionInfoSize = sizeof(vinfo);
 
 	if (!GetVersionEx (&vinfo))
@@ -224,6 +188,7 @@ void Sys_Init (void)
 		Sys_Error ("Quake2 doesn't run on Win32s");
 	else if ( vinfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS )
 		s_win95 = true;
+	*/
 
 	if (dedicated->value)
 	{
@@ -359,6 +324,7 @@ Send Key_Event calls
 */
 void Sys_SendKeyEvents (void)
 {
+#if 0
     MSG        msg;
 
 	while (PeekMessage (&msg, NULL, 0, 0, PM_NOREMOVE))
@@ -372,6 +338,8 @@ void Sys_SendKeyEvents (void)
 
 	// grab frame time 
 	sys_frame_time = timeGetTime();	// FIXME: should this be at start?
+#endif
+	sys_frame_time = SDL_GetTicks();
 }
 
 
@@ -385,22 +353,18 @@ Sys_GetClipboardData
 char *Sys_GetClipboardData( void )
 {
 	char *data = NULL;
-	char *cliptext;
 
-	if ( OpenClipboard( NULL ) != 0 )
+	if (SDL_HasClipboardText())
 	{
-		HANDLE hClipboardData;
-
-		if ( ( hClipboardData = GetClipboardData( CF_TEXT ) ) != 0 )
+		// TODO: We copy this from the buffer SDL gives us, just so we can SDL_free()
+		// it so that all the clients can just do regular free(). Simplify?
+		char* clipData = SDL_GetClipboardText();
+		if (clipData)
 		{
-			if ( ( cliptext = GlobalLock( hClipboardData ) ) != 0 ) 
-			{
-				data = malloc( GlobalSize( hClipboardData ) + 1 );
-				strcpy( data, cliptext );
-				GlobalUnlock( hClipboardData );
-			}
+			data = malloc(strlen(clipData) + 1);
+			strcpy(data, clipData);
 		}
-		CloseClipboard();
+		SDL_free(clipData);
 	}
 	return data;
 }
@@ -602,6 +566,7 @@ ParseCommandLine
 
 ==================
 */
+/*
 void ParseCommandLine (LPSTR lpCmdLine)
 {
 	argc = 1;
@@ -630,6 +595,7 @@ void ParseCommandLine (LPSTR lpCmdLine)
 	}
 
 }
+*/
 
 /*
 ==================
@@ -753,31 +719,21 @@ void Sys_HandleWindowEvent(const SDL_Event* ev)
 			}
 			break;
 		}
+		case SDL_WINDOWEVENT_FOCUS_GAINED:
+		{
+			IN_Activate(true);
+
+			//if (reflib_active)
+			//	re.AppActivate(true);
+		}
+		case SDL_WINDOWEVENT_FOCUS_LOST:
+		{
+			IN_Activate(false);
+			//if (reflib_active)
+			//	re.AppActivate(false);
+		}
 		default:
 			break;
-	}
-}
-
-static int QuakeKeyFromSDLKeySym(const SDL_Keysym* keysym)
-{
-	return (int)keysym->sym;
-}
-
-void Key_Event(int key, qboolean down, unsigned time);
-
-void Sys_HandleKeyboardEvent(const SDL_Event* ev)
-{
-	switch (ev->key.type)
-	{
-		case SDL_KEYDOWN:
-			Key_Event(QuakeKeyFromSDLKeySym(&(ev->key.keysym)), true, ev->key.timestamp);
-			break;
-		case SDL_KEYUP:
-			Key_Event(QuakeKeyFromSDLKeySym(&(ev->key.keysym)), false, ev->key.timestamp);
-			break;
-		default:
-			break;
-
 	}
 }
 
@@ -821,13 +777,24 @@ int main(int argc, char* argv[])
 			{
 				case SDL_QUIT:
 					Com_Quit();
-					return;
+					return 0;
 				case SDL_KEYDOWN:
 				case SDL_KEYUP:
-					Sys_HandleKeyboardEvent(&ev);
+					Key_HandleKeyboardEvent(&(ev.key));
 					break;
 				case SDL_WINDOWEVENT:
 					Sys_HandleWindowEvent(&ev);
+					break;
+				case SDL_MOUSEMOTION:
+					IN_HandleMouseMotionEvent(&(ev.motion));
+					break;
+				case SDL_MOUSEBUTTONDOWN:
+				case SDL_MOUSEBUTTONUP:
+					IN_HandleMouseButtonEvent(&(ev.button));
+					break;
+				case SDL_MOUSEWHEEL:
+					IN_HandleMouseWheelEvent(&(ev.wheel));
+					break;
 				default:
 					break;
 			}
@@ -846,5 +813,5 @@ int main(int argc, char* argv[])
 	}
 
 	// never gets here
-	return TRUE;
+	return 0;
 }

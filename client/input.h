@@ -32,3 +32,11 @@ void IN_Move (usercmd_t *cmd);
 // add additional movement on top of the keyboard move cmd
 
 void IN_Activate (qboolean active);
+
+struct SDL_MouseMotionEvent;
+struct SDL_MouseButtonEvent;
+struct SDL_MouseWheelEvent;
+
+void IN_HandleMouseMotionEvent(const struct SDL_MouseMotionEvent* ev);
+void IN_HandleMouseButtonEvent(const struct SDL_MouseButtonEvent* button);
+void IN_HandleMouseWheelEvent(const struct SDL_MouseWheelEvent* wheel);

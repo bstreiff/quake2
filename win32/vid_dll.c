@@ -393,7 +393,7 @@ LONG WINAPI MainWndProc (
 			if (wParam & MK_XBUTTON2)
 				temp |= 16;
 
-			IN_MouseEvent (temp);
+			//IN_MouseEvent (temp);
 		}
 		break;
 
@@ -588,7 +588,7 @@ qboolean VID_LoadRefresh( char *name )
 		Com_Error (ERR_FATAL, "%s has incompatible api_version", name);
 	}
 
-	if ( re.Init( global_hInstance, MainWndProc ) == -1 )
+	if ( re.Init( NULL, NULL ) == -1 )
 	{
 		re.Shutdown();
 		VID_FreeReflib ();

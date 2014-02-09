@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "client.h"
+#include "SDL.h"
 
 /*
 
@@ -142,6 +143,7 @@ keyname_t keynames[] =
 	{"KP_INS",			K_KP_INS },
 	{"KP_DEL",			K_KP_DEL },
 	{"KP_SLASH",		K_KP_SLASH },
+	{"KP_TIMES",		K_KP_TIMES },
 	{"KP_MINUS",		K_KP_MINUS },
 	{"KP_PLUS",			K_KP_PLUS },
 
@@ -949,5 +951,227 @@ int Key_GetKey (void)
 		Sys_SendKeyEvents ();
 
 	return key_waiting;
+}
+
+
+// The glue to connect SDL key events to Quake key events.
+//
+// We could make the Quake key event system use the SDL keysyms
+// directly, but I think that'd end up threading SDL through more
+// places than I'd like.
+
+typedef struct {
+	int sdl_key;
+	keysym_t quake_key;
+} sdl_to_quake_keymap_t;
+
+static const sdl_to_quake_keymap_t sdl_to_quake_keymap[] =
+{
+	{ SDLK_UNKNOWN, 0 },
+	{ SDLK_RETURN, K_ENTER },
+	{ SDLK_ESCAPE, K_ESCAPE },
+	{ SDLK_BACKSPACE, K_BACKSPACE },
+	{ SDLK_TAB, K_TAB },
+	{ SDLK_SPACE, K_SPACE },
+	{ SDLK_F1, K_F1 },
+	{ SDLK_F2, K_F2 },
+	{ SDLK_F3, K_F3 },
+	{ SDLK_F4, K_F4 },
+	{ SDLK_F5, K_F5 },
+	{ SDLK_F6, K_F6 },
+	{ SDLK_F7, K_F7 },
+	{ SDLK_F8, K_F8 },
+	{ SDLK_F9, K_F9 },
+	{ SDLK_F10, K_F10 },
+	{ SDLK_F11, K_F11 },
+	{ SDLK_F12, K_F12 },
+	{ SDLK_PRINTSCREEN, K_UNHANDLED },
+	{ SDLK_PAUSE, K_PAUSE },
+	{ SDLK_INSERT, K_INS },
+	{ SDLK_HOME, K_HOME },
+	{ SDLK_PAGEUP, K_PGUP },
+	{ SDLK_DELETE, K_DEL },
+	{ SDLK_END, K_END },
+	{ SDLK_PAGEDOWN, K_PGDN },
+	{ SDLK_RIGHT, K_RIGHTARROW },
+	{ SDLK_LEFT, K_LEFTARROW },
+	{ SDLK_DOWN, K_DOWNARROW },
+	{ SDLK_UP, K_UPARROW },
+	{ SDLK_KP_DIVIDE, K_KP_SLASH },
+	{ SDLK_KP_MULTIPLY, K_KP_TIMES },
+	{ SDLK_KP_MINUS, K_KP_MINUS },
+	{ SDLK_KP_PLUS, K_KP_PLUS },
+	{ SDLK_KP_ENTER, K_KP_ENTER },
+	{ SDLK_KP_1, K_KP_END },
+	{ SDLK_KP_2, K_KP_DOWNARROW },
+	{ SDLK_KP_3, K_KP_PGDN },
+	{ SDLK_KP_4, K_KP_LEFTARROW },
+	{ SDLK_KP_5, K_KP_5 },
+	{ SDLK_KP_6, K_KP_RIGHTARROW },
+	{ SDLK_KP_7, K_KP_HOME },
+	{ SDLK_KP_8, K_KP_UPARROW },
+	{ SDLK_KP_9, K_KP_PGUP },
+	{ SDLK_KP_0, K_KP_INS },
+	{ SDLK_KP_PERIOD, K_KP_DEL },
+
+	{ SDLK_APPLICATION, K_UNHANDLED },
+	{ SDLK_POWER, K_UNHANDLED },
+	{ SDLK_KP_EQUALS, K_UNHANDLED},
+	{ SDLK_F13, K_UNHANDLED },
+	{ SDLK_F14, K_UNHANDLED },
+	{ SDLK_F15, K_UNHANDLED },
+	{ SDLK_F16, K_UNHANDLED },
+	{ SDLK_F17, K_UNHANDLED },
+	{ SDLK_F18, K_UNHANDLED },
+	{ SDLK_F19, K_UNHANDLED },
+	{ SDLK_F20, K_UNHANDLED },
+	{ SDLK_F21, K_UNHANDLED },
+	{ SDLK_F22, K_UNHANDLED },
+	{ SDLK_F23, K_UNHANDLED },
+	{ SDLK_F24, K_UNHANDLED },
+	{ SDLK_EXECUTE, K_UNHANDLED },
+	{ SDLK_HELP, K_UNHANDLED },
+	{ SDLK_MENU, K_UNHANDLED },
+	{ SDLK_SELECT, K_UNHANDLED },
+	{ SDLK_STOP, K_UNHANDLED },
+	{ SDLK_AGAIN, K_UNHANDLED },
+	{ SDLK_UNDO, K_UNHANDLED },
+	{ SDLK_CUT, K_UNHANDLED },
+	{ SDLK_COPY, K_UNHANDLED },
+	{ SDLK_PASTE, K_UNHANDLED },
+	{ SDLK_FIND, K_UNHANDLED },
+	{ SDLK_MUTE, K_UNHANDLED },
+	{ SDLK_VOLUMEUP, K_UNHANDLED },
+	{ SDLK_VOLUMEDOWN, K_UNHANDLED },
+	{ SDLK_KP_COMMA, K_UNHANDLED },
+	{ SDLK_KP_EQUALSAS400, K_UNHANDLED },
+	{ SDLK_ALTERASE, K_UNHANDLED },
+	{ SDLK_SYSREQ, K_UNHANDLED },
+	{ SDLK_CANCEL, K_UNHANDLED },
+	{ SDLK_CLEAR, K_UNHANDLED },
+	{ SDLK_PRIOR, K_UNHANDLED },
+	{ SDLK_RETURN2, K_UNHANDLED },
+	{ SDLK_SEPARATOR, K_UNHANDLED },
+	{ SDLK_OUT, K_UNHANDLED },
+	{ SDLK_OPER, K_UNHANDLED },
+	{ SDLK_CLEARAGAIN, K_UNHANDLED },
+	{ SDLK_CRSEL, K_UNHANDLED },
+	{ SDLK_EXSEL, K_UNHANDLED },
+	{ SDLK_KP_00, K_UNHANDLED },
+	{ SDLK_KP_000, K_UNHANDLED },
+	{ SDLK_THOUSANDSSEPARATOR, K_UNHANDLED },
+	{ SDLK_DECIMALSEPARATOR, K_UNHANDLED },
+	{ SDLK_CURRENCYUNIT, K_UNHANDLED },
+	{ SDLK_CURRENCYSUBUNIT, K_UNHANDLED },
+	{ SDLK_KP_LEFTPAREN, K_UNHANDLED },
+	{ SDLK_KP_RIGHTPAREN, K_UNHANDLED },
+	{ SDLK_KP_LEFTBRACE, K_UNHANDLED },
+	{ SDLK_KP_RIGHTBRACE, K_UNHANDLED },
+	{ SDLK_KP_TAB, K_UNHANDLED },
+	{ SDLK_KP_BACKSPACE, K_UNHANDLED },
+	{ SDLK_KP_A, K_UNHANDLED },
+	{ SDLK_KP_B, K_UNHANDLED },
+	{ SDLK_KP_C, K_UNHANDLED },
+	{ SDLK_KP_D, K_UNHANDLED },
+	{ SDLK_KP_E, K_UNHANDLED },
+	{ SDLK_KP_F, K_UNHANDLED },
+	{ SDLK_KP_XOR, K_UNHANDLED },
+	{ SDLK_KP_POWER, K_UNHANDLED },
+	{ SDLK_KP_PERCENT, K_UNHANDLED },
+	{ SDLK_KP_LESS, K_UNHANDLED },
+	{ SDLK_KP_GREATER, K_UNHANDLED },
+	{ SDLK_KP_AMPERSAND, K_UNHANDLED },
+	{ SDLK_KP_DBLAMPERSAND, K_UNHANDLED },
+	{ SDLK_KP_VERTICALBAR, K_UNHANDLED },
+	{ SDLK_KP_DBLVERTICALBAR, K_UNHANDLED },
+	{ SDLK_KP_COLON, K_UNHANDLED },
+	{ SDLK_KP_HASH, K_UNHANDLED },
+	{ SDLK_KP_SPACE, K_UNHANDLED },
+	{ SDLK_KP_AT, K_UNHANDLED },
+	{ SDLK_KP_EXCLAM, K_UNHANDLED },
+	{ SDLK_KP_MEMSTORE, K_UNHANDLED },
+	{ SDLK_KP_MEMRECALL, K_UNHANDLED },
+	{ SDLK_KP_MEMCLEAR, K_UNHANDLED },
+	{ SDLK_KP_MEMADD, K_UNHANDLED },
+	{ SDLK_KP_MEMSUBTRACT, K_UNHANDLED },
+	{ SDLK_KP_MEMMULTIPLY, K_UNHANDLED },
+	{ SDLK_KP_MEMDIVIDE, K_UNHANDLED },
+	{ SDLK_KP_PLUSMINUS, K_UNHANDLED },
+	{ SDLK_KP_CLEAR, K_UNHANDLED },
+	{ SDLK_KP_CLEARENTRY, K_UNHANDLED },
+	{ SDLK_KP_BINARY, K_UNHANDLED },
+	{ SDLK_KP_OCTAL, K_UNHANDLED },
+	{ SDLK_KP_DECIMAL, K_UNHANDLED },
+	{ SDLK_KP_HEXADECIMAL, K_UNHANDLED },
+
+	{ SDLK_LCTRL, K_CTRL },
+	{ SDLK_LSHIFT, K_SHIFT },
+	{ SDLK_LALT, K_ALT },
+	{ SDLK_LGUI, K_UNHANDLED },
+	{ SDLK_RCTRL, K_CTRL },
+	{ SDLK_RSHIFT, K_SHIFT },
+	{ SDLK_RALT, K_ALT },
+	{ SDLK_RGUI, K_UNHANDLED },
+
+	{ SDLK_MODE, K_UNHANDLED },
+
+	{ SDLK_AUDIONEXT, K_UNHANDLED },
+	{ SDLK_AUDIOPREV, K_UNHANDLED },
+	{ SDLK_AUDIOSTOP, K_UNHANDLED },
+	{ SDLK_AUDIOPLAY, K_UNHANDLED },
+	{ SDLK_AUDIOMUTE, K_UNHANDLED },
+	{ SDLK_MEDIASELECT, K_UNHANDLED },
+	{ SDLK_WWW, K_UNHANDLED },
+	{ SDLK_MAIL, K_UNHANDLED },
+	{ SDLK_CALCULATOR, K_UNHANDLED },
+	{ SDLK_COMPUTER, K_UNHANDLED },
+	{ SDLK_AC_SEARCH, K_UNHANDLED },
+	{ SDLK_AC_HOME, K_UNHANDLED },
+	{ SDLK_AC_BACK, K_UNHANDLED },
+	{ SDLK_AC_FORWARD, K_UNHANDLED },
+	{ SDLK_AC_STOP, K_UNHANDLED },
+	{ SDLK_AC_REFRESH, K_UNHANDLED },
+	{ SDLK_AC_BOOKMARKS, K_UNHANDLED },
+
+	{ SDLK_BRIGHTNESSDOWN, K_UNHANDLED },
+	{ SDLK_BRIGHTNESSUP, K_UNHANDLED },
+	{ SDLK_DISPLAYSWITCH, K_UNHANDLED },
+	{ SDLK_KBDILLUMTOGGLE, K_UNHANDLED },
+	{ SDLK_KBDILLUMDOWN, K_UNHANDLED },
+	{ SDLK_KBDILLUMUP, K_UNHANDLED },
+	{ SDLK_EJECT, K_UNHANDLED },
+	{ SDLK_SLEEP, K_UNHANDLED },
+};
+static const size_t sdl_to_quake_keymap_length = sizeof(sdl_to_quake_keymap) / sizeof(sdl_to_quake_keymap[0]);
+
+static keysym_t QuakeKeyFromSDLKeySym(const SDL_Keysym* keysym)
+{
+	// All of these ones map 1:1.
+	if (keysym->sym >= SDLK_SPACE && keysym->sym <= SDLK_z)
+		return (keysym_t)(keysym->sym);
+
+	// Otherwise, we have to look it up.
+	for (size_t i = 0; i < sdl_to_quake_keymap_length; ++i)
+	{
+		if (keysym->sym == sdl_to_quake_keymap[i].sdl_key)
+		{
+			return sdl_to_quake_keymap[i].quake_key;
+		}
+	}
+
+	return K_UNHANDLED;
+}
+
+void Key_HandleKeyboardEvent(const SDL_KeyboardEvent* key)
+{
+	keysym_t qkey = QuakeKeyFromSDLKeySym(&(key->keysym));
+
+	if (qkey != K_UNHANDLED)
+	{
+		Key_Event(
+			qkey,
+			(key->type == SDL_KEYDOWN ? true : false),
+			key->timestamp);
+	}
 }
 
