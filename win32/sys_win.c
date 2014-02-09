@@ -30,6 +30,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <io.h>
 #include <conio.h>
 #include "../win32/conproc.h"
+#include "../client/input.h"
+#include "../client/vid.h"
+#include "../client/keys.h"
 
 #include "SDL.h"
 
@@ -603,7 +606,6 @@ WinMain
 
 ==================
 */
-HINSTANCE	global_hInstance;
 #if 0
 int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -675,68 +677,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 }
 #endif
 
-// http://blogs.msdn.com/b/oldnewthing/archive/2004/10/25/247180.aspx
-EXTERN_C IMAGE_DOS_HEADER __ImageBase;
-#define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
-
-extern cvar_t		*vid_xpos;			// X coordinate of window position
-extern cvar_t		*vid_ypos;			// Y coordinate of window position
-extern cvar_t		*vid_fullscreen;
-
-void Sys_HandleWindowEvent(const SDL_Event* ev)
-{
-	switch (ev->window.event)
-	{
-		case SDL_WINDOWEVENT_SHOWN:
-		{
-			break;
-		}
-		case SDL_WINDOWEVENT_MOVED:
-		{
-			int		xPos, yPos;
-			RECT r;
-			int		style;
-
-			if (!vid_fullscreen->value)
-			{
-				xPos = ev->window.data1;
-				yPos = ev->window.data2;
-
-				r.left = 0;
-				r.top = 0;
-				r.right = 1;
-				r.bottom = 1;
-
-				/*style = GetWindowLong(hWnd, GWL_STYLE);
-				AdjustWindowRect(&r, style, FALSE);*/
-
-				Cvar_SetValue("vid_xpos", xPos + r.left);
-				Cvar_SetValue("vid_ypos", yPos + r.top);
-				vid_xpos->modified = false;
-				vid_ypos->modified = false;
-				if (ActiveApp)
-					IN_Activate(true);
-			}
-			break;
-		}
-		case SDL_WINDOWEVENT_FOCUS_GAINED:
-		{
-			IN_Activate(true);
-
-			//if (reflib_active)
-			//	re.AppActivate(true);
-		}
-		case SDL_WINDOWEVENT_FOCUS_LOST:
-		{
-			IN_Activate(false);
-			//if (reflib_active)
-			//	re.AppActivate(false);
-		}
-		default:
-			break;
-	}
-}
-
 int main(int argc, char* argv[])
 {
 	MSG				msg;
@@ -744,7 +684,6 @@ int main(int argc, char* argv[])
 	char			*cddir;
 	SDL_Event		ev;
 
-	global_hInstance = HINST_THISCOMPONENT;
 	SDL_Init(SDL_INIT_EVERYTHING);
 
 	//ParseCommandLine(lpCmdLine);
@@ -783,7 +722,7 @@ int main(int argc, char* argv[])
 					Key_HandleKeyboardEvent(&(ev.key));
 					break;
 				case SDL_WINDOWEVENT:
-					Sys_HandleWindowEvent(&ev);
+					VID_HandleWindowEvent(&(ev.window));
 					break;
 				case SDL_MOUSEMOTION:
 					IN_HandleMouseMotionEvent(&(ev.motion));

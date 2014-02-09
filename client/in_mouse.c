@@ -34,8 +34,6 @@ MOUSE CONTROL
 */
 
 // mouse variables
-extern cvar_t	*m_filter;
-
 qboolean	mlooking;
 
 void IN_MLookDown(void) { mlooking = true; }
@@ -47,21 +45,14 @@ void IN_MLookUp(void) {
 
 int			mouse_buttons;
 int			mouse_oldbuttonstate;
-POINT		current_pos;
-int			mouse_x, mouse_y, old_mouse_x, old_mouse_y, mx_accum, my_accum;
 
-int			old_x, old_y;
+static int	mouse_rel_x;
+static int	mouse_rel_y;
 
 qboolean	mouseactive;	// false when not focus app
 
 qboolean	restore_spi;
 qboolean	mouseinitialized;
-int		originalmouseparms[3], newmouseparms[3] = { 0, 0, 1 };
-qboolean	mouseparmsvalid;
-
-int			window_center_x, window_center_y;
-RECT		window_rect;
-
 
 /*
 ===========
@@ -72,8 +63,6 @@ Called when the window gains focus or changes in some way
 */
 void IN_ActivateMouse(void)
 {
-	//int		width, height;
-
 	if (!mouseinitialized)
 		return;
 	if (!in_mouse->value)
@@ -85,39 +74,11 @@ void IN_ActivateMouse(void)
 		return;
 
 	mouseactive = true;
-	/*
-	if (mouseparmsvalid)
-		restore_spi = SystemParametersInfo(SPI_SETMOUSE, 0, newmouseparms, 0);
 
-	width = GetSystemMetrics(SM_CXSCREEN);
-	height = GetSystemMetrics(SM_CYSCREEN);
+	mouse_rel_x = 0;
+	mouse_rel_y = 0;
 
-	GetWindowRect(cl_hwnd, &window_rect);
-	if (window_rect.left < 0)
-		window_rect.left = 0;
-	if (window_rect.top < 0)
-		window_rect.top = 0;
-	if (window_rect.right >= width)
-		window_rect.right = width - 1;
-	if (window_rect.bottom >= height - 1)
-		window_rect.bottom = height - 1;
-
-	window_center_x = (window_rect.right + window_rect.left) / 2;
-	window_center_y = (window_rect.top + window_rect.bottom) / 2;
-
-	SetCursorPos(window_center_x, window_center_y);
-
-	old_x = window_center_x;
-	old_y = window_center_y;
-
-	SetCapture(cl_hwnd);
-	ClipCursor(&window_rect);
-	while (ShowCursor(FALSE) >= 0)
-		;
-	*/
-	Com_Printf("setting relative mouse mode\n");
 	SDL_SetRelativeMouseMode(true);
-	
 }
 
 
@@ -135,17 +96,9 @@ void IN_DeactivateMouse(void)
 	if (!mouseactive)
 		return;
 
-	/*
-	if (restore_spi)
-		SystemParametersInfo(SPI_SETMOUSE, 0, originalmouseparms, 0);
+	mouse_rel_x = 0;
+	mouse_rel_y = 0;
 
-	mouseactive = false;
-
-	ClipCursor(NULL);
-	ReleaseCapture();
-	while (ShowCursor(TRUE) < 0)
-		;
-	*/
 	SDL_SetRelativeMouseMode(false);
 }
 
@@ -165,7 +118,6 @@ void IN_StartupMouse(void)
 		return;
 
 	mouseinitialized = true;
-	mouseparmsvalid = SystemParametersInfo(SPI_GETMOUSE, 0, originalmouseparms, 0);
 	mouse_buttons = 5;
 }
 
@@ -176,65 +128,44 @@ IN_MouseMove
 */
 void IN_MouseMove(usercmd_t *cmd)
 {
-	int		mx, my;
+	int		this_mouse_x, this_mouse_y;
 
 	if (!mouseactive)
 		return;
 
-	// find mouse movement
-	//if (!GetCursorPos(&current_pos))
-	//	return;
+	// Get the relative mouse movement since the last time we called IN_MouseMove.
+	this_mouse_x = mouse_rel_x;
+	this_mouse_y = mouse_rel_y;
 
-	mx = current_pos.x - window_center_x;
-	my = current_pos.y - window_center_y;
+	// Reset it.
+	mouse_rel_x = 0;
+	mouse_rel_y = 0;
 
-#if 0
-	if (!mx && !my)
-		return;
-#endif
-
-	if (m_filter->value)
-	{
-		mouse_x = (mx + old_mouse_x) * 0.5;
-		mouse_y = (my + old_mouse_y) * 0.5;
-	}
-	else
-	{
-		mouse_x = mx;
-		mouse_y = my;
-	}
-
-	old_mouse_x = mx;
-	old_mouse_y = my;
-
-	mouse_x *= sensitivity->value;
-	mouse_y *= sensitivity->value;
+	// Apply sensitivity.
+	this_mouse_x *= sensitivity->value;
+	this_mouse_y *= sensitivity->value;
 
 	// add mouse X/Y movement to cmd
 	if ((in_strafe.state & 1) || (lookstrafe->value && mlooking))
-		cmd->sidemove += m_side->value * mouse_x;
+		cmd->sidemove += m_side->value * this_mouse_x;
 	else
-		cl.viewangles[YAW] -= m_yaw->value * mouse_x;
+		cl.viewangles[YAW] -= m_yaw->value * this_mouse_x;
 
 	if ((mlooking || freelook->value) && !(in_strafe.state & 1))
 	{
-		cl.viewangles[PITCH] += m_pitch->value * mouse_y;
+		cl.viewangles[PITCH] += m_pitch->value * this_mouse_y;
 	}
 	else
 	{
-		cmd->forwardmove -= m_forward->value * mouse_y;
+		cmd->forwardmove -= m_forward->value * this_mouse_y;
 	}
-
-	// force the mouse to the center, so there's room to move
-	//if (mx || my)
-	//	SetCursorPos(window_center_x, window_center_y);
 }
 
 
 void IN_HandleMouseMotionEvent(const SDL_MouseMotionEvent* motion)
 {
-	mouse_x = motion->x;
-	mouse_y = motion->y;
+	mouse_rel_x += motion->xrel;
+	mouse_rel_y += motion->yrel;
 }
 
 void IN_HandleMouseButtonEvent(const SDL_MouseButtonEvent* button)

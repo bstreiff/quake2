@@ -27,13 +27,11 @@ extern	unsigned	sys_msg_time;
 
 cvar_t	*in_mouse;
 cvar_t	*in_joystick;
-cvar_t	*m_filter;
 
 void IN_MLookDown(void);
 void IN_MLookUp(void);
 void Joy_AdvancedUpdate_f(void);
 
-extern int mx_accum, my_accum;
 extern qboolean	mouseactive;	// false when not focus app
 
 extern qboolean	restore_spi;
@@ -95,7 +93,6 @@ IN_Init
 void IN_Init (void)
 {
 	// mouse variables
-	m_filter				= Cvar_Get ("m_filter",					"0",		0);
     in_mouse				= Cvar_Get ("in_mouse",					"1",		CVAR_ARCHIVE);
 
 	// joystick variables
@@ -213,8 +210,6 @@ IN_ClearStates
 */
 void IN_ClearStates (void)
 {
-	mx_accum = 0;
-	my_accum = 0;
 }
 
 

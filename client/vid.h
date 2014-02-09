@@ -39,3 +39,6 @@ void	VID_CheckChanges (void);
 void	VID_MenuInit( void );
 void	VID_MenuDraw( void );
 const char *VID_MenuKey( int );
+
+struct SDL_WindowEvent;
+void VID_HandleWindowEvent(const struct SDL_WindowEvent* window);
