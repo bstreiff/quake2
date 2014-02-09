@@ -53,8 +53,6 @@ LONG WINAPI MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
 static qboolean s_alttab_disabled;
 
-extern	unsigned	sys_msg_time;
-
 /*
 ==========================================================================
 

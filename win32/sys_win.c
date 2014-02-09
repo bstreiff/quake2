@@ -36,29 +36,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "SDL.h"
 
-#define MINIMUM_WIN_MEMORY	0x0a00000
-#define MAXIMUM_WIN_MEMORY	0x1000000
-
-//#define DEMO
-
-qboolean s_win95;
-
 int			starttime;
 int			ActiveApp;
 qboolean	Minimized;
 
 static HANDLE		hinput, houtput;
 
-unsigned	sys_msg_time;
 unsigned	sys_frame_time;
 
 
 static HANDLE		qwclsemaphore;
 
-#define	MAX_NUM_ARGVS	128
-int			argc;
-char		*argv[MAX_NUM_ARGVS];
-
+static int g_argc;
+static char** g_argv;
 
 /*
 ===============================================================================
@@ -81,7 +71,11 @@ void Sys_Error (char *error, ...)
 	vsprintf (text, error, argptr);
 	va_end (argptr);
 
-	MessageBox(NULL, text, "Error", 0 /* MB_OK */ );
+	SDL_ShowSimpleMessageBox(
+		SDL_MESSAGEBOX_ERROR,
+		"Error",
+		text,
+		NULL);
 
 	if (qwclsemaphore)
 		CloseHandle (qwclsemaphore);
@@ -109,27 +103,6 @@ void Sys_Quit (void)
 }
 
 
-void WinError (void)
-{
-	LPVOID lpMsgBuf;
-
-	FormatMessage( 
-		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-		NULL,
-		GetLastError(),
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
-		(LPTSTR) &lpMsgBuf,
-		0,
-		NULL 
-	);
-
-	// Display the string.
-	MessageBox( NULL, lpMsgBuf, "GetLastError", MB_OK|MB_ICONINFORMATION );
-
-	// Free the buffer.
-	LocalFree( lpMsgBuf );
-}
-
 //================================================================
 
 
@@ -155,8 +128,6 @@ Sys_Init
 */
 void Sys_Init (void)
 {
-	//OSVERSIONINFO	vinfo;
-
 #if 0
 	// allocate a named semaphore on the client so the
 	// front end can tell if it is alive
@@ -177,22 +148,6 @@ void Sys_Init (void)
         "qwcl"); /* Semaphore name      */
 #endif
 
-	//timeBeginPeriod( 1 );
-
-	/*
-	vinfo.dwOSVersionInfoSize = sizeof(vinfo);
-
-	if (!GetVersionEx (&vinfo))
-		Sys_Error ("Couldn't get OS info");
-
-	if (vinfo.dwMajorVersion < 4)
-		Sys_Error ("Quake2 requires windows version 4 or greater");
-	if (vinfo.dwPlatformId == VER_PLATFORM_WIN32s)
-		Sys_Error ("Quake2 doesn't run on Win32s");
-	else if ( vinfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS )
-		s_win95 = true;
-	*/
-
 	if (dedicated->value)
 	{
 		if (!AllocConsole ())
@@ -201,7 +156,7 @@ void Sys_Init (void)
 		houtput = GetStdHandle (STD_OUTPUT_HANDLE);
 	
 		// let QHOST hook in
-		InitConProc (argc, argv);
+		InitConProc (g_argc, g_argv);
 	}
 }
 
@@ -327,21 +282,7 @@ Send Key_Event calls
 */
 void Sys_SendKeyEvents (void)
 {
-#if 0
-    MSG        msg;
-
-	while (PeekMessage (&msg, NULL, 0, 0, PM_NOREMOVE))
-	{
-		if (!GetMessage (&msg, NULL, 0, 0))
-			Sys_Quit ();
-		sys_msg_time = msg.time;
-      	TranslateMessage (&msg);
-      	DispatchMessage (&msg);
-	}
-
-	// grab frame time 
-	sys_frame_time = timeGetTime();	// FIXME: should this be at start?
-#endif
+	SDL_PumpEvents();
 	sys_frame_time = SDL_GetTicks();
 }
 
@@ -387,8 +328,10 @@ Sys_AppActivate
 */
 void Sys_AppActivate (void)
 {
-	ShowWindow ( cl_hwnd, SW_RESTORE);
-	SetForegroundWindow ( cl_hwnd );
+	SDL_Window* mainWindow = SDL_GetWindowFromID(0);
+
+	if (mainWindow)
+		SDL_RaiseWindow(mainWindow);
 }
 
 /*
@@ -399,7 +342,33 @@ GAME DLL
 ========================================================================
 */
 
-static HINSTANCE	game_library;
+static void*	game_library = NULL;
+
+#if defined(__linux__)
+	#define LIBRARY_EXTENSION "so"
+#elif defined(_WIN32)
+	#define LIBRARY_EXTENSION "dll"
+#elif defined(__APPLE__)
+	#define LIBRARY_EXTENSION "dylib"
+#else
+	#error Unknown platform, unknown library extension!
+#endif
+
+#if defined(_M_IX86) || defined(__i386__)
+	#define LIBRARY_ARCH "x86"
+#elif defined(_M_ARM) || defined(__arm__)
+	#define LIBRARY_ARCH "arm"
+#elif defined(_M_X64) || defined(_M_AMD64) || defined(__amd64__) || defined(__x86_64__)
+	#define LIBRARY_ARCH "x64"
+#elif defined(_M_ALPHA) || defined(__alpha__)
+	#define LIBRARY_ARCH "axp"
+#elif defined(_M_PPC) || defined(__ppc__)
+	#define LIBRARY_ARCH "ppc"
+#else
+	#error Unknown architecture.
+#endif
+
+#define GAME_LIBRARY_NAME "game" LIBRARY_ARCH "." LIBRARY_EXTENSION
 
 /*
 =================
@@ -408,8 +377,8 @@ Sys_UnloadGame
 */
 void Sys_UnloadGame (void)
 {
-	if (!FreeLibrary (game_library))
-		Com_Error (ERR_FATAL, "FreeLibrary failed for game library");
+	if (game_library)
+		SDL_UnloadObject(game_library);
 	game_library = NULL;
 }
 
@@ -426,24 +395,13 @@ void *Sys_GetGameAPI (void *parms)
 	char	name[MAX_OSPATH];
 	char	*path;
 	char	cwd[MAX_OSPATH];
-#if defined _M_IX86
-	const char *gamename = "gamex86.dll";
+
+	const char *gamename = GAME_LIBRARY_NAME;
 
 #ifdef NDEBUG
 	const char *debugdir = "release";
 #else
 	const char *debugdir = "debug";
-#endif
-
-#elif defined _M_ALPHA
-	const char *gamename = "gameaxp.dll";
-
-#ifdef NDEBUG
-	const char *debugdir = "releaseaxp";
-#else
-	const char *debugdir = "debugaxp";
-#endif
-
 #endif
 
 	if (game_library)
@@ -452,20 +410,20 @@ void *Sys_GetGameAPI (void *parms)
 	// check the current debug directory first for development purposes
 	_getcwd (cwd, sizeof(cwd));
 	Com_sprintf (name, sizeof(name), "%s/%s/%s", cwd, debugdir, gamename);
-	game_library = LoadLibrary ( name );
+	game_library = SDL_LoadObject ( name );
 	if (game_library)
 	{
-		Com_DPrintf ("LoadLibrary (%s)\n", name);
+		Com_DPrintf ("SDL_LoadObject (%s)\n", name);
 	}
 	else
 	{
 #ifdef DEBUG
 		// check the current directory for other development purposes
 		Com_sprintf (name, sizeof(name), "%s/%s", cwd, gamename);
-		game_library = LoadLibrary ( name );
+		game_library = SDL_LoadObject ( name );
 		if (game_library)
 		{
-			Com_DPrintf ("LoadLibrary (%s)\n", name);
+			Com_DPrintf ("SDL_LoadObject (%s)\n", name);
 		}
 		else
 #endif
@@ -478,17 +436,17 @@ void *Sys_GetGameAPI (void *parms)
 				if (!path)
 					return NULL;		// couldn't find one anywhere
 				Com_sprintf (name, sizeof(name), "%s/%s", path, gamename);
-				game_library = LoadLibrary (name);
+				game_library = SDL_LoadObject(name);
 				if (game_library)
 				{
-					Com_DPrintf ("LoadLibrary (%s)\n",name);
+					Com_DPrintf ("SDL_LoadObject (%s)\n",name);
 					break;
 				}
 			}
 		}
 	}
 
-	GetGameAPI = (void *)GetProcAddress (game_library, "GetGameAPI");
+	GetGameAPI = (void *)SDL_LoadFunction(game_library, "GetGameAPI");
 	if (!GetGameAPI)
 	{
 		Sys_UnloadGame ();		
@@ -565,43 +523,6 @@ size_t Sys_GetSteamDirectory(char* steamDirectory, size_t length)
 
 /*
 ==================
-ParseCommandLine
-
-==================
-*/
-/*
-void ParseCommandLine (LPSTR lpCmdLine)
-{
-	argc = 1;
-	argv[0] = "exe";
-
-	while (*lpCmdLine && (argc < MAX_NUM_ARGVS))
-	{
-		while (*lpCmdLine && ((*lpCmdLine <= 32) || (*lpCmdLine > 126)))
-			lpCmdLine++;
-
-		if (*lpCmdLine)
-		{
-			argv[argc] = lpCmdLine;
-			argc++;
-
-			while (*lpCmdLine && ((*lpCmdLine > 32) && (*lpCmdLine <= 126)))
-				lpCmdLine++;
-
-			if (*lpCmdLine)
-			{
-				*lpCmdLine = 0;
-				lpCmdLine++;
-			}
-			
-		}
-	}
-
-}
-*/
-
-/*
-==================
 WinMain
 
 ==================
@@ -655,7 +576,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		{
 			if (!GetMessage (&msg, NULL, 0, 0))
 				Com_Quit ();
-			sys_msg_time = msg.time;
 			TranslateMessage (&msg);
    			DispatchMessage (&msg);
 		}
@@ -686,7 +606,8 @@ int main(int argc, char* argv[])
 
 	SDL_Init(SDL_INIT_EVERYTHING);
 
-	//ParseCommandLine(lpCmdLine);
+	g_argc = argc;
+	g_argv = argv;
 
 	Qcommon_Init(argc, argv);
 	oldtime = Sys_Milliseconds();
@@ -700,16 +621,6 @@ int main(int argc, char* argv[])
 			Sleep(1);
 		}
 
-		/*
-		while (PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE))
-		{
-			if (!GetMessage(&msg, NULL, 0, 0))
-				Com_Quit();
-			sys_msg_time = msg.time;
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-		*/
 		while (SDL_PollEvent(&ev))
 		{
 			switch (ev.type)
