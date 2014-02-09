@@ -164,7 +164,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="client\in_joystick.c" />
+    <ClCompile Include="client\in_gamepad.c" />
     <ClCompile Include="client\in_mouse.c" />
     <ClCompile Include="win32\cd_win.c" />
     <ClCompile Include="client\cl_cin.c" />

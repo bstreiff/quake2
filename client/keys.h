@@ -89,49 +89,23 @@ typedef enum
 	K_MWHEELRIGHT,
 
 	//
-	// joystick buttons
+	// gamepad buttons
 	//
-	K_JOY1,
-	K_JOY2,
-	K_JOY3,
-	K_JOY4,
-
-	//
-	// aux keys are for multi-buttoned joysticks to generate so they can use
-	// the normal binding process
-	//
-	K_AUX1,
-	K_AUX2,
-	K_AUX3,
-	K_AUX4,
-	K_AUX5,
-	K_AUX6,
-	K_AUX7,
-	K_AUX8,
-	K_AUX9,
-	K_AUX10,
-	K_AUX11,
-	K_AUX12,
-	K_AUX13,
-	K_AUX14,
-	K_AUX15,
-	K_AUX16,
-	K_AUX17,
-	K_AUX18,
-	K_AUX19,
-	K_AUX20,
-	K_AUX21,
-	K_AUX22,
-	K_AUX23,
-	K_AUX24,
-	K_AUX25,
-	K_AUX26,
-	K_AUX27,
-	K_AUX28,
-	K_AUX29,
-	K_AUX30,
-	K_AUX31,
-	K_AUX32,
+	K_GAMEPAD_A,
+	K_GAMEPAD_B,
+	K_GAMEPAD_X,
+	K_GAMEPAD_Y,
+	K_GAMEPAD_BACK,
+	K_GAMEPAD_GUIDE,
+	K_GAMEPAD_START,
+	K_GAMEPAD_LSTICK,
+	K_GAMEPAD_RSTICK,
+	K_GAMEPAD_L1,
+	K_GAMEPAD_R1,
+	K_GAMEPAD_DPADUP,
+	K_GAMEPAD_DPADDOWN,
+	K_GAMEPAD_DPADLEFT,
+	K_GAMEPAD_DPADRIGHT,
 
 	K_LAST_SYM
 } keysym_t;

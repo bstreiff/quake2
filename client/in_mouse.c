@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "SDL.h"
 
 extern qboolean	in_appactive;
-extern cvar_t	*in_mouse;
+cvar_t	*in_mouse;
 
 /*
 ============================================================
@@ -113,12 +113,19 @@ void IN_StartupMouse(void)
 {
 	cvar_t		*cv;
 
+	// mouse variables
+	in_mouse = Cvar_Get("in_mouse", "1", CVAR_ARCHIVE);
+
 	cv = Cvar_Get("in_initmouse", "1", CVAR_NOSET);
 	if (!cv->value)
 		return;
 
 	mouseinitialized = true;
 	mouse_buttons = 5;
+}
+
+void IN_ShutdownMouse(void)
+{
 }
 
 /*

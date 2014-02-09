@@ -645,6 +645,18 @@ int main(int argc, char* argv[])
 				case SDL_MOUSEWHEEL:
 					IN_HandleMouseWheelEvent(&(ev.wheel));
 					break;
+				case SDL_CONTROLLERAXISMOTION:
+					IN_HandleControllerAxisEvent(&(ev.caxis));
+					break;
+				case SDL_CONTROLLERBUTTONDOWN:
+				case SDL_CONTROLLERBUTTONUP:
+					IN_HandleControllerButtonEvent(&(ev.cbutton));
+					break;
+				case SDL_CONTROLLERDEVICEADDED:
+				case SDL_CONTROLLERDEVICEREMAPPED:
+				case SDL_CONTROLLERDEVICEREMOVED:
+					IN_HandleControllerDeviceEvent(&(ev.cdevice));
+					break;
 				default:
 					break;
 			}

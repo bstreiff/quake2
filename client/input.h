@@ -40,3 +40,10 @@ struct SDL_MouseWheelEvent;
 void IN_HandleMouseMotionEvent(const struct SDL_MouseMotionEvent* ev);
 void IN_HandleMouseButtonEvent(const struct SDL_MouseButtonEvent* button);
 void IN_HandleMouseWheelEvent(const struct SDL_MouseWheelEvent* wheel);
+
+struct SDL_ControllerAxisEvent;
+struct SDL_ControllerButtonEvent;
+struct SDL_ControllerDeviceEvent;
+void IN_HandleControllerAxisEvent(const struct SDL_ControllerAxisEvent* axisev);
+void IN_HandleControllerButtonEvent(const struct SDL_ControllerButtonEvent* buttonev);
+void IN_HandleControllerDeviceEvent(const struct SDL_ControllerDeviceEvent* deviceev);

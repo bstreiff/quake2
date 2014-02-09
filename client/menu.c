@@ -159,11 +159,15 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 	switch ( key )
 	{
 	case K_ESCAPE:
+	case K_GAMEPAD_B:
+	case K_GAMEPAD_BACK:
 		M_PopMenu();
 		return menu_out_sound;
+
 	case K_KP_UPARROW:
 	case K_UPARROW:
 	case K_MWHEELUP:
+	case K_GAMEPAD_DPADUP:
 		if ( m )
 		{
 			m->cursor--;
@@ -171,17 +175,12 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 			sound = menu_move_sound;
 		}
 		break;
+
 	case K_TAB:
-		if ( m )
-		{
-			m->cursor++;
-			Menu_AdjustCursor( m, 1 );
-			sound = menu_move_sound;
-		}
-		break;
 	case K_KP_DOWNARROW:
 	case K_DOWNARROW:
 	case K_MWHEELDOWN:
+	case K_GAMEPAD_DPADDOWN:
 		if ( m )
 		{
 			m->cursor++;
@@ -189,18 +188,22 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 			sound = menu_move_sound;
 		}
 		break;
+
 	case K_KP_LEFTARROW:
 	case K_LEFTARROW:
 	case K_MWHEELLEFT:
+	case K_GAMEPAD_DPADLEFT:
 		if ( m )
 		{
 			Menu_SlideItem( m, -1 );
 			sound = menu_move_sound;
 		}
 		break;
+
 	case K_KP_RIGHTARROW:
 	case K_RIGHTARROW:
 	case K_MWHEELRIGHT:
+	case K_GAMEPAD_DPADRIGHT:
 		if ( m )
 		{
 			Menu_SlideItem( m, 1 );
@@ -213,43 +216,8 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 	case K_MOUSE3:
 	case K_MOUSE4:
 	case K_MOUSE5:
-	case K_JOY1:
-	case K_JOY2:
-	case K_JOY3:
-	case K_JOY4:
-	case K_AUX1:
-	case K_AUX2:
-	case K_AUX3:
-	case K_AUX4:
-	case K_AUX5:
-	case K_AUX6:
-	case K_AUX7:
-	case K_AUX8:
-	case K_AUX9:
-	case K_AUX10:
-	case K_AUX11:
-	case K_AUX12:
-	case K_AUX13:
-	case K_AUX14:
-	case K_AUX15:
-	case K_AUX16:
-	case K_AUX17:
-	case K_AUX18:
-	case K_AUX19:
-	case K_AUX20:
-	case K_AUX21:
-	case K_AUX22:
-	case K_AUX23:
-	case K_AUX24:
-	case K_AUX25:
-	case K_AUX26:
-	case K_AUX27:
-	case K_AUX28:
-	case K_AUX29:
-	case K_AUX30:
-	case K_AUX31:
-	case K_AUX32:
-		
+	case K_GAMEPAD_A:
+	case K_GAMEPAD_START:		
 	case K_KP_ENTER:
 	case K_ENTER:
 		if ( m )
@@ -1021,7 +989,7 @@ CONTROLS MENU
 =======================================================================
 */
 static cvar_t *win_noalttab;
-extern cvar_t *in_joystick;
+extern cvar_t *in_gamepad;
 
 static menuframework_s	s_options_menu;
 static menuaction_s		s_options_defaults_action;
@@ -1107,8 +1075,8 @@ static void ControlsSetMenuItemValues( void )
 	Cvar_SetValue( "crosshair", ClampCvar( 0, 3, crosshair->value ) );
 	s_options_crosshair_box.curvalue		= crosshair->value;
 
-	Cvar_SetValue( "in_joystick", ClampCvar( 0, 1, in_joystick->value ) );
-	s_options_joystick_box.curvalue		= in_joystick->value;
+	Cvar_SetValue("in_gamepad", ClampCvar(0, 1, in_gamepad->value));
+	s_options_joystick_box.curvalue			= in_gamepad->value;
 
 	s_options_noalttab_box.curvalue			= win_noalttab->value;
 }
