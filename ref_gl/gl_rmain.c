@@ -494,10 +494,7 @@ void R_DrawParticles (void)
 			qglEnd();
 			break;
 		case PARTICLE_TYPE_LINE:
-			p = ps->particles;
-			VectorSubtract (p->origin, r_newrefdef.vieworg, tv);
-			scale = (VectorLength(tv) / 8.0f);
-			qglLineWidth(gl_particle_size->value / scale);
+			qglLineWidth(1.0);
 			qglBegin( GL_LINES );
 			for ( i = 0, p = ps->particles; i < ps->num_particles; i++, p++ ) {
 				*(int *)color = d_8to24table[p->color];
@@ -513,10 +510,7 @@ void R_DrawParticles (void)
 			qglEnd();
 			break;
 		case PARTICLE_TYPE_LIGHTNING:
-			p = ps->particles;
-			VectorSubtract (p->origin, r_newrefdef.vieworg, tv);
-			scale = (VectorLength(tv) / 8.0f);
-			qglLineWidth(gl_particle_size->value / scale);
+			qglLineWidth(1.0);
 			qglBegin( GL_LINE_STRIP );
 			for ( i = 0, p = ps->particles; i < ps->num_particles; i++, p++ ) {
 				*(int *)color = d_8to24table[p->color];
