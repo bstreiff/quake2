@@ -99,7 +99,6 @@ void IN_Activate (qboolean active)
 {
 	in_appactive = active;
 	mouseactive = !active;		// force a new window check or turn off
-	Com_Printf("IN_Activate(%s)\n", (active ? "true" : "false"));
 
 	if (active)
 	{
