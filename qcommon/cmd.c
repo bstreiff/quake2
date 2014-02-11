@@ -409,7 +409,7 @@ void Cmd_Exec_f (void)
 	Com_Printf ("execing %s\n",Cmd_Argv(1));
 	
 	// the file doesn't have a trailing 0, so we need to copy it off
-	f2 = Z_Malloc(len+1);
+	f2 = Z_Malloc(len+2);
 	memcpy (f2, f, len);
 	// THP fix borrowed from r1
 	f2[len] = '\n';
