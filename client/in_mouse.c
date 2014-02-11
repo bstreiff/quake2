@@ -19,11 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "../client/client.h"
-#include "../win32/winquake.h"
 #include "SDL.h"
 
 extern qboolean	in_appactive;
-cvar_t	*in_mouse;
 
 /*
 ============================================================
@@ -43,15 +41,12 @@ void IN_MLookUp(void) {
 		IN_CenterView();
 }
 
-int			mouse_buttons;
 int			mouse_oldbuttonstate;
 
 static int	mouse_rel_x;
 static int	mouse_rel_y;
 
 qboolean	mouseactive;	// false when not focus app
-
-qboolean	restore_spi;
 qboolean	mouseinitialized;
 
 /*
@@ -65,11 +60,7 @@ void IN_ActivateMouse(void)
 {
 	if (!mouseinitialized)
 		return;
-	if (!in_mouse->value)
-	{
-		mouseactive = false;
-		return;
-	}
+
 	if (mouseactive)
 		return;
 
@@ -85,8 +76,8 @@ void IN_ActivateMouse(void)
 /*
 ===========
 IN_DeactivateMouse
-
-Called when the window loses focus
+`
+Called when the window loses focus`
 ===========
 */
 void IN_DeactivateMouse(void)
@@ -98,6 +89,7 @@ void IN_DeactivateMouse(void)
 
 	mouse_rel_x = 0;
 	mouse_rel_y = 0;
+	mouseactive = false;
 
 	SDL_SetRelativeMouseMode(false);
 }
@@ -113,15 +105,11 @@ void IN_StartupMouse(void)
 {
 	cvar_t		*cv;
 
-	// mouse variables
-	in_mouse = Cvar_Get("in_mouse", "1", CVAR_ARCHIVE);
-
 	cv = Cvar_Get("in_initmouse", "1", CVAR_NOSET);
 	if (!cv->value)
 		return;
 
 	mouseinitialized = true;
-	mouse_buttons = 5;
 }
 
 void IN_ShutdownMouse(void)
@@ -171,48 +159,54 @@ void IN_MouseMove(usercmd_t *cmd)
 
 void IN_HandleMouseMotionEvent(const SDL_MouseMotionEvent* motion)
 {
-	mouse_rel_x += motion->xrel;
-	mouse_rel_y += motion->yrel;
+	if (mouseactive)
+	{
+		mouse_rel_x += motion->xrel;
+		mouse_rel_y += motion->yrel;
+	}
 }
 
 void IN_HandleMouseButtonEvent(const SDL_MouseButtonEvent* button)
 {
-	// buttons are 1-indexed.
-	const int button_id = button->button - 1;
+	if (mouseactive)
+	{
+		// buttons are 1-indexed.
+		const int button_id = button->button - 1;
 
-	if (!mouseinitialized)
-		return;
+		if (!mouseinitialized)
+			return;
 
-	Key_Event(
-		K_MOUSE1 + button_id,
-		(button->state == SDL_PRESSED ? true : false),
-		button->timestamp);
+		Key_Event(
+			K_MOUSE1 + button_id,
+			(button->state == SDL_PRESSED ? true : false),
+			button->timestamp);
+	}
 }
 
 void IN_HandleMouseWheelEvent(const SDL_MouseWheelEvent* wheel)
 {
-	if (!mouseinitialized)
-		return;
+	if (mouseactive)
+	{
+		if (wheel->x > 0)
+		{
+			Key_Event(K_MWHEELLEFT, true, wheel->timestamp);
+			Key_Event(K_MWHEELLEFT, false, wheel->timestamp);
+		}
+		else if (wheel->x < 0)
+		{
+			Key_Event(K_MWHEELRIGHT, true, wheel->timestamp);
+			Key_Event(K_MWHEELRIGHT, false, wheel->timestamp);
+		}
 
-	if (wheel->x > 0)
-	{
-		Key_Event(K_MWHEELLEFT, true, wheel->timestamp);
-		Key_Event(K_MWHEELLEFT, false, wheel->timestamp);
-	}
-	else if (wheel->x < 0)
-	{
-		Key_Event(K_MWHEELRIGHT, true, wheel->timestamp);
-		Key_Event(K_MWHEELRIGHT, false, wheel->timestamp);
-	}
-
-	if (wheel->y > 0)
-	{
-		Key_Event(K_MWHEELUP, true, wheel->timestamp);
-		Key_Event(K_MWHEELUP, false, wheel->timestamp);
-	}
-	else if (wheel->y < 0)
-	{
-		Key_Event(K_MWHEELDOWN, true, wheel->timestamp);
-		Key_Event(K_MWHEELDOWN, false, wheel->timestamp);
+		if (wheel->y > 0)
+		{
+			Key_Event(K_MWHEELUP, true, wheel->timestamp);
+			Key_Event(K_MWHEELUP, false, wheel->timestamp);
+		}
+		else if (wheel->y < 0)
+		{
+			Key_Event(K_MWHEELDOWN, true, wheel->timestamp);
+			Key_Event(K_MWHEELDOWN, false, wheel->timestamp);
+		}
 	}
 }

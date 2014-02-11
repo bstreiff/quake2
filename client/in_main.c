@@ -19,10 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "../client/client.h"
-#include "winquake.h"
-
-extern cvar_t	*in_mouse;
-extern cvar_t	*in_gamepad;
 
 void IN_MLookDown(void);
 void IN_MLookUp(void);
@@ -103,6 +99,18 @@ void IN_Activate (qboolean active)
 {
 	in_appactive = active;
 	mouseactive = !active;		// force a new window check or turn off
+	Com_Printf("IN_Activate(%s)\n", (active ? "true" : "false"));
+
+	if (active)
+	{
+		IN_ActivateMouse();
+		IN_ActivateGamepad();
+	}
+	else
+	{
+		IN_DeactivateMouse();
+		IN_DeactivateGamepad();
+	}
 }
 
 
@@ -118,7 +126,7 @@ void IN_Frame (void)
 	if (!mouseinitialized)
 		return;
 
-	if (!in_mouse || !in_appactive)
+	if (!in_appactive)
 	{
 		IN_DeactivateMouse();
 		IN_DeactivateGamepad();
@@ -149,12 +157,21 @@ IN_Move
 */
 void IN_Move (usercmd_t *cmd)
 {
-	IN_MouseMove (cmd);
-
-	if (ActiveApp)
+	if (in_appactive)
+	{
+		IN_MouseMove (cmd);
 		IN_GamepadMove (cmd);
+	}
 }
 
+/*
+===========
+IN_Commands
+===========
+*/
+void IN_Commands(void)
+{
+}
 
 /*
 ===================

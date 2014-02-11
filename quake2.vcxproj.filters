@@ -78,9 +78,6 @@
     <ClCompile Include="qcommon\files.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="win32\in_win.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="client\keys.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -160,6 +157,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="client\in_gamepad.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\in_main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

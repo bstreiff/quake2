@@ -187,7 +187,7 @@
     <ClCompile Include="qcommon\crc.c" />
     <ClCompile Include="qcommon\cvar.c" />
     <ClCompile Include="qcommon\files.c" />
-    <ClCompile Include="win32\in_win.c" />
+    <ClCompile Include="client\in_main.c" />
     <ClCompile Include="client\keys.c" />
     <ClCompile Include="game\m_flash.c" />
     <ClCompile Include="qcommon\md4.c" />

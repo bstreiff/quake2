@@ -19,7 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "../client/client.h"
-#include "../win32/winquake.h"
 #include "SDL.h"
 
 cvar_t	*in_gamepad;
@@ -67,6 +66,21 @@ GAMEPAD
 static SDL_GameController* controller = NULL;
 static int controller_index = -1;
 
+qboolean IN_ConnectToController(int index)
+{
+	if (SDL_IsGameController(index))
+	{
+		controller = SDL_GameControllerOpen(index);
+		if (controller)
+		{
+			controller_index = index;
+			Cvar_Set("gamepad_name", (char *)SDL_GameControllerName(controller));
+			return true;
+		}
+	}
+	return false;
+}
+
 /*
 ===============
 IN_StartupGamepad
@@ -77,10 +91,10 @@ void IN_StartupGamepad(void)
 	// gamepad variables
 	in_gamepad = Cvar_Get("in_gamepad", "0", CVAR_ARCHIVE);
 	gamepad_name = Cvar_Get("gamepad_name", "", 0);
-	gamepad_forwardthreshold = Cvar_Get("gamepad_forwardthreshold", "0.15", CVAR_ARCHIVE);
-	gamepad_sidethreshold = Cvar_Get("gamepad_sidethreshold", "0.15", CVAR_ARCHIVE);
-	gamepad_pitchthreshold = Cvar_Get("gamepad_pitchthreshold", "0.15", CVAR_ARCHIVE);
-	gamepad_yawthreshold = Cvar_Get("gamepad_yawthreshold", "0.15", CVAR_ARCHIVE);
+	gamepad_forwardthreshold = Cvar_Get("gamepad_forwardthreshold", "0.17", CVAR_ARCHIVE);
+	gamepad_sidethreshold = Cvar_Get("gamepad_sidethreshold", "0.17", CVAR_ARCHIVE);
+	gamepad_pitchthreshold = Cvar_Get("gamepad_pitchthreshold", "0.17", CVAR_ARCHIVE);
+	gamepad_yawthreshold = Cvar_Get("gamepad_yawthreshold", "0.17", CVAR_ARCHIVE);
 	gamepad_forwardsensitivity = Cvar_Get("gamepad_forwardsensitivity", "-1", CVAR_ARCHIVE);
 	gamepad_sidesensitivity = Cvar_Get("gamepad_sidesensitivity", "1", CVAR_ARCHIVE);
 	gamepad_pitchsensitivity = Cvar_Get("gamepad_pitchsensitivity", "-1", CVAR_ARCHIVE);
@@ -99,15 +113,8 @@ void IN_StartupGamepad(void)
 	// Open the first valid game controller.
 	for (int i = 0; i < SDL_NumJoysticks() && controller == NULL; ++i)
 	{
-		if (SDL_IsGameController(i))
-		{
-			controller = SDL_GameControllerOpen(i);
-			if (controller)
-			{
-				controller_index = i;
-				Cvar_Set("gamepad_name", (char *)SDL_GameControllerName(controller));
-			}
-		}
+		if (IN_ConnectToController(i))
+			break;
 	}
 
 	// abort startup if we didn't find a valid gamepad
@@ -121,7 +128,6 @@ void IN_StartupGamepad(void)
 
 	SDL_GameControllerEventState(SDL_ENABLE);
 }
-
 
 void IN_ShutdownGamepad(void)
 {
@@ -142,16 +148,6 @@ void IN_DeactivateGamepad(void)
 {
 	SDL_GameControllerEventState(SDL_IGNORE);
 }
-
-/*
-===========
-IN_Commands
-===========
-*/
-void IN_Commands(void)
-{
-}
-
 
 /*
 ===========
@@ -274,5 +270,21 @@ void IN_HandleControllerButtonEvent(const SDL_ControllerButtonEvent* buttonev)
 
 void IN_HandleControllerDeviceEvent(const SDL_ControllerDeviceEvent* deviceev)
 {
-	// TODO: watch for controllers coming and going
+	switch (deviceev->type)
+	{
+		case SDL_CONTROLLERDEVICEADDED:
+			if (controller_index == -1)
+			{
+				// We don't have one already, try connecting to this one.
+				IN_ConnectToController(deviceev->which);
+			}
+			break;
+		case SDL_CONTROLLERDEVICEREMOVED:
+			if (deviceev->which == controller_index)
+			{
+				// We were using that! Clean up.
+				IN_ShutdownGamepad();
+			}
+			break;
+	}
 }
