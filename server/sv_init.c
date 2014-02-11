@@ -395,7 +395,8 @@ void SV_Map (qboolean attractloop, char *levelstring, qboolean loadgame)
 	if (sv.state == ss_dead && !sv.loadgame)
 		SV_InitGame ();	// the game is just starting
 
-	strcpy (level, levelstring);
+    //THP buffer overflow fix from r1
+    strncpy (level, levelstring, sizeof(level)-1);
 
 	// if there is a + in the map, set nextserver to the remainder
 	ch = strstr(level, "+");

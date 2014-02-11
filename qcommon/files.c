@@ -648,12 +648,22 @@ Creates a filelink_t
 void FS_Link_f (void)
 {
 	filelink_t	*l, **prev;
+	char *to;
 
 	if (Cmd_Argc() != 3)
 	{
 		Com_Printf ("USAGE: link <from> <to>\n");
 		return;
 	}
+	//THP link validation code from r1. prevents people from reading outside the q2 dir
+	to = Cmd_Argv(2);
+	if (to[0]) {
+		if (strstr (to, "..") || strchr (to, '\\') || *to != '.') {
+			Com_Printf ("Bad destination path.\n");
+			return;
+		}
+	}
+
 
 	// see if the link already exists
 	prev = &fs_links;
@@ -743,7 +753,8 @@ void FS_Dir_f( void )
 
 	if ( Cmd_Argc() != 1 )
 	{
-		strcpy( wildcard, Cmd_Argv( 1 ) );
+		// THP security fix from r1
+		strncpy( wildcard, Cmd_Argv( 1 ), sizeof(wildcard)-1 );
 	}
 
 	while ( ( path = FS_NextPath( path ) ) != NULL )

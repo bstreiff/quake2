@@ -216,9 +216,14 @@ void Cbuf_Execute (void)
 				break;
 		}
 			
-				
-		memcpy (line, text, i);
-		line[i] = 0;
+		if (i > sizeof(line)-1) { // THP buffer overflow vulnerability fix from r1
+			Com_Printf("Cbuf_Execute: buffer overflow caught");
+			memcpy (line, text, sizeof(line) - 1);
+			line[sizeof(line) - 1] = 0;
+		} else {
+			memcpy (line, text, i);
+			line[i] = 0;
+		}
 		
 // delete the text from the command buffer and move remaining commands down
 // this is necessary because commands (exec, alias) can insert data at the
@@ -370,7 +375,7 @@ Cmd_Exec_f
 */
 void Cmd_Exec_f (void)
 {
-	char	*f, *f2;
+	char	*f, *f2, *path, *p;
 	int		len;
 
 	if (Cmd_Argc () != 2)
@@ -379,7 +384,23 @@ void Cmd_Exec_f (void)
 		return;
 	}
 
-	len = FS_LoadFile (Cmd_Argv(1), (void **)&f);
+	// THP borrowed code from r1 to foil attempts at hackery
+	path = Cmd_Argv(1);
+	while (p = strchr(path, '\\')) *p = '/';
+	if ((p = strstr(path, "../"))) {
+		p += 3;
+		if (strstr(p, "../")) {
+			Com_Printf("refusing to exec illegal path \"%s\"\n", path);
+			return;
+		}
+	}
+	len = FS_LoadFile (path, NULL);
+	if (len > 8190) {
+		Com_Printf("refusing to exec \"%s\", exceeds maximum length.\n", path);
+		return;
+	}
+
+	len = FS_LoadFile (path, (void **)&f);
 	if (!f)
 	{
 		Com_Printf ("couldn't exec %s\n",Cmd_Argv(1));
@@ -390,7 +411,9 @@ void Cmd_Exec_f (void)
 	// the file doesn't have a trailing 0, so we need to copy it off
 	f2 = Z_Malloc(len+1);
 	memcpy (f2, f, len);
-	f2[len] = 0;
+	// THP fix borrowed from r1
+	f2[len] = '\n';
+	f2[len+1] = 0;
 
 	Cbuf_InsertText (f2);
 

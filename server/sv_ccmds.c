@@ -810,7 +810,9 @@ void SV_ConSay_f(void)
 		p[strlen(p)-1] = 0;
 	}
 
-	strcat(text, p);
+	// THP security patch from r1
+	strncat(text, p, 1014);
+	Com_Printf("%s\n", text);
 
 	for (j = 0, client = svs.clients; j < maxclients->value; j++, client++)
 	{
