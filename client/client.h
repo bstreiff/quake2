@@ -488,6 +488,11 @@ void CL_RequestNextDownload (void);
 //
 // cl_input
 //
+
+#define KBUTTON_STATEBIT_DOWN				(1 << 0)
+#define KBUTTON_STATEBIT_IMPULSE_DOWN		(1 << 1)
+#define KBUTTON_STATEBIT_IMPULSE_UP			(1 << 2)
+
 typedef struct
 {
 	int			down[2];		// key nums holding it down

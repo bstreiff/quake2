@@ -37,12 +37,12 @@ int		edit_line=0;
 int		history_line=0;
 
 int		key_waiting;
-char	*keybindings[256];
-qboolean	consolekeys[256];	// if true, can't be rebound while in console
-qboolean	menubound[256];	// if true, can't be rebound while in menu
-int		keyshift[256];		// key to map to if shift held down in console
-int		key_repeats[256];	// if > 1, it is autorepeating
-qboolean	keydown[256];
+char	*keybindings[K_LAST_SYM];
+qboolean	consolekeys[K_LAST_SYM];	// if true, can't be rebound while in console
+qboolean	menubound[K_LAST_SYM];	// if true, can't be rebound while in menu
+int		keyshift[K_LAST_SYM];		// key to map to if shift held down in console
+int		key_repeats[K_LAST_SYM];	// if > 1, it is autorepeating
+qboolean	keydown[K_LAST_SYM];
 
 typedef struct
 {
@@ -101,12 +101,23 @@ keyname_t keynames[] =
 	{"GAMEPAD_START", K_GAMEPAD_START},
 	{"GAMEPAD_LSTICK", K_GAMEPAD_LSTICK},
 	{"GAMEPAD_RSTICK", K_GAMEPAD_RSTICK},
-	{"GAMEPAD_L1", K_GAMEPAD_L1},
-	{"GAMEPAD_R1", K_GAMEPAD_R1},
+	{"GAMEPAD_LSHOULDER", K_GAMEPAD_LSHOULDER},
+	{"GAMEPAD_RSHOULDER", K_GAMEPAD_RSHOULDER},
 	{"GAMEPAD_DPADUP", K_GAMEPAD_DPADUP},
 	{"GAMEPAD_DPADDOWN", K_GAMEPAD_DPADDOWN},
 	{"GAMEPAD_DPADLEFT", K_GAMEPAD_DPADLEFT},
 	{"GAMEPAD_DPADRIGHT", K_GAMEPAD_DPADRIGHT},
+
+	{"GAMEPAD_LSTICKUP", K_GAMEPAD_LSTICKUP},
+	{"GAMEPAD_LSTICKDOWN", K_GAMEPAD_LSTICKDOWN},
+	{"GAMEPAD_LSTICKLEFT", K_GAMEPAD_LSTICKLEFT},
+	{"GAMEPAD_LSTICKRIGHT", K_GAMEPAD_LSTICKRIGHT},
+	{"GAMEPAD_RSTICKUP", K_GAMEPAD_RSTICKUP},
+	{"GAMEPAD_RSTICKDOWN", K_GAMEPAD_RSTICKDOWN},
+	{"GAMEPAD_RSTICKLEFT", K_GAMEPAD_RSTICKLEFT},
+	{"GAMEPAD_RSTICKRIGHT", K_GAMEPAD_RSTICKRIGHT},
+	{"GAMEPAD_LTRIGGER", K_GAMEPAD_LTRIGGER},
+	{"GAMEPAD_RTRIGGER", K_GAMEPAD_RTRIGGER},
 
 	{"KP_HOME",			K_KP_HOME },
 	{"KP_UPARROW",		K_KP_UPARROW },
@@ -177,6 +188,8 @@ Interactive line editing and console scrollback
 */
 void Key_Console (int key)
 {
+	if (key >= K_LAST_SYM)
+		return;
 
 	switch ( key )
 	{
@@ -377,6 +390,8 @@ int			chat_bufferlen = 0;
 
 void Key_Message (int key)
 {
+	if (key >= K_LAST_SYM)
+		return;
 
 	if ( key == K_ENTER || key == K_KP_ENTER )
 	{
@@ -468,7 +483,7 @@ char *Key_KeynumToString (int keynum)
 	keyname_t	*kn;	
 	static	char	tinystr[2];
 	
-	if (keynum == -1)
+	if (keynum == -1 || keynum >= K_LAST_SYM)
 		return "<KEY NOT FOUND>";
 	if (keynum > 32 && keynum < 127)
 	{	// printable ascii
@@ -495,7 +510,7 @@ void Key_SetBinding (int keynum, char *binding)
 	char	*new;
 	int		l;
 			
-	if (keynum == -1)
+	if (keynum == -1 || keynum >= K_LAST_SYM)
 		return;
 
 // free old bindings
@@ -542,7 +557,7 @@ void Key_Unbindall_f (void)
 {
 	int		i;
 	
-	for (i=0 ; i<256 ; i++)
+	for (i = 0; i<K_LAST_SYM; i++)
 		if (keybindings[i])
 			Key_SetBinding (i, "");
 }
@@ -604,7 +619,7 @@ void Key_WriteBindings (FILE *f)
 {
 	int		i;
 
-	for (i=0 ; i<256 ; i++)
+	for (i = 0; i<K_LAST_SYM; i++)
 		if (keybindings[i] && keybindings[i][0])
 			fprintf (f, "bind %s \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
 }
@@ -620,7 +635,7 @@ void Key_Bindlist_f (void)
 {
 	int		i;
 
-	for (i=0 ; i<256 ; i++)
+	for (i = 0; i<K_LAST_SYM; i++)
 		if (keybindings[i] && keybindings[i][0])
 			Com_Printf ("%s \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
 }
@@ -679,7 +694,7 @@ void Key_Init (void)
 	consolekeys['`'] = false;
 	consolekeys['~'] = false;
 
-	for (i=0 ; i<256 ; i++)
+	for (i = 0; i<K_LAST_SYM; i++)
 		keyshift[i] = i;
 	for (i='a' ; i<='z' ; i++)
 		keyshift[i] = i - 'a' + 'A';
@@ -906,7 +921,7 @@ void Key_ClearStates (void)
 
 	anykeydown = false;
 
-	for (i=0 ; i<256 ; i++)
+	for (i = 0; i<K_LAST_SYM; i++)
 	{
 		if ( keydown[i] || key_repeats[i] )
 			Key_Event( i, false, 0 );
@@ -931,6 +946,37 @@ int Key_GetKey (void)
 	return key_waiting;
 }
 
+/*
+===================
+Key_GetPressDistance
+===================
+
+Get the distance of the keypress. For most keys (keyboard keys), this
+will be 1.0. For 'keys' used for analog axes, this is a value between
+0.0..1.0 corresponding to that axis.
+
+NOTE: This assumes that the key is already 'active'. e.g., it returns
+1.0 for keyboard keys regardless of if they are pressed or not. It is
+expected that a higher level determines that.
+*/
+float IN_GetGamepadAxisDistance(keysym_t axiskey);
+
+float Key_GetPressDistance(keysym_t key)
+{
+	if (key == K_GAMEPAD_LSTICKUP || key == K_GAMEPAD_LSTICKDOWN ||
+		key == K_GAMEPAD_LSTICKLEFT || key == K_GAMEPAD_LSTICKRIGHT ||
+		key == K_GAMEPAD_RSTICKUP || key == K_GAMEPAD_RSTICKDOWN ||
+		key == K_GAMEPAD_RSTICKLEFT || key == K_GAMEPAD_LSTICKRIGHT ||
+		key == K_GAMEPAD_LTRIGGER || key == K_GAMEPAD_RTRIGGER)
+	{
+		return IN_GetGamepadAxisDistance(key);
+	}
+	else
+	{
+		// plain ol' key.
+		return 1.0;
+	}
+}
 
 // The glue to connect SDL key events to Quake key events.
 //

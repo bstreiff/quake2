@@ -100,18 +100,33 @@ typedef enum
 	K_GAMEPAD_START,
 	K_GAMEPAD_LSTICK,
 	K_GAMEPAD_RSTICK,
-	K_GAMEPAD_L1,
-	K_GAMEPAD_R1,
+	K_GAMEPAD_LSHOULDER,
+	K_GAMEPAD_RSHOULDER,
 	K_GAMEPAD_DPADUP,
 	K_GAMEPAD_DPADDOWN,
 	K_GAMEPAD_DPADLEFT,
 	K_GAMEPAD_DPADRIGHT,
 
+	//
+	// these represent the axes on the gamepad. they are analog controls,
+	// and so have slightly different treatment than regular keys.
+	//
+	K_GAMEPAD_LSTICKUP,
+	K_GAMEPAD_LSTICKDOWN,
+	K_GAMEPAD_LSTICKLEFT,
+	K_GAMEPAD_LSTICKRIGHT,
+	K_GAMEPAD_RSTICKUP,
+	K_GAMEPAD_RSTICKDOWN,
+	K_GAMEPAD_RSTICKLEFT,
+	K_GAMEPAD_RSTICKRIGHT,
+	K_GAMEPAD_LTRIGGER,
+	K_GAMEPAD_RTRIGGER,
+
 	K_LAST_SYM
 } keysym_t;
 
-extern char		*keybindings[256];
-extern	int		key_repeats[256];
+extern char		*keybindings[K_LAST_SYM];
+extern	int		key_repeats[K_LAST_SYM];
 
 extern	int	anykeydown;
 extern char chat_buffer[];

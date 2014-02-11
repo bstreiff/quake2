@@ -87,7 +87,7 @@ void KeyDown (kbutton_t *b)
 		return;
 	}
 	
-	if (b->state & 1)
+	if (b->state & KBUTTON_STATEBIT_DOWN)
 		return;		// still down
 
 	// save timestamp
@@ -96,7 +96,7 @@ void KeyDown (kbutton_t *b)
 	if (!b->downtime)
 		b->downtime = sys_frame_time - 100;
 
-	b->state |= 1 + 2;	// down + impulse down
+	b->state |= (KBUTTON_STATEBIT_DOWN | KBUTTON_STATEBIT_IMPULSE_DOWN);	// down + impulse down
 }
 
 void KeyUp (kbutton_t *b)
@@ -111,7 +111,7 @@ void KeyUp (kbutton_t *b)
 	else
 	{ // typed manually at the console, assume for unsticking, so clear all
 		b->down[0] = b->down[1] = 0;
-		b->state = 4;	// impulse up
+		b->state = KBUTTON_STATEBIT_IMPULSE_UP;	// impulse up
 		return;
 	}
 
@@ -124,7 +124,7 @@ void KeyUp (kbutton_t *b)
 	if (b->down[0] || b->down[1])
 		return;		// some other key is still holding it down
 
-	if (!(b->state & 1))
+	if (!(b->state & KBUTTON_STATEBIT_DOWN))
 		return;		// still up (this should not happen)
 
 	// save timestamp
@@ -135,8 +135,8 @@ void KeyUp (kbutton_t *b)
 	else
 		b->msec += 10;
 
-	b->state &= ~1;		// now up
-	b->state |= 4; 		// impulse up
+	b->state &= ~(KBUTTON_STATEBIT_DOWN);		// now up
+	b->state |= KBUTTON_STATEBIT_IMPULSE_UP; 		// impulse up
 }
 
 void IN_KLookDown (void) {KeyDown(&in_klook);}
@@ -182,12 +182,13 @@ CL_KeyState
 Returns the fraction of the frame that the key was down
 ===============
 */
+float Key_GetPressDistance(keysym_t key);
 float CL_KeyState (kbutton_t *key)
 {
 	float		val;
 	int			msec;
 
-	key->state &= 1;		// clear impulses
+	key->state &= KBUTTON_STATEBIT_DOWN;		// clear impulses
 
 	msec = key->msec;
 	key->msec = 0;
@@ -210,6 +211,11 @@ float CL_KeyState (kbutton_t *key)
 		val = 0;
 	if (val > 1)
 		val = 1;
+
+	if (key->down[0])
+		val *= Key_GetPressDistance(key->down[0]);
+	if (key->down[1])
+		val *= Key_GetPressDistance(key->down[1]);
 
 	return val;
 }
@@ -243,17 +249,17 @@ void CL_AdjustAngles (void)
 	float	speed;
 	float	up, down;
 	
-	if (in_speed.state & 1)
+	if (in_speed.state & KBUTTON_STATEBIT_DOWN)
 		speed = cls.frametime * cl_anglespeedkey->value;
 	else
 		speed = cls.frametime;
 
-	if (!(in_strafe.state & 1))
+	if (!(in_strafe.state & KBUTTON_STATEBIT_DOWN))
 	{
 		cl.viewangles[YAW] -= speed*cl_yawspeed->value*CL_KeyState (&in_right);
 		cl.viewangles[YAW] += speed*cl_yawspeed->value*CL_KeyState (&in_left);
 	}
-	if (in_klook.state & 1)
+	if (in_klook.state & KBUTTON_STATEBIT_DOWN)
 	{
 		cl.viewangles[PITCH] -= speed*cl_pitchspeed->value * CL_KeyState (&in_forward);
 		cl.viewangles[PITCH] += speed*cl_pitchspeed->value * CL_KeyState (&in_back);
@@ -280,7 +286,7 @@ void CL_BaseMove (usercmd_t *cmd)
 	memset (cmd, 0, sizeof(*cmd));
 	
 	VectorCopy (cl.viewangles, cmd->angles);
-	if (in_strafe.state & 1)
+	if (in_strafe.state & KBUTTON_STATEBIT_DOWN)
 	{
 		cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_right);
 		cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_left);
@@ -292,7 +298,7 @@ void CL_BaseMove (usercmd_t *cmd)
 	cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
 	cmd->upmove -= cl_upspeed->value * CL_KeyState (&in_down);
 
-	if (! (in_klook.state & 1) )
+	if (!(in_klook.state & KBUTTON_STATEBIT_DOWN))
 	{	
 		cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
 		cmd->forwardmove -= cl_forwardspeed->value * CL_KeyState (&in_back);
@@ -301,7 +307,7 @@ void CL_BaseMove (usercmd_t *cmd)
 //
 // adjust for speed key / running
 //
-	if ( (in_speed.state & 1) ^ (int)(cl_run->value) )
+	if ((in_speed.state & KBUTTON_STATEBIT_DOWN) ^ (int)(cl_run->value))
 	{
 		cmd->forwardmove *= 2;
 		cmd->sidemove *= 2;
@@ -341,13 +347,13 @@ void CL_FinishMove (usercmd_t *cmd)
 //
 // figure button bits
 //	
-	if ( in_attack.state & 3 )
+	if (in_attack.state & (KBUTTON_STATEBIT_DOWN|KBUTTON_STATEBIT_IMPULSE_DOWN) )
 		cmd->buttons |= BUTTON_ATTACK;
-	in_attack.state &= ~2;
+	in_attack.state &= ~(KBUTTON_STATEBIT_IMPULSE_DOWN);
 	
-	if (in_use.state & 3)
+	if (in_use.state & (KBUTTON_STATEBIT_DOWN | KBUTTON_STATEBIT_IMPULSE_DOWN))
 		cmd->buttons |= BUTTON_USE;
-	in_use.state &= ~2;
+	in_use.state &= ~(KBUTTON_STATEBIT_IMPULSE_DOWN);
 
 	if (anykeydown && cls.key_dest == key_game)
 		cmd->buttons |= BUTTON_ANY;

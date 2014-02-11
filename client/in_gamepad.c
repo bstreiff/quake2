@@ -23,31 +23,31 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 cvar_t	*in_gamepad;
 
-Sint16 s_axis_value[SDL_CONTROLLER_AXIS_MAX] = {0};
+static Sint16 s_axis_value[SDL_CONTROLLER_AXIS_MAX] = {0};
 
 // none of these cvars are saved over a session
 // this means that advanced controller configuration needs to be executed
 // each time.  this avoids any problems with getting back to a default usage
 // or when changing from one controller to another.  this way at least something
 // works.
-cvar_t	*gamepad_name;
-cvar_t	*gamepad_advanced;
-cvar_t	*gamepad_advaxisx;
-cvar_t	*gamepad_advaxisy;
-cvar_t	*gamepad_advaxisz;
-cvar_t	*gamepad_advaxisr;
-cvar_t	*gamepad_advaxisu;
-cvar_t	*gamepad_advaxisv;
-cvar_t	*gamepad_forwardthreshold;
-cvar_t	*gamepad_sidethreshold;
-cvar_t	*gamepad_pitchthreshold;
-cvar_t	*gamepad_yawthreshold;
-cvar_t	*gamepad_forwardsensitivity;
-cvar_t	*gamepad_sidesensitivity;
-cvar_t	*gamepad_pitchsensitivity;
-cvar_t	*gamepad_yawsensitivity;
-cvar_t	*gamepad_upthreshold;
-cvar_t	*gamepad_upsensitivity;
+static cvar_t	*gamepad_name;
+
+static cvar_t	*gamepad_threshold[SDL_CONTROLLER_AXIS_MAX];
+static cvar_t	*gamepad_sensitivity[SDL_CONTROLLER_AXIS_MAX];
+
+static const struct {
+	const char* threshold_cvar_name;
+	const char* sensitivity_cvar_name;
+	keysym_t	neg_keysym;
+	keysym_t	pos_keysym;
+} axis_info[SDL_CONTROLLER_AXIS_MAX] = {
+	{ "gamepad_threshold_lx", "gamepad_sensitivity_lx", K_GAMEPAD_LSTICKLEFT,  K_GAMEPAD_LSTICKRIGHT },
+	{ "gamepad_threshold_ly", "gamepad_sensitivity_ly", K_GAMEPAD_LSTICKUP,    K_GAMEPAD_LSTICKDOWN },
+	{ "gamepad_threshold_rx", "gamepad_sensitivity_rx", K_GAMEPAD_RSTICKLEFT,  K_GAMEPAD_RSTICKRIGHT },
+	{ "gamepad_threshold_ry", "gamepad_sensitivity_ry", K_GAMEPAD_RSTICKUP,    K_GAMEPAD_RSTICKDOWN },
+	{ "gamepad_threshold_lt", "gamepad_sensitivity_lt", K_UNHANDLED,           K_GAMEPAD_LTRIGGER },
+	{ "gamepad_threshold_rt", "gamepad_sensitivity_rt", K_UNHANDLED,           K_GAMEPAD_RTRIGGER },
+};
 
 extern qboolean	in_appactive;
 
@@ -91,14 +91,12 @@ void IN_StartupGamepad(void)
 	// gamepad variables
 	in_gamepad = Cvar_Get("in_gamepad", "0", CVAR_ARCHIVE);
 	gamepad_name = Cvar_Get("gamepad_name", "", 0);
-	gamepad_forwardthreshold = Cvar_Get("gamepad_forwardthreshold", "0.17", CVAR_ARCHIVE);
-	gamepad_sidethreshold = Cvar_Get("gamepad_sidethreshold", "0.17", CVAR_ARCHIVE);
-	gamepad_pitchthreshold = Cvar_Get("gamepad_pitchthreshold", "0.17", CVAR_ARCHIVE);
-	gamepad_yawthreshold = Cvar_Get("gamepad_yawthreshold", "0.17", CVAR_ARCHIVE);
-	gamepad_forwardsensitivity = Cvar_Get("gamepad_forwardsensitivity", "-1", CVAR_ARCHIVE);
-	gamepad_sidesensitivity = Cvar_Get("gamepad_sidesensitivity", "1", CVAR_ARCHIVE);
-	gamepad_pitchsensitivity = Cvar_Get("gamepad_pitchsensitivity", "-1", CVAR_ARCHIVE);
-	gamepad_yawsensitivity = Cvar_Get("gamepad_yawsensitivity", "-1", CVAR_ARCHIVE);
+
+	for (int i = 0; i < SDL_CONTROLLER_AXIS_MAX; ++i)
+	{
+		gamepad_threshold[i] = Cvar_Get(axis_info[i].threshold_cvar_name, "0.17", CVAR_ARCHIVE);
+		gamepad_sensitivity[i] = Cvar_Get(axis_info[i].sensitivity_cvar_name, "1.0", CVAR_ARCHIVE);
+	}
 
 	// abort startup if user requests no gamepad
 	if (!in_gamepad->value)
@@ -149,6 +147,31 @@ void IN_DeactivateGamepad(void)
 	SDL_GameControllerEventState(SDL_IGNORE);
 }
 
+float IN_GetGamepadAxisDistance(keysym_t axiskey)
+{
+	if (axiskey == 0)
+		return 0.0;
+
+	for (int i = 0; i < SDL_CONTROLLER_AXIS_MAX; ++i)
+	{
+		float fAxisValue = (float)s_axis_value[i];
+		// convert range from -32768..32767 to -1..1 
+		fAxisValue /= 32768.0;
+		fAxisValue *= gamepad_sensitivity[i]->value;
+
+		if (axiskey == axis_info[i].neg_keysym)
+		{
+			return (fAxisValue < 0 ? -fAxisValue : 0.0);
+		}
+		else if (axiskey == axis_info[i].pos_keysym)
+		{
+			return (fAxisValue > 0 ? fAxisValue : 0.0);
+		}
+	}
+
+	return 0.0;
+}
+
 /*
 ===========
 IN_GamepadMove
@@ -156,60 +179,8 @@ IN_GamepadMove
 */
 void IN_GamepadMove(usercmd_t *cmd)
 {
-	float	speed, aspeed;
-	float	fAxisValue;
-	int		i;
-
-	// verify gamepad is available and that the user wants to use it
-	if (!in_gamepad->value || !controller)
-	{
-		return;
-	}
-
-	if ((in_speed.state & 1) ^ (int)cl_run->value)
-		speed = 2;
-	else
-		speed = 1;
-	aspeed = speed * cls.frametime;
-
-	// loop through the axes
-	for (i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++)
-	{
-		// get the floating point zero-centered, potentially-inverted data for the current axis
-		fAxisValue = (float)s_axis_value[i];
-		// convert range from -32768..32767 to -1..1 
-		fAxisValue /= 32768.0;
-
-		// TODO: make it so the user can rebind these?
-		if (i == SDL_CONTROLLER_AXIS_LEFTY)
-		{
-			if (fabs(fAxisValue) > gamepad_forwardthreshold->value)
-			{
-				cmd->forwardmove += (fAxisValue * gamepad_forwardsensitivity->value) * speed * cl_forwardspeed->value;
-			}
-		}
-		else if (i == SDL_CONTROLLER_AXIS_LEFTX)
-		{
-			if (fabs(fAxisValue) > gamepad_sidethreshold->value)
-			{
-				cmd->sidemove += (fAxisValue * gamepad_sidesensitivity->value) * speed * cl_sidespeed->value;
-			}
-		}
-		else if (i == SDL_CONTROLLER_AXIS_RIGHTY)
-		{
-			if (fabs(fAxisValue) > gamepad_pitchthreshold->value)
-			{
-				cl.viewangles[PITCH] += (fAxisValue * gamepad_pitchsensitivity->value) * aspeed * cl_pitchspeed->value;
-			}
-		}
-		else if (i == SDL_CONTROLLER_AXIS_RIGHTX)
-		{
-			if (fabs(fAxisValue) > gamepad_yawthreshold->value)
-			{
-				cl.viewangles[YAW] += (fAxisValue * gamepad_yawsensitivity->value) * aspeed * cl_yawspeed->value;
-			}
-		}
-	}
+	// No-op. This used to handle control for the axes, but those
+	// are synthesized as key events now.
 }
 
 void IN_HandleControllerAxisEvent(const SDL_ControllerAxisEvent* axisev)
@@ -223,28 +194,69 @@ void IN_HandleControllerAxisEvent(const SDL_ControllerAxisEvent* axisev)
 
 	if (axisev->axis < SDL_CONTROLLER_AXIS_MAX)
 	{
+		float fAxisValue;
+
 		s_axis_value[axisev->axis] = axisev->value;
+
+		fAxisValue = axisev->value;
+		// convert range from -32768..32767 to -1..1 
+		fAxisValue /= 32768.0;
+
+		if (fAxisValue < 0) // left or up
+		{
+			if (axis_info[axisev->axis].pos_keysym)
+			{
+				Key_Event(
+					axis_info[axisev->axis].pos_keysym,
+					false,
+					axisev->timestamp);
+			}
+			if (axis_info[axisev->axis].neg_keysym)
+			{
+				Key_Event(
+					axis_info[axisev->axis].neg_keysym,
+					(fabs(fAxisValue) > gamepad_threshold[axisev->axis]->value),
+					axisev->timestamp);
+			}
+		}
+		else if (fAxisValue > 0) // right or down
+		{
+			if (axis_info[axisev->axis].neg_keysym)
+			{
+				Key_Event(
+					axis_info[axisev->axis].neg_keysym,
+					false,
+					axisev->timestamp);
+			}
+			if (axis_info[axisev->axis].pos_keysym)
+			{
+				Key_Event(
+					axis_info[axisev->axis].pos_keysym,
+					(fabs(fAxisValue) > gamepad_threshold[axisev->axis]->value),
+					axisev->timestamp);
+			}
+		}
 	}
 }
 
 // 1:1 mapping between SDL buttons and Quake buttons
 static const keysym_t controller_button[] =
 {
-	K_GAMEPAD_A,		// SDL_CONTROLLER_BUTTON_A
-	K_GAMEPAD_B,		// SDL_CONTROLLER_BUTTON_B
-	K_GAMEPAD_X,		// SDL_CONTROLLER_BUTTON_X
-	K_GAMEPAD_Y,		// SDL_CONTROLLER_BUTTON_Y
-	K_GAMEPAD_BACK,		// SDL_CONTROLLER_BUTTON_BACK
-	K_GAMEPAD_GUIDE,	// SDL_CONTROLLER_BUTTON_GUIDE
-	K_GAMEPAD_START,	// SDL_CONTROLLER_BUTTON_START
-	K_GAMEPAD_LSTICK,	// SDL_CONTROLLER_BUTTON_LEFTSTICK
-	K_GAMEPAD_RSTICK,	// SDL_CONTROLLER_BUTTON_RIGHTSTICK
-	K_GAMEPAD_L1,		// SDL_CONTROLLER_BUTTON_LEFTSHOULDER
-	K_GAMEPAD_R1,		// SDL_CONTROLLER_BUTTON_RIGHTSHOULDER
-	K_GAMEPAD_DPADUP,	// SDL_CONTROLLER_BUTTON_DPAD_UP
-	K_GAMEPAD_DPADDOWN,	// SDL_CONTROLLER_BUTTON_DPAD_DOWN
-	K_GAMEPAD_DPADLEFT,	// SDL_CONTROLLER_BUTTON_DPAD_LEFT
-	K_GAMEPAD_DPADRIGHT	// SDL_CONTROLLER_BUTTON_DPAD_RIGHT
+	K_GAMEPAD_A,			// SDL_CONTROLLER_BUTTON_A
+	K_GAMEPAD_B,			// SDL_CONTROLLER_BUTTON_B
+	K_GAMEPAD_X,			// SDL_CONTROLLER_BUTTON_X
+	K_GAMEPAD_Y,			// SDL_CONTROLLER_BUTTON_Y
+	K_GAMEPAD_BACK,			// SDL_CONTROLLER_BUTTON_BACK
+	K_GAMEPAD_GUIDE,		// SDL_CONTROLLER_BUTTON_GUIDE
+	K_GAMEPAD_START,		// SDL_CONTROLLER_BUTTON_START
+	K_GAMEPAD_LSTICK,		// SDL_CONTROLLER_BUTTON_LEFTSTICK
+	K_GAMEPAD_RSTICK,		// SDL_CONTROLLER_BUTTON_RIGHTSTICK
+	K_GAMEPAD_LSHOULDER,	// SDL_CONTROLLER_BUTTON_LEFTSHOULDER
+	K_GAMEPAD_RSHOULDER,	// SDL_CONTROLLER_BUTTON_RIGHTSHOULDER
+	K_GAMEPAD_DPADUP,		// SDL_CONTROLLER_BUTTON_DPAD_UP
+	K_GAMEPAD_DPADDOWN,		// SDL_CONTROLLER_BUTTON_DPAD_DOWN
+	K_GAMEPAD_DPADLEFT,		// SDL_CONTROLLER_BUTTON_DPAD_LEFT
+	K_GAMEPAD_DPADRIGHT		// SDL_CONTROLLER_BUTTON_DPAD_RIGHT
 };
 static const size_t controller_button_length = sizeof(controller_button) / sizeof(controller_button[0]);
 

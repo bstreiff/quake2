@@ -168,6 +168,7 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 	case K_UPARROW:
 	case K_MWHEELUP:
 	case K_GAMEPAD_DPADUP:
+	case K_GAMEPAD_LSTICKUP:
 		if ( m )
 		{
 			m->cursor--;
@@ -181,6 +182,7 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 	case K_DOWNARROW:
 	case K_MWHEELDOWN:
 	case K_GAMEPAD_DPADDOWN:
+	case K_GAMEPAD_LSTICKDOWN:
 		if ( m )
 		{
 			m->cursor++;
@@ -193,6 +195,7 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 	case K_LEFTARROW:
 	case K_MWHEELLEFT:
 	case K_GAMEPAD_DPADLEFT:
+	case K_GAMEPAD_LSTICKLEFT:
 		if ( m )
 		{
 			Menu_SlideItem( m, -1 );
@@ -204,6 +207,7 @@ const char *Default_MenuKey( menuframework_s *m, int key )
 	case K_RIGHTARROW:
 	case K_MWHEELRIGHT:
 	case K_GAMEPAD_DPADRIGHT:
+	case K_GAMEPAD_LSTICKRIGHT:
 		if ( m )
 		{
 			Menu_SlideItem( m, 1 );
@@ -412,12 +416,16 @@ const char *M_Main_Key (int key)
 	switch (key)
 	{
 	case K_ESCAPE:
+	case K_GAMEPAD_B:
+	case K_GAMEPAD_START:
 		M_PopMenu ();
 		break;
 
 	case K_KP_DOWNARROW:
 	case K_DOWNARROW:
 	case K_MWHEELDOWN:
+	case K_GAMEPAD_DPADDOWN:
+	case K_GAMEPAD_LSTICKDOWN:
 		if (++m_main_cursor >= MAIN_ITEMS)
 			m_main_cursor = 0;
 		return sound;
@@ -425,12 +433,15 @@ const char *M_Main_Key (int key)
 	case K_KP_UPARROW:
 	case K_UPARROW:
 	case K_MWHEELUP:
+	case K_GAMEPAD_DPADUP:
+	case K_GAMEPAD_LSTICKUP:
 		if (--m_main_cursor < 0)
 			m_main_cursor = MAIN_ITEMS - 1;
 		return sound;
 
 	case K_KP_ENTER:
 	case K_ENTER:
+	case K_GAMEPAD_A:
 		m_entersound = true;
 
 		switch (m_main_cursor)
@@ -1003,7 +1014,7 @@ static menulist_s		s_options_lookspring_box;
 static menulist_s		s_options_lookstrafe_box;
 static menulist_s		s_options_crosshair_box;
 static menuslider_s		s_options_sfxvolume_slider;
-static menulist_s		s_options_joystick_box;
+static menulist_s		s_options_gamepad_box;
 static menulist_s		s_options_cdvolume_box;
 static menulist_s		s_options_quality_list;
 static menulist_s		s_options_compatibility_list;
@@ -1014,9 +1025,9 @@ static void CrosshairFunc( void *unused )
 	Cvar_SetValue( "crosshair", s_options_crosshair_box.curvalue );
 }
 
-static void JoystickFunc( void *unused )
+static void GamepadFunc( void *unused )
 {
-	Cvar_SetValue( "in_joystick", s_options_joystick_box.curvalue );
+	Cvar_SetValue( "in_gamepad", s_options_gamepad_box.curvalue );
 }
 
 static void CustomizeControlsFunc( void *unused )
@@ -1076,7 +1087,7 @@ static void ControlsSetMenuItemValues( void )
 	s_options_crosshair_box.curvalue		= crosshair->value;
 
 	Cvar_SetValue("in_gamepad", ClampCvar(0, 1, in_gamepad->value));
-	s_options_joystick_box.curvalue			= in_gamepad->value;
+	s_options_gamepad_box.curvalue			= in_gamepad->value;
 
 	s_options_noalttab_box.curvalue			= win_noalttab->value;
 }
@@ -1293,12 +1304,12 @@ void Options_MenuInit( void )
 	s_options_noalttab_box.generic.callback = NoAltTabFunc;
 	s_options_noalttab_box.itemnames = yesno_names;
 */
-	s_options_joystick_box.generic.type = MTYPE_SPINCONTROL;
-	s_options_joystick_box.generic.x	= 0;
-	s_options_joystick_box.generic.y	= 120;
-	s_options_joystick_box.generic.name	= "use joystick";
-	s_options_joystick_box.generic.callback = JoystickFunc;
-	s_options_joystick_box.itemnames = yesno_names;
+	s_options_gamepad_box.generic.type = MTYPE_SPINCONTROL;
+	s_options_gamepad_box.generic.x = 0;
+	s_options_gamepad_box.generic.y = 120;
+	s_options_gamepad_box.generic.name = "use gamepad";
+	s_options_gamepad_box.generic.callback = GamepadFunc;
+	s_options_gamepad_box.itemnames = yesno_names;
 
 	s_options_customize_options_action.generic.type	= MTYPE_ACTION;
 	s_options_customize_options_action.generic.x		= 0;
@@ -1331,7 +1342,7 @@ void Options_MenuInit( void )
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_lookstrafe_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_freelook_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_crosshair_box );
-	Menu_AddItem( &s_options_menu, ( void * ) &s_options_joystick_box );
+	Menu_AddItem( &s_options_menu, ( void * ) &s_options_gamepad_box );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_customize_options_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_defaults_action );
 	Menu_AddItem( &s_options_menu, ( void * ) &s_options_console_action );
@@ -3870,6 +3881,8 @@ const char *M_Quit_Key (int key)
 	switch (key)
 	{
 	case K_ESCAPE:
+	case K_GAMEPAD_B:
+	case K_GAMEPAD_START:
 	case 'n':
 	case 'N':
 		M_PopMenu ();
@@ -3877,6 +3890,7 @@ const char *M_Quit_Key (int key)
 
 	case 'Y':
 	case 'y':
+	case K_GAMEPAD_A:
 		cls.key_dest = key_console;
 		CL_Quit_f ();
 		break;

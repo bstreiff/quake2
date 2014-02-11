@@ -136,11 +136,10 @@ void IN_Frame (void)
 		|| cls.key_dest == key_console
 		|| cls.key_dest == key_menu)
 	{
-		// temporarily deactivate if in fullscreen
+		// Release mouse focus if windowed.
 		if (Cvar_VariableValue ("vid_fullscreen") == 0)
 		{
 			IN_DeactivateMouse();
-			IN_DeactivateGamepad();
 			return;
 		}
 	}
