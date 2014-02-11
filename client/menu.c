@@ -653,7 +653,7 @@ static void M_FindKeysForCommand (char *command, int *twokeys)
 	l = strlen(command);
 	count = 0;
 
-	for (j=0 ; j<256 ; j++)
+	for (j=0 ; j<K_LAST_SYM ; j++)
 	{
 		b = keybindings[j];
 		if (!b)
