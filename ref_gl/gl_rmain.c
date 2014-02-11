@@ -425,6 +425,12 @@ void R_DrawParticles (void)
 			GL_TexEnv( GL_MODULATE );
 			GL_Bind(ps->sprite->texnum);
 			qglBegin( GL_QUADS );
+
+			// precompute scale factor
+			scale = gl_particle_size->value;
+			if (scale > 20) scale = 20;
+			if (scale < 0.001) scale = 0.001;
+
 			for ( i = 0, p = ps->particles; i < ps->num_particles; i++, p++ ) {
 				*(int *)color = d_8to24table[p->color];
 				color[3] = p->alpha*255;
@@ -439,28 +445,38 @@ void R_DrawParticles (void)
 					VectorCopy(vright, right);
 				}
 
-				// scale factor
-				scale = gl_particle_size->value;
-				if (scale > 20) scale = 20;
-				if (scale < 0.001) scale = 0.001;
+				VectorScale(right, scale * p->scale[0] * 0.5, right);
+				VectorScale(up, scale * p->scale[1] * 0.5, up);
 				
 				qglTexCoord2f( 0.0f, 0.0f );
-				qglVertex3fv( p->origin );
+				qglVertex3f( p->origin[0] - right[0] - up[0],
+							 p->origin[1] - right[1] - up[1],
+							 p->origin[2] - right[2] - up[2]);
 
 				qglTexCoord2f( 0.0f, 1.0f );
-				qglVertex3f( p->origin[0] + right[0]*scale*p->scale[0],
-							 p->origin[1] + right[1]*scale*p->scale[0],
-							 p->origin[2] + right[2]*scale*p->scale[0]);
+				qglVertex3f( p->origin[0] + right[0] - up[0],
+							 p->origin[1] + right[1] - up[1],
+							 p->origin[2] + right[2] - up[2]);
 
 				qglTexCoord2f( 1.0f, 1.0f );
-				qglVertex3f( p->origin[0] + right[0]*scale*p->scale[0] + up[0]*scale*p->scale[1],
-							 p->origin[1] + right[1]*scale*p->scale[0] + up[1]*scale*p->scale[1],
-							 p->origin[2] + right[2]*scale*p->scale[0] + up[2]*scale*p->scale[1]);
+				qglVertex3f( p->origin[0] + right[0] + up[0],
+							 p->origin[1] + right[1] + up[1],
+							 p->origin[2] + right[2] + up[2]);
 
 				qglTexCoord2f( 1.0f, 0.0f );
-				qglVertex3f( p->origin[0] + up[0]*scale*p->scale[1],
-							 p->origin[1] + up[1]*scale*p->scale[1],
-							 p->origin[2] + up[2]*scale*p->scale[1]);
+				qglVertex3f( p->origin[0] - right[0] + up[0],
+							 p->origin[1] - right[1] + up[1],
+							 p->origin[2] - right[2] + up[2]);
+			}
+			qglEnd();
+			qglPointSize( gl_particle_size->value );
+			qglBegin( GL_POINTS );
+			for ( i = 0, p = ps->particles; i < ps->num_particles; i++, p++ ) {
+				*(int *)color = d_8to24table[p->color];
+				color[3] = p->alpha*255;
+				qglColor4ubv( color );
+
+				qglVertex3fv( p->origin );
 			}
 			qglEnd();
 			qglDisable( GL_TEXTURE_2D );

@@ -1545,8 +1545,13 @@ void CL_DiminishingTrail (vec3_t start, vec3_t end, centity_t *old, int flags)
 
 	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
 	if (!ps) return;
-	ps->type = PARTICLE_TYPE_SPRITE;
+	ps->type = PARTICLE_TYPE_SPRITE_BILLBOARD;
 	ps->sprite = "sprites/particle/soft.tga";
+	/* THP todo: add support for rotating billboarded particles before enabling this
+	if (flags & EF_ROCKET) {
+		ps->sprite = "sprites/particle/smoke.tga";
+	}
+	*/
 
 	while (len > 0)
 	{
@@ -1558,6 +1563,8 @@ void CL_DiminishingTrail (vec3_t start, vec3_t end, centity_t *old, int flags)
 			p = CL_ParticleSystem_AddParticle(ps);
 			if (!p) return;
 			VectorClear (p->accel);
+			p->scale[0] = 0.5;
+			p->scale[1] = 0.5;
 		
 			p->time = cl.time;
 
@@ -1650,9 +1657,10 @@ void CL_RocketTrail (vec3_t start, vec3_t end, centity_t *old)
 	dec = 1;
 	VectorScale (vec, dec, vec);
 
-	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
+	cparticle_system_t *ps = CL_GetParticleSystem( (old - cl_entities) );
 	if (!ps) return;
-	ps->type = PARTICLE_TYPE_POINT;
+	ps->type = PARTICLE_TYPE_SPRITE;
+	ps->sprite = "sprites/particle/spark2.tga";
 
 	while (len > 0)
 	{
@@ -1665,6 +1673,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, centity_t *old)
 			
 			VectorClear (p->accel);
 			p->time = cl.time;
+			p->scale[0] = p->scale[1] = 0.5;
 
 			p->alpha = 1.0;
 			p->alphavel = -1.0 / (1+frand()*0.2);
@@ -1859,7 +1868,8 @@ void CL_BubbleTrail (vec3_t start, vec3_t end)
 
 	cparticle_system_t *ps = CL_GetParticleSystem( NEW_PARTICLE_SYSTEM );
 	if (!ps) return;
-	ps->type = PARTICLE_TYPE_POINT;
+	ps->type = PARTICLE_TYPE_SPRITE_BILLBOARD;
+	ps->sprite = "sprites/particle/bubbles.tga";
 
 	for (i=0 ; i<len ; i+=dec)
 	{
@@ -1868,6 +1878,7 @@ void CL_BubbleTrail (vec3_t start, vec3_t end)
 
 		VectorClear (p->accel);
 		p->time = cl.time;
+		p->scale[0] = p->scale[1] = 0.25;
 
 		p->alpha = 1.0;
 		p->alphavel = -1.0 / (1+frand()*0.2);
