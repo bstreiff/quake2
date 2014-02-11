@@ -117,9 +117,6 @@
     <ClCompile Include="client\snd_mix.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="win32\snd_win.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="server\sv_ccmds.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -160,6 +157,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="client\in_main.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\snd_sdl.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
