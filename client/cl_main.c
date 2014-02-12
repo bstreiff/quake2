@@ -594,6 +594,7 @@ void CL_ClearState (void)
 	S_StopAllSounds ();
 	CL_ClearEffects ();
 	CL_ClearTEnts ();
+	CL_ParticleSystem_Init();
 
 // wipe the entire cl structure
 	memset (&cl, 0, sizeof(cl));

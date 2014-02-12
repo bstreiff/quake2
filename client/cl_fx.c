@@ -899,6 +899,18 @@ cparticle_system_t *CL_GetParticleSystem(int edict){
 }
 
 /*===============
+CL_ParticleSystem_Init
+===============
+clears all particle systems
+*/
+void CL_ParticleSystem_Init() {
+	int i; cparticle_system_t *ps;
+	for (i = 0, ps = &particlesystems[0]; i < MAX_PARTICLESYSTEMS; i++, ps++) {
+		CL_ParticleSystem_Clear(ps);
+	}
+}
+
+/*===============
 CL_ParticleSystem_Clear
 ===============
 Empties out the particle system and resets it.
@@ -1660,7 +1672,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, centity_t *old)
 	cparticle_system_t *ps = CL_GetParticleSystem( (old - cl_entities) );
 	if (!ps) return;
 	ps->type = PARTICLE_TYPE_SPRITE;
-	ps->sprite = "sprites/particle/spark2.tga";
+	ps->sprite = "sprites/particle/spark.tga";
 
 	while (len > 0)
 	{

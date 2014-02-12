@@ -470,16 +470,6 @@ void R_DrawParticles (void)
 							 p->origin[2] - right[2] + up[2]);
 			}
 			qglEnd();
-			qglPointSize( gl_particle_size->value );
-			qglBegin( GL_POINTS );
-			for ( i = 0, p = ps->particles; i < ps->num_particles; i++, p++ ) {
-				*(int *)color = d_8to24table[p->color];
-				color[3] = p->alpha*255;
-				qglColor4ubv( color );
-
-				qglVertex3fv( p->origin );
-			}
-			qglEnd();
 			qglDisable( GL_TEXTURE_2D );
 			break;
 		case PARTICLE_TYPE_POINT: default:
