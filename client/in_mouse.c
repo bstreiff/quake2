@@ -166,6 +166,17 @@ void IN_HandleMouseMotionEvent(const SDL_MouseMotionEvent* motion)
 	}
 }
 
+// SDL calls the middle mouse button #2 and right #3.
+// Quake calls the middle mouse button MOUSE3 and the right one MOUSE2.
+static const keysym_t s_mousebuttons[5] =
+{
+	K_MOUSE1, /* SDL_BUTTON_LEFT */
+	K_MOUSE3, /* SDL_BUTTON_MIDDLE */
+	K_MOUSE2, /* SDL_BUTTON_RIGHT */
+	K_MOUSE4, /* SDL_BUTTON_X1 */
+	K_MOUSE5, /* SDL_BUTTON_X2 */
+};
+
 void IN_HandleMouseButtonEvent(const SDL_MouseButtonEvent* button)
 {
 	if (mouseactive)
@@ -176,8 +187,11 @@ void IN_HandleMouseButtonEvent(const SDL_MouseButtonEvent* button)
 		if (!mouseinitialized)
 			return;
 
+		if (button_id >= 5)
+			return; // Oh no, mice got more buttons since this was written!
+
 		Key_Event(
-			K_MOUSE1 + button_id,
+			s_mousebuttons[button_id],
 			(button->state == SDL_PRESSED ? true : false),
 			button->timestamp);
 	}
