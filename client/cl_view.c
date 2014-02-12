@@ -38,6 +38,7 @@ cvar_t		*cl_testblend;
 
 cvar_t		*cl_stats;
 
+cvar_t		*cl_thirdperson;
 
 int			r_numdlights;
 dlight_t	r_dlights[MAX_DLIGHTS];
@@ -450,6 +451,46 @@ void SCR_DrawCrosshair (void)
 
 /*
 ==================
+V_ThirdpersonView
+==================
+ THP do the calculations for thirdperson view.
+*/
+trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, void *passedict, int contentmask);
+void V_ThirdpersonView(client_state_t *cl) {
+	vec3_t o_pos, fwd, right, up, camera, targetpos, newdir;
+	vec3_t min, max;
+	trace_t tr;
+	VectorSet(min, -1,-1,-1);
+	VectorSet(max,  1, 1, 1);
+
+	// save current position.
+	VectorCopy(cl->refdef.vieworg, o_pos);
+	// find new camera position
+	AngleVectors(cl->refdef.viewangles, fwd, right, up);
+	VectorMA(cl->refdef.vieworg, -64, fwd, camera);
+	VectorMA(camera, 16, up, camera);
+	tr = SV_Trace(o_pos, min, max, camera, NULL, MASK_OPAQUE);
+	// back off a little bit if we hit something
+	if (tr.fraction < 1.0) {
+		VectorSubtract(o_pos, tr.endpos, newdir);
+		VectorNormalize(newdir);
+		VectorAdd(newdir, tr.plane.normal, newdir);
+		VectorMA(tr.endpos, 3, newdir, camera);
+		VectorCopy(camera, cl->refdef.vieworg);
+	} else {
+		VectorCopy(tr.endpos, cl->refdef.vieworg);
+	}
+
+	// find the place the player is pointing at and point at that spot.
+	VectorMA(o_pos, 8192, fwd, targetpos);
+	tr = SV_Trace(o_pos, NULL, NULL, targetpos, NULL, MASK_SOLID);
+	VectorSubtract(tr.endpos, cl->refdef.vieworg, newdir);
+	VectorNormalize(newdir);
+	vectoangles(newdir, cl->refdef.viewangles);
+}
+
+/*
+==================
 V_RenderView
 
 ==================
@@ -513,6 +554,10 @@ void V_RenderView( float stereo_separation )
 		cl.refdef.vieworg[0] += 1.0/16;
 		cl.refdef.vieworg[1] += 1.0/16;
 		cl.refdef.vieworg[2] += 1.0/16;
+
+		if (cl_thirdperson->value) { // THP thirdperson stuff
+			V_ThirdpersonView(&cl);
+		}
 
 		cl.refdef.x = scr_vrect.x;
 		cl.refdef.y = scr_vrect.y;
@@ -589,6 +634,7 @@ void V_Init (void)
 	Cmd_AddCommand ("viewpos", V_Viewpos_f);
 
 	crosshair = Cvar_Get ("crosshair", "0", CVAR_ARCHIVE);
+	cl_thirdperson = Cvar_Get ("cl_thirdperson", "1", CVAR_ARCHIVE);
 
 	cl_testblend = Cvar_Get ("cl_testblend", "0", 0);
 	cl_testparticles = Cvar_Get ("cl_testparticles", "0", 0);

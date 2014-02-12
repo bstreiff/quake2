@@ -1025,7 +1025,6 @@ void CL_AddPacketEntities (frame_t *frame)
 
 		if (s1->number == cl.playernum+1)
 		{
-			ent.flags |= RF_VIEWERMODEL;	// only draw from mirrors
 			// FIXME: still pass to refresh
 
 			if (effects & EF_FLAG1)
@@ -1037,7 +1036,10 @@ void CL_AddPacketEntities (frame_t *frame)
 			else if (effects & EF_TRACKERTRAIL)					//PGM
 				V_AddLight (ent.origin, 225, -1.0, -1.0, -1.0);	//PGM
 
-			continue;
+			if (!cl_thirdperson->value) { // THP thirdperson
+				ent.flags |= RF_VIEWERMODEL;	// only draw from mirrors
+				continue;
+			}
 		}
 
 		// if set to invisible, skip
@@ -1344,6 +1346,9 @@ void CL_AddViewWeapon (player_state_t *ps, player_state_t *ops)
 
 	// don't draw gun if in wide angle view
 	if (ps->fov > 90)
+		return;
+	
+	if (cl_thirdperson->value) // THP thirdperson
 		return;
 
 	memset (&gun, 0, sizeof(gun));
