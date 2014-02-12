@@ -236,6 +236,23 @@ void IN_HandleControllerAxisEvent(const SDL_ControllerAxisEvent* axisev)
 					axisev->timestamp);
 			}
 		}
+		else if (fAxisValue == 0) // dead center (or this 'axis' is actually a binary on/off control)
+		{
+			if (axis_info[axisev->axis].neg_keysym)
+			{
+				Key_Event(
+					axis_info[axisev->axis].neg_keysym,
+					false,
+					axisev->timestamp);
+			}
+			if (axis_info[axisev->axis].pos_keysym)
+			{
+				Key_Event(
+					axis_info[axisev->axis].pos_keysym,
+					false,
+					axisev->timestamp);
+			}
+		}
 	}
 }
 
