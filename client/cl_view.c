@@ -468,10 +468,9 @@ V_RenderView
 
 ==================
 */
+int entitycmpfnc(const entity_t *, const entity_t *);
 void V_RenderView( float stereo_separation )
 {
-	extern int entitycmpfnc( const entity_t *, const entity_t * );
-
 	if (cls.state != ca_active)
 		return;
 

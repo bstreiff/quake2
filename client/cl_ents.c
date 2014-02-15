@@ -244,7 +244,7 @@ CL_ParseDelta
 Can go from either a baseline or a previous packet_entity
 ==================
 */
-void CL_ParseDelta (entity_state_t *from, entity_state_t *to, int number, int bits)
+void CL_ParseDelta (entity_state_t *from, entity_state_t *to, int number, unsigned int bits)
 {
 	// set everything to the state we are delta'ing from
 	*to = *from;

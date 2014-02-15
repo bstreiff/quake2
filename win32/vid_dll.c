@@ -408,7 +408,6 @@ void VID_HandleWindowEvent(const SDL_WindowEvent* window)
 		case SDL_WINDOWEVENT_MOVED:
 		{
 			int		xPos, yPos;
-			int		style;
 
 			if (!vid_fullscreen->value)
 			{

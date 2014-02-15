@@ -446,7 +446,7 @@ void *Sys_GetGameAPI (void *parms)
 		}
 	}
 
-	GetGameAPI = (void *)SDL_LoadFunction(game_library, "GetGameAPI");
+	GetGameAPI = (void (*)(void *))SDL_LoadFunction(game_library, "GetGameAPI");
 	if (!GetGameAPI)
 	{
 		Sys_UnloadGame ();		
@@ -496,7 +496,7 @@ static size_t QueryRegistryKeyForPath(
 
 				retval = RegQueryValueEx(key, valuename, 0, NULL, (LPBYTE)outBuffer, &pathlen);
 				if (retval == ERROR_MORE_DATA)
-					result = -pathlen;
+					result = 0; // What? We created the size it asked for. Give up.
 				else
 					result = pathlen;
 			}
@@ -599,9 +599,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 int main(int argc, char* argv[])
 {
-	MSG				msg;
 	int				time, oldtime, newtime;
-	char			*cddir;
 	SDL_Event		ev;
 
 	SDL_Init(SDL_INIT_EVERYTHING);

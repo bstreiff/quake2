@@ -418,7 +418,6 @@ void Menu_DrawStatusBar( const char *string )
 	if ( string )
 	{
 		int l = strlen( string );
-		int maxrow = VID_HEIGHT / 8;
 		int maxcol = VID_WIDTH / 8;
 		int col = maxcol / 2 - l / 2;
 

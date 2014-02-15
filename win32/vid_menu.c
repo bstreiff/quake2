@@ -78,7 +78,6 @@ static void ScreenSizeCallback( void *s )
 
 static void BrightnessCallback( void *s )
 {
-	menuslider_s *slider = ( menuslider_s * ) s;
 }
 
 static void ResetDefaults( void *unused )
@@ -162,10 +161,9 @@ static void ApplyChanges( void *unused )
 	M_ForceMenuOff();
 }
 
+void M_PopMenu(void);
 static void CancelChanges( void *unused )
 {
-	extern void M_PopMenu( void );
-
 	M_PopMenu();
 }
 
