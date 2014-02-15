@@ -20,6 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // r_misc.c
 
 #include "gl_local.h"
+#include <png.h>
+#include <zlib.h>
 
 /*
 ==================
@@ -83,15 +85,6 @@ void R_InitParticleTexture (void)
 ============================================================================== 
 */ 
 
-typedef struct _TargaHeader {
-	unsigned char 	id_length, colormap_type, image_type;
-	unsigned short	colormap_index, colormap_length;
-	unsigned char	colormap_size;
-	unsigned short	x_origin, y_origin, width, height;
-	unsigned char	pixel_size, attributes;
-} TargaHeader;
-
-
 /* 
 ================== 
 GL_ScreenShot_f
@@ -99,64 +92,105 @@ GL_ScreenShot_f
 */  
 void GL_ScreenShot_f (void) 
 {
-	byte		*buffer;
-	char		picname[80]; 
-	char		checkname[MAX_OSPATH];
-	int			i, c, temp;
-	FILE		*f;
+	png_byte*	buffer;
+	char		filename[MAX_OSPATH] = {0};
+	char		timestamp[MAX_OSPATH] = {0};
+	FILE*		f;
+	png_structp	png = NULL;
+	png_infop	pnginfo = NULL;
+	png_byte**	row_pointers = NULL;
+	struct timeval tv;
+	struct tm	tm;
+	time_t		now;
 
 	// create the scrnshots directory if it doesn't exist
-	Com_sprintf (checkname, sizeof(checkname), "%s/scrnshot", ri.FS_Gamedir());
-	Sys_Mkdir (checkname);
+	Com_sprintf(filename, sizeof(filename), "%s/scrnshot", ri.FS_Gamedir());
+	Sys_Mkdir(filename);
 
-// 
-// find a file name to save it to 
-// 
-	strcpy(picname,"quake00.tga");
+	Sys_GetTimeOfDay(&tv);
+	now = tv.tv_sec;
+#if defined(WIN32)
+	localtime_s(&tm, &now);
+#else
+	localtime_r(&now, &tm);
+#endif
+	strftime(timestamp, sizeof(timestamp), "%Y%m%d_%H%M%S", &tm);
 
-	for (i=0 ; i<=99 ; i++) 
-	{ 
-		picname[5] = i/10 + '0'; 
-		picname[6] = i%10 + '0'; 
-		Com_sprintf (checkname, sizeof(checkname), "%s/scrnshot/%s", ri.FS_Gamedir(), picname);
-		f = fopen (checkname, "rb");
-		if (!f)
-			break;	// file doesn't exist
-		fclose (f);
-	} 
-	if (i==100) 
+	// strftime doesn't handle fractional seconds, we add msec ourselves.
+	Com_sprintf(filename, sizeof(filename),
+		"%s/scrnshot/quake_%s_%03d.png",
+		ri.FS_Gamedir(), timestamp, (tv.tv_usec / 1000));
+
+	f = fopen(filename, "wb");
+	if (!f)
 	{
-		ri.Con_Printf (PRINT_ALL, "SCR_ScreenShot_f: Couldn't create a file\n"); 
-		return;
- 	}
-
-
-	buffer = malloc(vid.width*vid.height*3 + 18);
-	memset (buffer, 0, 18);
-	buffer[2] = 2;		// uncompressed type
-	buffer[12] = vid.width&255;
-	buffer[13] = vid.width>>8;
-	buffer[14] = vid.height&255;
-	buffer[15] = vid.height>>8;
-	buffer[16] = 24;	// pixel size
-
-	qglReadPixels (0, 0, vid.width, vid.height, GL_RGB, GL_UNSIGNED_BYTE, buffer+18 ); 
-
-	// swap rgb to bgr
-	c = 18+vid.width*vid.height*3;
-	for (i=18 ; i<c ; i+=3)
-	{
-		temp = buffer[i];
-		buffer[i] = buffer[i+2];
-		buffer[i+2] = temp;
+		ri.Con_Printf(PRINT_ALL, "SCR_ScreenShot_f: Couldn't create a file\n");
+		goto fopen_failed;
 	}
 
-	f = fopen (checkname, "wb");
-	fwrite (buffer, 1, c, f);
-	fclose (f);
+	png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (!png)
+	{
+		ri.Con_Printf(PRINT_ALL, "SCR_ScreenShot_f: Unable to create PNG.\n");
+		goto png_create_write_struct_failed;
+	}
 
-	free (buffer);
-	ri.Con_Printf (PRINT_ALL, "Wrote %s\n", picname);
+	pnginfo = png_create_info_struct(png);
+	if (!pnginfo)
+	{
+		ri.Con_Printf(PRINT_ALL, "SCR_ScreenShot_f: Unable to create PNG info pointer.\n");
+		goto png_create_info_struct_failed;
+	}
+
+	png_set_IHDR(
+		png, pnginfo,
+		vid.width, vid.height, 8,
+		PNG_COLOR_TYPE_RGB,
+		PNG_INTERLACE_NONE,
+		PNG_COMPRESSION_TYPE_DEFAULT,
+		PNG_FILTER_TYPE_DEFAULT);
+
+	// Get the pixels.
+	buffer = (png_byte*)png_malloc(png, vid.width*vid.height*3);
+	if (!buffer)
+	{
+		ri.Con_Printf(PRINT_ALL, "SCR_ScreenShot_f: Unable to alloc memory for buffer.\n");
+		goto alloc_buffer_failed;
+	}
+	qglReadPixels (0, 0, vid.width, vid.height, GL_RGB, GL_UNSIGNED_BYTE, buffer); 
+
+	// We need to build an array of row pointers.
+	row_pointers = (png_byte**)png_malloc(png, vid.height * sizeof(png_byte*));
+	if (!row_pointers)
+	{
+		ri.Con_Printf(PRINT_ALL, "SCR_ScreenShot_f: Unable to alloc memory for buffer.\n");
+		goto alloc_row_pointers_failed;
+	}
+	// OpenGL returns the buffer flipped from the way we want to write it, so set
+	// up the row pointers into the buffer in reverse.
+	for (int i = 0; i < vid.height; ++i)
+	{
+		row_pointers[i] = buffer + (vid.height-i)*(vid.width*3);
+	}
+
+	png_init_io(png, f);
+	png_set_rows(png, pnginfo, row_pointers);
+	png_write_png(png, pnginfo, PNG_TRANSFORM_IDENTITY, NULL);
+
+	ri.Con_Printf(PRINT_ALL, "Wrote %s\n", filename);
+
+	png_free(png, row_pointers);
+	row_pointers = NULL;
+alloc_row_pointers_failed:
+	png_free(png, buffer);
+	buffer = NULL;
+alloc_buffer_failed:
+png_create_info_struct_failed:
+	png_destroy_write_struct(&png, &pnginfo);
+png_create_write_struct_failed:
+	fclose(f);
+fopen_failed:
+	return;
 } 
 
 /*

@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Express 2012 for Windows Desktop
+# Visual Studio Express 2013 for Windows Desktop
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ctf", "ctf\ctf.vcxproj", "{52A0491B-707B-4F80-9891-853447A04BE5}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "game", "game\game.vcxproj", "{A9957AC3-C2B3-47BF-BD7A-44A9872DCC51}"
@@ -8,6 +10,17 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "quake2", "quake2.vcxproj", "{3251989C-A6BB-4F4D-9736-C7B034C1BF52}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ref_gl", "ref_gl\ref_gl.vcxproj", "{1451934D-0944-4095-BAAA-7B800DDE85B5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0F997370-FBEE-4B51-A916-34F45403FA12} = {0F997370-FBEE-4B51-A916-34F45403FA12}
+		{DA9547E8-F52A-41F1-A138-87C22AFA0A04} = {DA9547E8-F52A-41F1-A138-87C22AFA0A04}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "vendor\zlib\zlib.vcxproj", "{0F997370-FBEE-4B51-A916-34F45403FA12}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libpng", "vendor\libpng\libpng.vcxproj", "{DA9547E8-F52A-41F1-A138-87C22AFA0A04}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0F997370-FBEE-4B51-A916-34F45403FA12} = {0F997370-FBEE-4B51-A916-34F45403FA12}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -40,6 +53,18 @@ Global
 		{1451934D-0944-4095-BAAA-7B800DDE85B5}.Release|Win32.Build.0 = Release|Win32
 		{1451934D-0944-4095-BAAA-7B800DDE85B5}.Template|Win32.ActiveCfg = Template|Win32
 		{1451934D-0944-4095-BAAA-7B800DDE85B5}.Template|Win32.Build.0 = Template|Win32
+		{0F997370-FBEE-4B51-A916-34F45403FA12}.Debug|Win32.ActiveCfg = Debug|Win32
+		{0F997370-FBEE-4B51-A916-34F45403FA12}.Debug|Win32.Build.0 = Debug|Win32
+		{0F997370-FBEE-4B51-A916-34F45403FA12}.Release|Win32.ActiveCfg = Release|Win32
+		{0F997370-FBEE-4B51-A916-34F45403FA12}.Release|Win32.Build.0 = Release|Win32
+		{0F997370-FBEE-4B51-A916-34F45403FA12}.Template|Win32.ActiveCfg = Release|Win32
+		{0F997370-FBEE-4B51-A916-34F45403FA12}.Template|Win32.Build.0 = Release|Win32
+		{DA9547E8-F52A-41F1-A138-87C22AFA0A04}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DA9547E8-F52A-41F1-A138-87C22AFA0A04}.Debug|Win32.Build.0 = Debug|Win32
+		{DA9547E8-F52A-41F1-A138-87C22AFA0A04}.Release|Win32.ActiveCfg = Release|Win32
+		{DA9547E8-F52A-41F1-A138-87C22AFA0A04}.Release|Win32.Build.0 = Release|Win32
+		{DA9547E8-F52A-41F1-A138-87C22AFA0A04}.Template|Win32.ActiveCfg = Release|Win32
+		{DA9547E8-F52A-41F1-A138-87C22AFA0A04}.Template|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

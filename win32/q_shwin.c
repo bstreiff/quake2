@@ -210,6 +210,36 @@ void Sys_FindClose (void)
 	findhandle = 0;
 }
 
+int Sys_GetTimeOfDay(struct timeval* tv)
+{
+#if defined(WIN32)
+	LARGE_INTEGER			t;
+	FILETIME				filetime;
+
+	// Contains a 64-bit value representing the number of
+	// 100-nanosecond intervals since January 1, 1601 (UTC).
+	GetSystemTimeAsFileTime(&filetime);
+
+	// Copy into a LARGE_INTEGER.
+	t.HighPart = filetime.dwHighDateTime;
+	t.LowPart = filetime.dwLowDateTime;
+
+	// Convert to microseconds.
+	t.QuadPart /= 10;
+
+	// Subtract the difference between the 1601 epoch to the 1970 epoch.
+	t.QuadPart -= 11644473600000000ULL;
+
+	// Finally, fill the struct timeval.
+	tv->tv_sec = t.QuadPart / 1000000;
+	tv->tv_usec = t.QuadPart % 1000000;
+	return 0;
+#else
+	// In POSIX, the use of the timezone structure is obsolete;
+	// the tz argument should normally be specified as NULL.
+	return gettimeofday(tv, NULL);
+#endif
+}
 
 //============================================
 
