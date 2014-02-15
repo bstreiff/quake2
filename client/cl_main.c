@@ -543,10 +543,7 @@ void CL_Rcon_f (void)
 		return;
 	}
 
-	message[0] = (char)255;
-	message[1] = (char)255;
-	message[2] = (char)255;
-	message[3] = (char)255;
+	memset(message, 255, 4);
 	message[4] = 0;
 
 	NET_Config (true);		// allow remote
@@ -589,6 +586,8 @@ CL_ClearState
 
 =====================
 */
+void CL_ParticleSystem_Init();
+
 void CL_ClearState (void)
 {
 	S_StopAllSounds ();
@@ -645,9 +644,9 @@ void CL_Disconnect (void)
 	// send a disconnect message to the server
 	final[0] = clc_stringcmd;
 	strcpy ((char *)final+1, "disconnect");
-	Netchan_Transmit (&cls.netchan, strlen(final), final);
-	Netchan_Transmit (&cls.netchan, strlen(final), final);
-	Netchan_Transmit (&cls.netchan, strlen(final), final);
+	Netchan_Transmit (&cls.netchan, strlen((const char*)final), final);
+	Netchan_Transmit (&cls.netchan, strlen((const char*)final), final);
+	Netchan_Transmit (&cls.netchan, strlen((const char*)final), final);
 
 	CL_ClearState ();
 
@@ -700,7 +699,7 @@ void CL_Packet_f (void)
 
 	in = Cmd_Argv(2);
 	out = send+4;
-	send[0] = send[1] = send[2] = send[3] = (char)0xff;
+	memset(send, 0xFF, 4);
 
 	l = strlen (in);
 	for (i=0 ; i<l ; i++)

@@ -94,7 +94,7 @@ void GL_SelectTexture( GLenum texture )
 
 void GL_TexEnv( GLenum mode )
 {
-	static int lastmodes[2] = { -1, -1 };
+	static GLenum lastmodes[2] = { (GLenum)(-1), (GLenum)(-1) };
 
 	if ( mode != lastmodes[gl_state.currenttmu] )
 	{
@@ -606,6 +606,7 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 							*pixbuf++ = blue;
 							*pixbuf++ = 255;
 							break;
+					default:
 					case 32:
 							blue = *buf_p++;
 							green = *buf_p++;
@@ -635,6 +636,7 @@ void LoadTGA (char *name, byte **pic, int *width, int *height)
 								red = *buf_p++;
 								alphabyte = 255;
 								break;
+						default:
 						case 32:
 								blue = *buf_p++;
 								green = *buf_p++;

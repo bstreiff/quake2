@@ -1467,9 +1467,7 @@ void LightningGun_Fire (edict_t *ent, vec3_t g_offset, int damage)
 void Weapon_LightningGun_Fire (edict_t *ent)
 {
 	float	rotation;
-	vec3_t	forward, right;
 	vec3_t	offset;
-	int		effect;
 	int		damage;
 
 	ent->client->weapon_sound = gi.soundindex("weapons/lightgun.wav");

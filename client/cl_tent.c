@@ -81,6 +81,8 @@ void CL_BFGExplosionParticles (vec3_t org);
 // RAFAEL
 void CL_BlueBlasterParticles (vec3_t org, vec3_t dir);
 
+void CL_LightningSpark(vec3_t org, vec3_t dir, int color, int count);
+
 struct sfx_s	*cl_sfx_ric1;
 struct sfx_s	*cl_sfx_ric2;
 struct sfx_s	*cl_sfx_ric3;

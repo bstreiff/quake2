@@ -1125,12 +1125,12 @@ static void UpdateCDVolumeFunc( void *unused )
 	Cvar_SetValue( "cd_nocd", !s_options_cdvolume_box.curvalue );
 }
 
+void Key_ClearTyping(void);
 static void ConsoleFunc( void *unused )
 {
 	/*
 	** the proper way to do this is probably to have ToggleConsole_f accept a parameter
 	*/
-	extern void Key_ClearTyping( void );
 
 	if ( cl.attractloop )
 	{
@@ -3419,6 +3419,8 @@ static qboolean IconOfSkinExists( char *skin, char **pcxfiles, int npcxfiles )
 	return false;
 }
 
+char **FS_ListFiles(char *, int *, unsigned, unsigned);
+
 static qboolean PlayerConfig_ScanDirectories( void )
 {
 	char findname[1024];
@@ -3427,8 +3429,6 @@ static qboolean PlayerConfig_ScanDirectories( void )
 	char **dirnames;
 	char *path = NULL;
 	int i;
-
-	extern char **FS_ListFiles( char *, int *, unsigned, unsigned );
 
 	s_numplayermodels = 0;
 
@@ -3557,6 +3557,7 @@ static qboolean PlayerConfig_ScanDirectories( void )
 	}
 	if ( dirnames )
 		FreeFileList( dirnames, ndirs );
+	return true;
 }
 
 static int pmicmpfnc( const void *_a, const void *_b )
@@ -3744,9 +3745,10 @@ qboolean PlayerConfig_MenuInit( void )
 	return true;
 }
 
+float CalcFov(float fov_x, float w, float h);
+
 void PlayerConfig_MenuDraw( void )
 {
-	extern float CalcFov( float fov_x, float w, float h );
 	refdef_t refdef;
 	char scratch[MAX_QPATH];
 

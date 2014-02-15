@@ -281,7 +281,7 @@ qboolean VID_LoadRefresh( char *name )
 		Com_Error (ERR_FATAL, "%s has incompatible api_version", name);
 	}
 
-	if ( re.Init( NULL, NULL ) == -1 )
+	if ( re.Init( NULL, NULL ) == false )
 	{
 		re.Shutdown();
 		VID_FreeReflib ();

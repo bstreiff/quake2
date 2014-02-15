@@ -27,7 +27,7 @@ viddef_t	vid;
 
 refimport_t	ri;
 
-int GL_TEXTURE0, GL_TEXTURE1;
+GLenum GL_TEXTURE0, GL_TEXTURE1;
 
 model_t		*r_worldmodel;
 
@@ -1115,7 +1115,13 @@ qboolean R_SetMode (void)
 R_Init
 ===============
 */
-int R_Init( void *hinstance, void *hWnd )
+
+#if defined(_WIN32)
+#   pragma warning (push)
+#	pragma warning (disable : 4055)
+#endif
+
+qboolean R_Init( void *hinstance, void *hWnd )
 {	
 	char renderer_buffer[1000];
 	char vendor_buffer[1000];
@@ -1139,14 +1145,14 @@ int R_Init( void *hinstance, void *hWnd )
 	{
 		QGL_Shutdown();
         ri.Con_Printf (PRINT_ALL, "ref_gl::R_Init() - could not load \"%s\"\n", gl_driver->string );
-		return -1;
+		return false;
 	}
 
 	// initialize OS-specific parts of OpenGL
 	if ( !GLimp_Init( hinstance, hWnd ) )
 	{
 		QGL_Shutdown();
-		return -1;
+		return false;
 	}
 
 	// set our "safe" modes
@@ -1157,7 +1163,7 @@ int R_Init( void *hinstance, void *hWnd )
 	{
 		QGL_Shutdown();
         ri.Con_Printf (PRINT_ALL, "ref_gl::R_Init() - could not R_SetMode()\n" );
-		return -1;
+		return false;
 	}
 
 	ri.Vid_MenuInit();
@@ -1165,13 +1171,13 @@ int R_Init( void *hinstance, void *hWnd )
 	/*
 	** get our various GL strings
 	*/
-	gl_config.vendor_string = qglGetString (GL_VENDOR);
+	gl_config.vendor_string = (const char*)qglGetString (GL_VENDOR);
 	ri.Con_Printf (PRINT_ALL, "GL_VENDOR: %s\n", gl_config.vendor_string );
-	gl_config.renderer_string = qglGetString (GL_RENDERER);
+	gl_config.renderer_string = (const char*)qglGetString(GL_RENDERER);
 	ri.Con_Printf (PRINT_ALL, "GL_RENDERER: %s\n", gl_config.renderer_string );
-	gl_config.version_string = qglGetString (GL_VERSION);
+	gl_config.version_string = (const char*)qglGetString(GL_VERSION);
 	ri.Con_Printf (PRINT_ALL, "GL_VERSION: %s\n", gl_config.version_string );
-	gl_config.extensions_string = qglGetString (GL_EXTENSIONS);
+	gl_config.extensions_string = (const char*)qglGetString(GL_EXTENSIONS);
 	ri.Con_Printf (PRINT_ALL, "GL_EXTENSIONS: %s\n", gl_config.extensions_string );
 
 	strcpy( renderer_buffer, gl_config.renderer_string );
@@ -1207,27 +1213,13 @@ int R_Init( void *hinstance, void *hWnd )
 		SDL_GL_ExtensionSupported("GL_SGI_compiled_vertex_array"))
 	{
 		ri.Con_Printf( PRINT_ALL, "...enabling GL_EXT_compiled_vertex_array\n" );
-		qglLockArraysEXT = (void *)SDL_GL_GetProcAddress("glLockArraysEXT");
-		qglUnlockArraysEXT = (void *)SDL_GL_GetProcAddress("glUnlockArraysEXT");
+		qglLockArraysEXT = (void(APIENTRY *)(int,int))SDL_GL_GetProcAddress("glLockArraysEXT");
+		qglUnlockArraysEXT = (void(APIENTRY *)(void))SDL_GL_GetProcAddress("glUnlockArraysEXT");
 	}
 	else
 	{
 		ri.Con_Printf( PRINT_ALL, "...GL_EXT_compiled_vertex_array not found\n" );
 	}
-
-#ifdef _WIN32
-	/*
-	if ( strstr( gl_config.extensions_string, "WGL_EXT_swap_control" ) )
-	{
-		qwglSwapIntervalEXT = ( BOOL (WINAPI *)(int)) qwglGetProcAddress( "wglSwapIntervalEXT" );
-		ri.Con_Printf( PRINT_ALL, "...enabling WGL_EXT_swap_control\n" );
-	}
-	else
-	{
-		ri.Con_Printf( PRINT_ALL, "...WGL_EXT_swap_control not found\n" );
-	}
-	*/
-#endif
 
 	if (SDL_GL_ExtensionSupported("GL_EXT_point_parameters"))
 	{
@@ -1272,9 +1264,9 @@ int R_Init( void *hinstance, void *hWnd )
 		if ( gl_ext_multitexture->value )
 		{
 			ri.Con_Printf( PRINT_ALL, "...using GL_ARB_multitexture\n" );
-			qglMultiTexCoord2fARB = (void *)SDL_GL_GetProcAddress("glMultiTexCoord2fARB");
-			qglActiveTextureARB = (void *)SDL_GL_GetProcAddress("glActiveTextureARB");
-			qglClientActiveTextureARB = (void *)SDL_GL_GetProcAddress("glClientActiveTextureARB");
+			qglMultiTexCoord2fARB = (void (APIENTRY*)(GLenum,GLfloat,GLfloat))SDL_GL_GetProcAddress("glMultiTexCoord2fARB");
+			qglActiveTextureARB = (void (APIENTRY*)(GLenum))SDL_GL_GetProcAddress("glActiveTextureARB");
+			qglClientActiveTextureARB = (void (APIENTRY*)(GLenum))SDL_GL_GetProcAddress("glClientActiveTextureARB");
 			GL_TEXTURE0 = GL_TEXTURE0_ARB;
 			GL_TEXTURE1 = GL_TEXTURE1_ARB;
 		}
@@ -1306,8 +1298,12 @@ int R_Init( void *hinstance, void *hWnd )
 	if ( err != GL_NO_ERROR )
 		ri.Con_Printf (PRINT_ALL, "glGetError() = 0x%x\n", err);
 
-	return 0;
+	return true;
 }
+
+#if defined(_WIN32)
+#   pragma warning (pop)
+#endif
 
 /*
 ===============

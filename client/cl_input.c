@@ -471,6 +471,8 @@ void CL_SendCmd (void)
 	usercmd_t	nullcmd;
 	int			checksumIndex;
 
+	memset(&buf, 0, sizeof(sizebuf_t));
+
 	// build a command even if not connected
 
 	// save this command off for prediction

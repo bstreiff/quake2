@@ -31,37 +31,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "../ref_gl/gl_local.h"
 #include "glw_win.h"
 
-/*
-int   ( WINAPI * qwglChoosePixelFormat )(HDC, CONST PIXELFORMATDESCRIPTOR *);
-int   ( WINAPI * qwglDescribePixelFormat) (HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
-int   ( WINAPI * qwglGetPixelFormat)(HDC);
-BOOL  ( WINAPI * qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
-BOOL  ( WINAPI * qwglSwapBuffers)(HDC);
-
-BOOL  ( WINAPI * qwglCopyContext)(HGLRC, HGLRC, UINT);
-HGLRC ( WINAPI * qwglCreateContext)(HDC);
-HGLRC ( WINAPI * qwglCreateLayerContext)(HDC, int);
-BOOL  ( WINAPI * qwglDeleteContext)(HGLRC);
-HGLRC ( WINAPI * qwglGetCurrentContext)(VOID);
-HDC   ( WINAPI * qwglGetCurrentDC)(VOID);
-PROC  ( WINAPI * qwglGetProcAddress)(LPCSTR);
-BOOL  ( WINAPI * qwglMakeCurrent)(HDC, HGLRC);
-BOOL  ( WINAPI * qwglShareLists)(HGLRC, HGLRC);
-BOOL  ( WINAPI * qwglUseFontBitmaps)(HDC, DWORD, DWORD, DWORD);
-
-BOOL  ( WINAPI * qwglUseFontOutlines)(HDC, DWORD, DWORD, DWORD, FLOAT,
-                                           FLOAT, int, LPGLYPHMETRICSFLOAT);
-
-BOOL ( WINAPI * qwglDescribeLayerPlane)(HDC, int, int, UINT,
-                                            LPLAYERPLANEDESCRIPTOR);
-int  ( WINAPI * qwglSetLayerPaletteEntries)(HDC, int, int, int,
-                                                CONST COLORREF *);
-int  ( WINAPI * qwglGetLayerPaletteEntries)(HDC, int, int, int,
-                                                COLORREF *);
-BOOL ( WINAPI * qwglRealizeLayerPalette)(HDC, int, BOOL);
-BOOL ( WINAPI * qwglSwapLayerBuffers)(HDC, UINT);
-*/
-
 void ( APIENTRY * qglAccum )(GLenum op, GLfloat value);
 void ( APIENTRY * qglAlphaFunc )(GLenum func, GLclampf ref);
 GLboolean ( APIENTRY * qglAreTexturesResident )(GLsizei n, const GLuint *textures, GLboolean *residences);
@@ -402,9 +371,6 @@ void ( APIENTRY * qglViewport )(GLint x, GLint y, GLsizei width, GLsizei height)
 void ( APIENTRY * qglLockArraysEXT)( int, int);
 void ( APIENTRY * qglUnlockArraysEXT) ( void );
 
-BOOL ( WINAPI * qwglSwapIntervalEXT)( int interval );
-BOOL ( WINAPI * qwglGetDeviceGammaRampEXT)( unsigned char *, unsigned char *, unsigned char * );
-BOOL ( WINAPI * qwglSetDeviceGammaRampEXT)( const unsigned char *, const unsigned char *, const unsigned char * );
 void ( APIENTRY * qglPointParameterfEXT)( GLenum param, GLfloat value );
 void ( APIENTRY * qglPointParameterfvEXT)( GLenum param, const GLfloat *value );
 void ( APIENTRY * qglColorTableEXT)( int, int, int, int, int, const void * );
@@ -2644,13 +2610,6 @@ static void APIENTRY logViewport(GLint x, GLint y, GLsizei width, GLsizei height
 void QGL_Shutdown( void )
 {
 	SDL_GL_UnloadLibrary();
-	/*if ( glw_state.hinstOpenGL )
-	{
-		FreeLibrary( glw_state.hinstOpenGL );
-		glw_state.hinstOpenGL = NULL;
-	}
-
-	glw_state.hinstOpenGL = NULL;*/
 
 	qglAccum                     = NULL;
 	qglAlphaFunc                 = NULL;
@@ -2988,38 +2947,9 @@ void QGL_Shutdown( void )
 	qglVertex4sv                 = NULL;
 	qglVertexPointer             = NULL;
 	qglViewport                  = NULL;
-	/*
-	qwglCopyContext              = NULL;
-	qwglCreateContext            = NULL;
-	qwglCreateLayerContext       = NULL;
-	qwglDeleteContext            = NULL;
-	qwglDescribeLayerPlane       = NULL;
-	qwglGetCurrentContext        = NULL;
-	qwglGetCurrentDC             = NULL;
-	qwglGetLayerPaletteEntries   = NULL;
-	qwglGetProcAddress           = NULL;
-	qwglMakeCurrent              = NULL;
-	qwglRealizeLayerPalette      = NULL;
-	qwglSetLayerPaletteEntries   = NULL;
-	qwglShareLists               = NULL;
-	qwglSwapLayerBuffers         = NULL;
-	qwglUseFontBitmaps           = NULL;
-	qwglUseFontOutlines          = NULL;
-
-	qwglChoosePixelFormat        = NULL;
-	qwglDescribePixelFormat      = NULL;
-	qwglGetPixelFormat           = NULL;
-	qwglSetPixelFormat           = NULL;
-	qwglSwapBuffers              = NULL;
-	*/
-
-	qwglSwapIntervalEXT	= NULL;
-
-	qwglGetDeviceGammaRampEXT = NULL;
-	qwglSetDeviceGammaRampEXT = NULL;
 }
 
-#	pragma warning (disable : 4113 4133 4047 )
+#	pragma warning (disable : 4113 4133 4047 4152 )
 #	define GPA( a ) SDL_GL_GetProcAddress( a )
 
 /*
@@ -3382,31 +3312,6 @@ qboolean QGL_Init( const char *dllname )
 	qglVertexPointer             = 	dllVertexPointer             = GPA( "glVertexPointer" );
 	qglViewport                  = 	dllViewport                  = GPA( "glViewport" );
 
-	/*
-	qwglCopyContext              = GPA( "wglCopyContext" );
-	qwglCreateContext            = GPA( "wglCreateContext" );
-	qwglCreateLayerContext       = GPA( "wglCreateLayerContext" );
-	qwglDeleteContext            = GPA( "wglDeleteContext" );
-	qwglDescribeLayerPlane       = GPA( "wglDescribeLayerPlane" );
-	qwglGetCurrentContext        = GPA( "wglGetCurrentContext" );
-	qwglGetCurrentDC             = GPA( "wglGetCurrentDC" );
-	qwglGetLayerPaletteEntries   = GPA( "wglGetLayerPaletteEntries" );
-	qwglGetProcAddress           = GPA( "wglGetProcAddress" );
-	qwglMakeCurrent              = GPA( "wglMakeCurrent" );
-	qwglRealizeLayerPalette      = GPA( "wglRealizeLayerPalette" );
-	qwglSetLayerPaletteEntries   = GPA( "wglSetLayerPaletteEntries" );
-	qwglShareLists               = GPA( "wglShareLists" );
-	qwglSwapLayerBuffers         = GPA( "wglSwapLayerBuffers" );
-	qwglUseFontBitmaps           = GPA( "wglUseFontBitmapsA" );
-	qwglUseFontOutlines          = GPA( "wglUseFontOutlinesA" );
-
-	qwglChoosePixelFormat        = GPA( "wglChoosePixelFormat" );
-	qwglDescribePixelFormat      = GPA( "wglDescribePixelFormat" );
-	qwglGetPixelFormat           = GPA( "wglGetPixelFormat" );
-	qwglSetPixelFormat           = GPA( "wglSetPixelFormat" );
-	qwglSwapBuffers              = GPA( "wglSwapBuffers" );*/
-
-	qwglSwapIntervalEXT = 0;
 	qglPointParameterfEXT = 0;
 	qglPointParameterfvEXT = 0;
 	qglColorTableEXT = 0;

@@ -1218,7 +1218,6 @@ void Mod_LoadAliasModel(model_t *mod, void *buffer)
 {
 	int					i, j;
 	const byte			*bufferItr = (byte*)buffer;
-	const dstvert_t		*pinst;
 	const dtriangle_t	*pintri;
 	int					*pincmd;
 	alias_model_t		*outmodel;
