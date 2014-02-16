@@ -187,9 +187,7 @@
     <ClInclude Include="..\qcommon\qcommon.h" />
     <ClInclude Include="..\qcommon\qfiles.h" />
     <ClInclude Include="qgl.h" />
-    <ClInclude Include="qmenu.h" />
     <ClInclude Include="..\client\ref.h" />
-    <ClInclude Include="ref_gl.h" />
     <ClInclude Include="q_math.h" />
     <ClInclude Include="warpsin.h" />
     <ClInclude Include="..\win32\winquake.h" />

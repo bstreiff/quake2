@@ -219,9 +219,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\anorms.h" />
-    <ClInclude Include="qcommon\bspfile.h" />
     <ClInclude Include="client\cdaudio.h" />
     <ClInclude Include="client\client.h" />
+    <ClInclude Include="qcommon\platform.h" />
     <ClInclude Include="win32\conproc.h" />
     <ClInclude Include="client\console.h" />
     <ClInclude Include="game\game.h" />

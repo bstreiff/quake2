@@ -41,12 +41,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stdlib.h>
 #include <time.h>
 
-#if defined _M_ALPHA && !defined C_ONLY
-#define idaxp	1
-#else
-#define idaxp	0
-#endif
-
 typedef unsigned char 		byte;
 typedef enum {false, true}	qboolean;
 
@@ -120,11 +114,6 @@ MATHLIB
 
 typedef float vec_t;
 typedef vec_t vec3_t[3];
-typedef vec_t vec5_t[5];
-
-typedef	int	fixed4_t;
-typedef	int	fixed8_t;
-typedef	int	fixed16_t;
 
 #ifndef M_PI
 #define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
@@ -396,7 +385,6 @@ COLLISION DETECTION
 
 
 // plane_t structure
-// !!! if this is changed, it must be changed in asm code too !!!
 typedef struct cplane_s
 {
 	vec3_t	normal;
@@ -405,16 +393,6 @@ typedef struct cplane_s
 	byte	signbits;		// signx + (signy<<1) + (signz<<1)
 	byte	pad[2];
 } cplane_t;
-
-// structure offset for asm code
-#define CPLANE_NORMAL_X			0
-#define CPLANE_NORMAL_Y			4
-#define CPLANE_NORMAL_Z			8
-#define CPLANE_DIST				12
-#define CPLANE_TYPE				16
-#define CPLANE_SIGNBITS			17
-#define CPLANE_PAD0				18
-#define CPLANE_PAD1				19
 
 typedef struct cmodel_s
 {
@@ -548,70 +526,63 @@ typedef struct
 // even if it has a zero index model.
 #define	EF_ROTATE			0x00000001		// rotate (bonus items)
 #define	EF_GIB				0x00000002		// leave a trail
+//#define EF_UNUSED			0x00000004
 #define	EF_BLASTER			0x00000008		// redlight + trail
 #define	EF_ROCKET			0x00000010		// redlight + trail
-#define	EF_GRENADE			0x00000020
-#define	EF_HYPERBLASTER		0x00000040
-#define	EF_BFG				0x00000080
-#define EF_COLOR_SHELL		0x00000100
+#define	EF_GRENADE			0x00000020		// smoke trail
+#define	EF_HYPERBLASTER		0x00000040		// yellow light (can be mixed with EF_TRACKER)
+#define	EF_BFG				0x00000080		// translucency, green light (ramping unless EF_ANIM_ALLFAST)
+#define EF_COLOR_SHELL		0x00000100		// create color shell with RF_SHELL_*
 #define EF_POWERSCREEN		0x00000200
 #define	EF_ANIM01			0x00000400		// automatically cycle between frames 0 and 1 at 2 hz
 #define	EF_ANIM23			0x00000800		// automatically cycle between frames 2 and 3 at 2 hz
 #define EF_ANIM_ALL			0x00001000		// automatically cycle through all frames at 2hz
 #define EF_ANIM_ALLFAST		0x00002000		// automatically cycle through all frames at 10hz
 #define	EF_FLIES			0x00004000
-#define	EF_QUAD				0x00008000
-#define	EF_PENT				0x00010000
+#define	EF_QUAD				0x00008000		// EF_COLOR_SHELL plus RF_SHELL_BLUE
+#define	EF_PENT				0x00010000		// EF_COLOR_SHELL plus RF_SHELL_RED
 #define	EF_TELEPORTER		0x00020000		// particle fountain
-#define EF_FLAG1			0x00040000
-#define EF_FLAG2			0x00080000
-// RAFAEL
+#define EF_FLAG1			0x00040000		// red light + particle trail
+#define EF_FLAG2			0x00080000		// blue light + particle trail
 #define EF_IONRIPPER		0x00100000
 #define EF_GREENGIB			0x00200000
 #define	EF_BLUEHYPERBLASTER 0x00400000
 #define EF_SPINNINGLIGHTS	0x00800000
 #define EF_PLASMA			0x01000000
 #define EF_TRAP				0x02000000
-
-//ROGUE
 #define EF_TRACKER			0x04000000
-#define	EF_DOUBLE			0x08000000
-#define	EF_SPHERETRANS		0x10000000
+#define	EF_DOUBLE			0x08000000		// RF_COLOR_SHELL plus RF_SHELL_DOUBLE
+#define	EF_SPHERETRANS		0x10000000		// translucency, more with EF_TRACKERTRAIL
 #define EF_TAGTRAIL			0x20000000
-#define EF_HALF_DAMAGE		0x40000000
+#define EF_HALF_DAMAGE		0x40000000		// RF_COLOR_SHELL plus RF_SHELL_HALF_DAM
 #define EF_TRACKERTRAIL		0x80000000
-//ROGUE
 
 // entity_state_t->renderfx flags
-#define	RF_MINLIGHT			1		// allways have some light (viewmodel)
-#define	RF_VIEWERMODEL		2		// don't draw through eyes, only mirrors
-#define	RF_WEAPONMODEL		4		// only draw through eyes
-#define	RF_FULLBRIGHT		8		// allways draw full intensity
-#define	RF_DEPTHHACK		16		// for view weapon Z crunching
-#define	RF_TRANSLUCENT		32
-#define	RF_FRAMELERP		64
-#define RF_BEAM				128
-#define	RF_CUSTOMSKIN		256		// skin is an index in image_precache
-#define	RF_GLOW				512		// pulse lighting for bonus items
-#define RF_SHELL_RED		1024
-#define	RF_SHELL_GREEN		2048
-#define RF_SHELL_BLUE		4096
-
-//ROGUE
-#define RF_IR_VISIBLE		0x00008000		// 32768
-#define	RF_SHELL_DOUBLE		0x00010000		// 65536
+#define	RF_MINLIGHT			0x00000001		// always have some light (viewmodel)
+#define	RF_VIEWERMODEL		0x00000002		// don't draw through eyes, only mirrors
+#define	RF_WEAPONMODEL		0x00000004		// only draw through eyes
+#define	RF_FULLBRIGHT		0x00000008		// allways draw full intensity
+#define	RF_DEPTHHACK		0x00000010		// for view weapon Z crunching
+#define	RF_TRANSLUCENT		0x00000020		// use alpha value
+#define	RF_FRAMELERP		0x00000040
+#define RF_BEAM				0x00000080
+#define	RF_CUSTOMSKIN		0x00000100		// skin is an index in image_precache (not used?)
+#define	RF_GLOW				0x00000200		// pulse lighting for bonus items
+#define RF_SHELL_RED		0x00000400
+#define	RF_SHELL_GREEN		0x00000800
+#define RF_SHELL_BLUE		0x00001000
+//#define RF_UNUSED1		0x00002000
+//#define RF_UNUSED2		0x00004000
+#define RF_IR_VISIBLE		0x00008000
+#define	RF_SHELL_DOUBLE		0x00010000
 #define	RF_SHELL_HALF_DAM	0x00020000
-#define RF_USE_DISGUISE		0x00040000
-//ROGUE
+#define RF_USE_DISGUISE		0x00040000		// use disguise.pcx as skin
 
 // player_state_t->refdef flags
-#define	RDF_UNDERWATER		1		// warp the screen as apropriate
-#define RDF_NOWORLDMODEL	2		// used for player configuration screen
-
-//ROGUE
-#define	RDF_IRGOGGLES		4
-#define RDF_UVGOGGLES		8
-//ROGUE
+#define	RDF_UNDERWATER		0x00000001		// warp the screen as apropriate
+#define RDF_NOWORLDMODEL	0x00000002		// used for player configuration screen
+#define	RDF_IRGOGGLES		0x00000004
+#define RDF_UVGOGGLES		0x00000008
 
 //
 // muzzle flashes / player effects
@@ -1029,50 +1000,12 @@ typedef enum
 #define DF_INFINITE_AMMO	0x00002000	// 8192
 #define DF_QUAD_DROP		0x00004000	// 16384
 #define DF_FIXED_FOV		0x00008000	// 32768
-
-// RAFAEL
 #define	DF_QUADFIRE_DROP	0x00010000	// 65536
-
-//ROGUE
 #define DF_NO_MINES			0x00020000
 #define DF_NO_STACK_DOUBLE	0x00040000
 #define DF_NO_NUKES			0x00080000
 #define DF_NO_SPHERES		0x00100000
-//ROGUE
 
-/*
-ROGUE - VERSIONS
-1234	08/13/1998		Activision
-1235	08/14/1998		Id Software
-1236	08/15/1998		Steve Tietze
-1237	08/15/1998		Phil Dobranski
-1238	08/15/1998		John Sheley
-1239	08/17/1998		Barrett Alexander
-1230	08/17/1998		Brandon Fish
-1245	08/17/1998		Don MacAskill
-1246	08/17/1998		David "Zoid" Kirsch
-1247	08/17/1998		Manu Smith
-1248	08/17/1998		Geoff Scully
-1249	08/17/1998		Andy Van Fossen
-1240	08/20/1998		Activision Build 2
-1256	08/20/1998		Ranger Clan
-1257	08/20/1998		Ensemble Studios
-1258	08/21/1998		Robert Duffy
-1259	08/21/1998		Stephen Seachord
-1250	08/21/1998		Stephen Heaslip
-1267	08/21/1998		Samir Sandesara
-1268	08/21/1998		Oliver Wyman
-1269	08/21/1998		Steven Marchegiano
-1260	08/21/1998		Build #2 for Nihilistic
-1278	08/21/1998		Build #2 for Ensemble
-
-9999	08/20/1998		Internal Use
-*/
-#define ROGUE_VERSION_ID		1278
-
-#define ROGUE_VERSION_STRING	"08/21/1998 Beta 2 for Ensemble"
-
-// ROGUE
 /*
 ==========================================================
 
@@ -1188,13 +1121,3 @@ typedef struct
 	short		stats[MAX_STATS];		// fast status bar updates
 } player_state_t;
 
-
-// ==================
-// PGM 
-#define VIDREF_GL		1
-#define VIDREF_SOFT		2
-#define VIDREF_OTHER	3
-
-extern int vidref_val;
-// PGM
-// ==================

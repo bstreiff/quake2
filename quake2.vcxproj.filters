@@ -167,9 +167,6 @@
     <ClInclude Include="client\anorms.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="qcommon\bspfile.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="client\cdaudio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -222,6 +219,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="win32\winquake.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="qcommon\platform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

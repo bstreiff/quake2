@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sys_win.h
 
 #include "../qcommon/qcommon.h"
+#include "../qcommon/platform.h"
 #include "winquake.h"
 #include "resource.h"
 #include <errno.h>
@@ -344,31 +345,7 @@ GAME DLL
 
 static void*	game_library = NULL;
 
-#if defined(__linux__)
-	#define LIBRARY_EXTENSION "so"
-#elif defined(_WIN32)
-	#define LIBRARY_EXTENSION "dll"
-#elif defined(__APPLE__)
-	#define LIBRARY_EXTENSION "dylib"
-#else
-	#error Unknown platform, unknown library extension!
-#endif
-
-#if defined(_M_IX86) || defined(__i386__)
-	#define LIBRARY_ARCH "x86"
-#elif defined(_M_ARM) || defined(__arm__)
-	#define LIBRARY_ARCH "arm"
-#elif defined(_M_X64) || defined(_M_AMD64) || defined(__amd64__) || defined(__x86_64__)
-	#define LIBRARY_ARCH "x64"
-#elif defined(_M_ALPHA) || defined(__alpha__)
-	#define LIBRARY_ARCH "axp"
-#elif defined(_M_PPC) || defined(__ppc__)
-	#define LIBRARY_ARCH "ppc"
-#else
-	#error Unknown architecture.
-#endif
-
-#define GAME_LIBRARY_NAME "game" LIBRARY_ARCH "." LIBRARY_EXTENSION
+#define GAME_LIBRARY_NAME "game" ARCH_NAME "." LIBRARY_EXTENSION
 
 /*
 =================
