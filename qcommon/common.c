@@ -99,14 +99,28 @@ Both client and server can use this, and it will output
 to the apropriate place.
 =============
 */
-void Com_Printf (char *fmt, ...)
+static void Com_Printf_Common (char *fmt, va_list argptr)
 {
-	va_list		argptr;
-	char		msg[MAXPRINTMSG];
+	char		*msg = NULL;
+	int			len;
 
-	va_start (argptr,fmt);
-	vsprintf (msg,fmt,argptr);
-	va_end (argptr);
+#if WIN32
+	len = _vscprintf(fmt, argptr) + 1;
+	msg = (char*)malloc(len*sizeof(char));
+	if (msg)
+	{
+		vsnprintf(msg, len, fmt, argptr);
+		msg[len - 1] = '\0';
+	}
+#else
+	len = vsnprintf(NULL, 0, fmt, argptr) + 1;
+	msg = (char*)malloc(len*sizeof(char));
+	if (msg)
+	{
+		vsnprintf(msg, len, fmt, argptr);
+		msg[len - 1] = '\0';
+	}
+#endif
 
 	if (rd_target)
 	{
@@ -142,8 +156,19 @@ void Com_Printf (char *fmt, ...)
 		if (logfile_active->value > 1)
 			fflush (logfile);		// force it to save every time
 	}
+
+	if (msg)
+		free(msg);
 }
 
+void Com_Printf(char *fmt, ...)
+{
+	va_list		argptr;
+
+	va_start(argptr, fmt);
+	Com_Printf_Common(fmt, argptr);
+	va_end(argptr);
+}
 
 /*
 ================
@@ -155,16 +180,13 @@ A Com_Printf that only shows up if the "developer" cvar is set
 void Com_DPrintf (char *fmt, ...)
 {
 	va_list		argptr;
-	char		msg[MAXPRINTMSG];
 		
 	if (!developer || !developer->value)
 		return;			// don't confuse non-developers with techie stuff...
 
-	va_start (argptr,fmt);
-	vsprintf (msg,fmt,argptr);
-	va_end (argptr);
-	
-	Com_Printf ("%s", msg);
+	va_start(argptr, fmt);
+	Com_Printf_Common(fmt, argptr);
+	va_end(argptr);
 }
 
 
@@ -186,10 +208,13 @@ void Com_Error (int code, char *fmt, ...)
 		Sys_Error ("recursive error after: %s", msg);
 	recursive = true;
 
-	va_start (argptr,fmt);
-	vsprintf (msg,fmt,argptr);
-	va_end (argptr);
-	
+	va_start(argptr, fmt);
+	// This may truncate, but we're in an error path that might be
+	// a result of an allocation failure, so we might not be able
+	// to allocate enough memory to fully satisfy the string.
+	vsnprintf(msg, MAXPRINTMSG, fmt, argptr);
+	va_end(argptr);
+
 	if (code == ERR_DISCONNECT)
 	{
 		CL_Drop ();

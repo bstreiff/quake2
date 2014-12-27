@@ -61,16 +61,35 @@ DLL GLUE
 ==========================================================================
 */
 
-#define	MAXPRINTMSG	4096
 void VID_Printf (int print_level, char *fmt, ...)
 {
 	va_list		argptr;
-	char		msg[MAXPRINTMSG];
+	char		*msg = NULL;
 	static qboolean	inupdate;
-	
-	va_start (argptr,fmt);
-	vsprintf (msg,fmt,argptr);
+	int			len;
+
+	va_start(argptr, fmt);
+#if WIN32
+	len = _vscprintf(fmt, argptr) + 1;
+	msg = (char*)malloc(len*sizeof(char));
+	if (msg)
+	{
+		vsnprintf(msg, len, fmt, argptr);
+		msg[len - 1] = '\0';
+	}
+#else
+	len = vsnprintf(NULL, 0, fmt, argptr) + 1;
+	msg = (char*)malloc(len*sizeof(char));
+	if (msg)
+	{
+		vsnprintf(msg, len, fmt, argptr);
+		msg[len - 1] = '\0';
+	}
+#endif
 	va_end (argptr);
+
+	if (!msg)
+		Com_Error(ERR_FATAL, "Unable to allocate string");
 
 	if (print_level == PRINT_ALL)
 	{
@@ -85,17 +104,37 @@ void VID_Printf (int print_level, char *fmt, ...)
 		MessageBox( 0, msg, "PRINT_ALERT", MB_ICONWARNING );
 		OutputDebugString( msg );
 	}
+
+	if (msg)
+		free(msg);
 }
 
 void VID_Error (int err_level, char *fmt, ...)
 {
 	va_list		argptr;
-	char		msg[MAXPRINTMSG];
+	char		*msg = NULL;
+	int			len;
 	static qboolean	inupdate;
 	
-	va_start (argptr,fmt);
-	vsprintf (msg,fmt,argptr);
-	va_end (argptr);
+	va_start(argptr, fmt);
+#if WIN32
+	len = _vscprintf(fmt, argptr) + 1;
+	msg = (char*)malloc(len*sizeof(char));
+	if (msg)
+	{
+		vsnprintf(msg, len, fmt, argptr);
+		msg[len - 1] = '\0';
+	}
+#else
+	len = vsnprintf(NULL, 0, fmt, argptr) + 1;
+	msg = (char*)malloc(len*sizeof(char));
+	if (msg)
+	{
+		vsnprintf(msg, len, fmt, argptr);
+		msg[len - 1] = '\0';
+	}
+#endif
+	va_end(argptr);
 
 	Com_Error (err_level,"%s", msg);
 }
