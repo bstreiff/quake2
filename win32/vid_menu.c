@@ -214,7 +214,13 @@ void VID_MenuInit( void )
 	if ( !gl_finish )
 		gl_finish = Cvar_Get( "gl_finish", "0", CVAR_ARCHIVE );
 
-	s_mode_list[OPENGL_MENU].curvalue = gl_mode->value;
+	// We allow gl_mode to be -1 for custom resolutions but this currently
+	// isn't supported in the menu system. Coerce it to mode 6 (1024x768)
+	// if this happens.
+	if (gl_mode->value >= 0)
+		s_mode_list[OPENGL_MENU].curvalue = gl_mode->value;
+	else
+		s_mode_list[OPENGL_MENU].curvalue = 6;
 
 	if ( !scr_viewsize )
 		scr_viewsize = Cvar_Get ("viewsize", "100", CVAR_ARCHIVE);

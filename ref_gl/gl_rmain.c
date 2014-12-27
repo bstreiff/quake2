@@ -136,6 +136,8 @@ cvar_t	*gl_texscale;
 cvar_t	*vid_fullscreen;
 cvar_t	*vid_gamma;
 cvar_t	*vid_ref;
+cvar_t	*vid_width;
+cvar_t	*vid_height;
 
 /*
 =================
@@ -1050,6 +1052,8 @@ void R_Register( void )
 	vid_fullscreen = ri.Cvar_Get( "vid_fullscreen", "0", CVAR_ARCHIVE );
 	vid_gamma = ri.Cvar_Get( "vid_gamma", "1.0", CVAR_ARCHIVE );
 	vid_ref = ri.Cvar_Get( "vid_ref", "gl", CVAR_ARCHIVE );
+	vid_width = ri.Cvar_Get("vid_width", "1024", CVAR_ARCHIVE);
+	vid_height = ri.Cvar_Get("vid_height", "768", CVAR_ARCHIVE);
 
 	ri.Cmd_AddCommand( "imagelist", GL_ImageList_f );
 	ri.Cmd_AddCommand( "screenshot", GL_ScreenShot_f );

@@ -39,6 +39,8 @@ cvar_t		*vid_ref;			// Name of Refresh DLL loaded
 cvar_t		*vid_xpos;			// X coordinate of window position
 cvar_t		*vid_ypos;			// Y coordinate of window position
 cvar_t		*vid_fullscreen;
+cvar_t		*vid_width;
+cvar_t		*vid_height;
 
 // Global variables used internally by this module
 viddef_t	viddef;				// global video state; used by other modules
@@ -214,6 +216,14 @@ vidmode_t vid_modes[] =
 
 qboolean VID_GetModeInfo( int *width, int *height, int mode )
 {
+	// If mode is -1, use the vid_width/vid_height cvars.
+	if (mode == -1)
+	{
+		*width = vid_width->value;
+		*height = vid_height->value;
+		return true;
+	}
+
 	if ( mode < 0 || mode >= VID_NUM_MODES )
 		return false;
 
@@ -406,6 +416,8 @@ void VID_Init (void)
 	vid_fullscreen = Cvar_Get ("vid_fullscreen", "0", CVAR_ARCHIVE);
 	vid_gamma = Cvar_Get( "vid_gamma", "1", CVAR_ARCHIVE );
 	win_noalttab = Cvar_Get( "win_noalttab", "0", CVAR_ARCHIVE );
+	vid_width = Cvar_Get("vid_width", "1024", CVAR_ARCHIVE);
+	vid_height = Cvar_Get("vid_height", "768", CVAR_ARCHIVE);
 
 	/* Add some console commands that we want to handle */
 	Cmd_AddCommand ("vid_restart", VID_Restart_f);
