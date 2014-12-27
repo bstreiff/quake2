@@ -479,8 +479,10 @@ void LoadPCX (char *filename, byte **pic, byte **palette, int *width, int *heigh
 			else
 				runLength = 1;
 
-			while(runLength-- > 0)
+			while(runLength-- > 0 && x<=pcx->xmax)
+         {
 				pix[x++] = dataByte;
+         }
 		}
 
 	}
