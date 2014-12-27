@@ -90,6 +90,7 @@
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <OutputFile>.\debug\obj\quake2.bsc</OutputFile>
+      <PreserveSbr>true</PreserveSbr>
     </Bscmake>
     <Link>
       <SuppressStartupBanner>true</SuppressStartupBanner>

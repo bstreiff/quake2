@@ -91,6 +91,7 @@
     <Bscmake>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <OutputFile>.\..\debug\obj\ref_gl.bsc</OutputFile>
+      <PreserveSbr>true</PreserveSbr>
     </Bscmake>
     <Link>
       <SuppressStartupBanner>true</SuppressStartupBanner>
