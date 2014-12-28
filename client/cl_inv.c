@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "client.h"
 
+extern cvar_t*    vid_hudscale;
+
 /*
 ================
 CL_ParseInventory
@@ -42,10 +44,11 @@ Inv_DrawString
 */
 void Inv_DrawString (int x, int y, char *string)
 {
+   const float scale = vid_hudscale->value;
 	while (*string)
 	{
 		re.DrawChar (x, y, *string);
-		x+=8;
+		x+=8*scale;
 		string++;
 	}
 }
@@ -65,6 +68,7 @@ CL_DrawInventory
 
 void CL_DrawInventory (void)
 {
+   const float scale = vid_hudscale->value;
 	int		i, j;
 	int		num, selected_num, item;
 	int		index[MAX_ITEMS];
@@ -97,16 +101,16 @@ void CL_DrawInventory (void)
 	if (top < 0)
 		top = 0;
 
-	x = (viddef.width-256)/2;
-	y = (viddef.height-240)/2;
+	x = (viddef.width-(256*scale))/2;
+	y = (viddef.height-(240*scale))/2;
 
-	re.DrawPic (x, y+8, "inventory");
+	re.DrawPic (x, y+(8*scale), "inventory");
 
-	y += 24;
-	x += 24;
+	y += 24*scale;
+	x += 24*scale;
 	Inv_DrawString (x, y, "hotkey ### item");
-	Inv_DrawString (x, y+8, "------ --- ----");
-	y += 16;
+	Inv_DrawString (x, y+(8*scale), "------ --- ----");
+	y += 16*scale;
 	for (i=top ; i<num && i < top+DISPLAY_ITEMS ; i++)
 	{
 		item = index[i];
@@ -127,10 +131,10 @@ void CL_DrawInventory (void)
 		else	// draw a blinky cursor by the selected item
 		{
 			if ( (int)(cls.realtime*10) & 1)
-				re.DrawChar (x-8, y, 15);
+				re.DrawChar (x-(8*scale), y, 15);
 		}
 		Inv_DrawString (x, y, string);
-		y += 8;
+		y += 8*scale;
 	}
 
 

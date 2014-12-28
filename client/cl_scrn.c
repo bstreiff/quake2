@@ -780,8 +780,9 @@ void SCR_ExecuteLayoutString (char *s)
 	int		width;
 	int		index;
 	clientinfo_t	*ci;
-   const int virtual_width = 320 * vid_hudscale->value;
-   const int virtual_height = 240 * vid_hudscale->value;
+   const float scale = vid_hudscale->value;
+   const int virtual_width = 320 * scale;
+   const int virtual_height = 240 * scale;
 
 	if (cls.state != ca_active || !cl.refresh_prepped)
 		return;
@@ -799,38 +800,38 @@ void SCR_ExecuteLayoutString (char *s)
 		if (!strcmp(token, "xl"))
 		{
 			token = COM_Parse (&s);
-         x = atoi(token) * vid_hudscale->value;
+         x = atoi(token) * scale;
 			continue;
 		}
 		if (!strcmp(token, "xr"))
 		{
 			token = COM_Parse (&s);
-         x = viddef.width + atoi(token) * vid_hudscale->value;
+         x = viddef.width + atoi(token) * scale;
 			continue;
 		}
 		if (!strcmp(token, "xv"))
 		{
 			token = COM_Parse (&s);
-         x = viddef.width / 2 - virtual_width / 2 + atoi(token) * vid_hudscale->value;
+         x = viddef.width / 2 - virtual_width / 2 + atoi(token) * scale;
 			continue;
 		}
 
 		if (!strcmp(token, "yt"))
 		{
 			token = COM_Parse (&s);
-         y = atoi(token) * vid_hudscale->value;
+         y = atoi(token) * scale;
 			continue;
 		}
 		if (!strcmp(token, "yb"))
 		{
 			token = COM_Parse (&s);
-         y = viddef.height + atoi(token) * vid_hudscale->value;
+         y = viddef.height + atoi(token) * scale;
 			continue;
 		}
 		if (!strcmp(token, "yv"))
 		{
 			token = COM_Parse (&s);
-         y = viddef.height / 2 - virtual_height / 2 + atoi(token) * vid_hudscale->value;
+         y = viddef.height / 2 - virtual_height / 2 + atoi(token) * scale;
 			continue;
 		}
 
@@ -852,9 +853,9 @@ void SCR_ExecuteLayoutString (char *s)
 			int		score, ping, time;
 
 			token = COM_Parse (&s);
-         x = viddef.width / 2 - virtual_width / 2 + atoi(token);
+         x = viddef.width / 2 - virtual_width / 2 + atoi(token)*scale;
 			token = COM_Parse (&s);
-         y = viddef.height / 2 - virtual_height / 2 + atoi(token);
+         y = viddef.height / 2 - virtual_height / 2 + atoi(token)*scale;
 
 			token = COM_Parse (&s);
 			value = atoi(token);
@@ -871,11 +872,11 @@ void SCR_ExecuteLayoutString (char *s)
 			token = COM_Parse (&s);
 			time = atoi(token);
 
-			DrawAltString (x+32, y, ci->name);
-			DrawString (x+32, y+8,  "Score: ");
-			DrawAltString (x+32+7*8, y+8,  va("%i", score));
-			DrawString (x+32, y+16, va("Ping:  %i", ping));
-			DrawString (x+32, y+24, va("Time:  %i", time));
+			DrawAltString (x+(32*scale), y, ci->name);
+			DrawString (x+(32*scale), y+(8*scale),  "Score: ");
+			DrawAltString (x+((32+7*8)*scale), y+(8*scale),  va("%i", score));
+			DrawString (x+(32*scale), y+(16*scale), va("Ping:  %i", ping));
+			DrawString (x+(32*scale), y+(24*scale), va("Time:  %i", time));
 
 			if (!ci->icon)
 				ci = &cl.baseclientinfo;
@@ -889,9 +890,9 @@ void SCR_ExecuteLayoutString (char *s)
 			char	block[80];
 
 			token = COM_Parse (&s);
-         x = viddef.width / 2 - virtual_width / 2 + atoi(token);
+         x = viddef.width / 2 - virtual_width / 2 + atoi(token)*scale;
 			token = COM_Parse (&s);
-         y = viddef.height / 2 - virtual_height / 2 + atoi(token);
+         y = viddef.height / 2 - virtual_height / 2 + atoi(token)*scale;
 
 			token = COM_Parse (&s);
 			value = atoi(token);
