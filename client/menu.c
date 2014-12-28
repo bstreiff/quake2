@@ -3968,9 +3968,6 @@ void M_Draw (void)
 	if (cls.key_dest != key_menu)
 		return;
 
-	// repaint everything next frame
-	SCR_DirtyScreen ();
-
 	// dim everything behind it down
 	if (cl.cinematictime > 0)
 		re.DrawFill (0,0,viddef.width, viddef.height, 0);

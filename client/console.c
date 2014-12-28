@@ -570,11 +570,6 @@ void Con_DrawNotify (void)
       v += 8 * vid_hudscale->value;
 	}
 	
-	if (v)
-	{
-		SCR_AddDirtyPoint (0,0);
-		SCR_AddDirtyPoint (viddef.width-1, v);
-	}
 }
 
 /*
@@ -603,8 +598,6 @@ void Con_DrawConsole (float frac)
 
 // draw the background
 	re.DrawStretchPic (0, lines-viddef.height, viddef.width, viddef.height, "conback");
-	SCR_AddDirtyPoint (0,0);
-	SCR_AddDirtyPoint (viddef.width-1,lines-1);
 
 	Com_sprintf (version, sizeof(version), "v%4.2f", VERSION);
 	for (x=0 ; x<5 ; x++)

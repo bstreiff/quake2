@@ -56,16 +56,8 @@ cvar_t		*scr_debuggraph;
 cvar_t		*scr_graphheight;
 cvar_t		*scr_graphscale;
 cvar_t		*scr_graphshift;
-cvar_t		*scr_drawall;
 
 extern cvar_t      *vid_hudscale;
-
-typedef struct
-{
-	int		x1, y1, x2, y2;
-} dirty_t;
-
-dirty_t		scr_dirty, scr_old_dirty[2];
 
 char		crosshair_pic[MAX_QPATH];
 int			crosshair_width, crosshair_height;
@@ -275,14 +267,12 @@ void SCR_DrawCenterString (void)
 			if (start[l] == '\n' || !start[l])
 				break;
       x = (viddef.width - l * 8 * vid_hudscale->value) / 2;
-		SCR_AddDirtyPoint (x, y);
       for (j = 0; j<l; j++, x += 8 * vid_hudscale->value)
 		{
 			re.DrawChar (x, y, start[j]);	
 			if (!remaining--)
 				return;
 		}
-      SCR_AddDirtyPoint(x, y + 8 * vid_hudscale->value);
 			
       y += 8 * vid_hudscale->value;
 
@@ -383,7 +373,6 @@ void SCR_Init (void)
 	scr_graphheight = Cvar_Get ("graphheight", "32", 0);
 	scr_graphscale = Cvar_Get ("graphscale", "1", 0);
 	scr_graphshift = Cvar_Get ("graphshift", "0", 0);
-	scr_drawall = Cvar_Get ("scr_drawall", "0", 0);
 
 //
 // register our commands
@@ -620,49 +609,6 @@ void SCR_TimeRefresh_f (void)
 	Com_Printf ("%f seconds (%f fps)\n", time, 128/time);
 }
 
-/*
-=================
-SCR_AddDirtyPoint
-=================
-*/
-void SCR_AddDirtyPoint (int x, int y)
-{
-	if (x < scr_dirty.x1)
-		scr_dirty.x1 = x;
-	if (x > scr_dirty.x2)
-		scr_dirty.x2 = x;
-	if (y < scr_dirty.y1)
-		scr_dirty.y1 = y;
-	if (y > scr_dirty.y2)
-		scr_dirty.y2 = y;
-}
-
-void SCR_DirtyScreen (void)
-{
-	SCR_AddDirtyPoint (0, 0);
-	SCR_AddDirtyPoint (viddef.width-1, viddef.height-1);
-}
-
-/*
-==============
-SCR_TileClear
-
-Clear any parts of the tiled background that were drawn on last frame
-==============
-*/
-void SCR_TileClear (void)
-{
-	if (scr_drawall->value)
-		SCR_DirtyScreen ();	// for power vr or broken page flippers...
-
-   // NOTE: This used to do more, but I've removed the ability to make
-   // the rendered size smaller than the screen size ('viewsize' cvar).
-   // Now we always have something 'fullscreen'-- either the console,
-   // the game, or a cinematic. It seems plausible that the 'dirty' markings
-   // might be able to be removed entirely.
-}
-
-
 //===============================================================
 
 
@@ -770,9 +716,6 @@ void SCR_DrawField (int x, int y, int color, int width, int value)
 	// draw number string
 	if (width > 5)
 		width = 5;
-
-	SCR_AddDirtyPoint(x, y);
-   SCR_AddDirtyPoint(x + width*CHAR_WIDTH*vid_hudscale->value + 2, y + 23 * vid_hudscale->value);
 
 	Com_sprintf (num, sizeof(num), "%i", value);
 	l = strlen(num);
@@ -899,8 +842,6 @@ void SCR_ExecuteLayoutString (char *s)
 				Com_Error (ERR_DROP, "Pic >= MAX_IMAGES");
 			if (cl.configstrings[CS_IMAGES+value])
 			{
-				SCR_AddDirtyPoint (x, y);
-				SCR_AddDirtyPoint (x+23, y+23);
 				re.DrawPic (x, y, cl.configstrings[CS_IMAGES+value]);
 			}
 			continue;
@@ -914,8 +855,6 @@ void SCR_ExecuteLayoutString (char *s)
          x = viddef.width / 2 - virtual_width / 2 + atoi(token);
 			token = COM_Parse (&s);
          y = viddef.height / 2 - virtual_height / 2 + atoi(token);
-			SCR_AddDirtyPoint (x, y);
-			SCR_AddDirtyPoint (x+159, y+31);
 
 			token = COM_Parse (&s);
 			value = atoi(token);
@@ -953,8 +892,6 @@ void SCR_ExecuteLayoutString (char *s)
          x = viddef.width / 2 - virtual_width / 2 + atoi(token);
 			token = COM_Parse (&s);
          y = viddef.height / 2 - virtual_height / 2 + atoi(token);
-			SCR_AddDirtyPoint (x, y);
-			SCR_AddDirtyPoint (x+159, y+31);
 
 			token = COM_Parse (&s);
 			value = atoi(token);
@@ -982,8 +919,6 @@ void SCR_ExecuteLayoutString (char *s)
 		if (!strcmp(token, "picn"))
 		{	// draw a pic from a name
 			token = COM_Parse (&s);
-			SCR_AddDirtyPoint (x, y);
-			SCR_AddDirtyPoint (x+23, y+23);
 			re.DrawPic (x, y, token);
 			continue;
 		}
@@ -1264,9 +1199,6 @@ void SCR_UpdateScreen (void)
 
 			// do 3D refresh drawing, and then update the screen
 			SCR_CalcVrect ();
-
-			// clear any dirty part of the background
-			SCR_TileClear ();
 
 			V_RenderView ( separation[i] );
 
