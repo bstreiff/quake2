@@ -28,7 +28,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern cvar_t *vid_ref;
 extern cvar_t *vid_fullscreen;
 extern cvar_t *vid_gamma;
-extern cvar_t *scr_viewsize;
 
 static cvar_t *gl_mode;
 static cvar_t *gl_driver;
@@ -54,7 +53,6 @@ static int				s_current_menu_index;
 static menulist_s		s_mode_list[1];
 static menulist_s		s_ref_list[1];
 static menuslider_s		s_tq_slider;
-static menuslider_s		s_screensize_slider[1];
 static menuslider_s		s_brightness_slider[1];
 static menulist_s  		s_fs_box[1];
 static menulist_s  		s_stipple_box;
@@ -222,11 +220,6 @@ void VID_MenuInit( void )
 	else
 		s_mode_list[OPENGL_MENU].curvalue = 6;
 
-	if ( !scr_viewsize )
-		scr_viewsize = Cvar_Get ("viewsize", "100", CVAR_ARCHIVE);
-
-	s_screensize_slider[OPENGL_MENU].curvalue = scr_viewsize->value/10;
-
 	if ( strcmp( vid_ref->string, "gl" ) == 0 )
 	{
 		s_current_menu_index = OPENGL_MENU;
@@ -258,14 +251,6 @@ void VID_MenuInit( void )
 		s_mode_list[i].generic.x = 0;
 		s_mode_list[i].generic.y = 10;
 		s_mode_list[i].itemnames = resolutions;
-
-		s_screensize_slider[i].generic.type	= MTYPE_SLIDER;
-		s_screensize_slider[i].generic.x		= 0;
-		s_screensize_slider[i].generic.y		= 20;
-		s_screensize_slider[i].generic.name	= "screen size";
-		s_screensize_slider[i].minvalue = 3;
-		s_screensize_slider[i].maxvalue = 12;
-		s_screensize_slider[i].generic.callback = ScreenSizeCallback;
 
 		s_brightness_slider[i].generic.type	= MTYPE_SLIDER;
 		s_brightness_slider[i].generic.x	= 0;
@@ -320,7 +305,6 @@ void VID_MenuInit( void )
 
 	Menu_AddItem( &s_opengl_menu, ( void * ) &s_ref_list[OPENGL_MENU] );
 	Menu_AddItem( &s_opengl_menu, ( void * ) &s_mode_list[OPENGL_MENU] );
-	Menu_AddItem( &s_opengl_menu, ( void * ) &s_screensize_slider[OPENGL_MENU] );
 	Menu_AddItem( &s_opengl_menu, ( void * ) &s_brightness_slider[OPENGL_MENU] );
 	Menu_AddItem( &s_opengl_menu, ( void * ) &s_fs_box[OPENGL_MENU] );
 	Menu_AddItem( &s_opengl_menu, ( void * ) &s_tq_slider );

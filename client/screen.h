@@ -40,7 +40,6 @@ extern	float		scr_conlines;		// lines of console to display
 
 extern	int			sb_lines;
 
-extern	cvar_t		*scr_viewsize;
 extern	cvar_t		*crosshair;
 extern	cvar_t		*cl_thirdperson; // THP thirdperson view
 
