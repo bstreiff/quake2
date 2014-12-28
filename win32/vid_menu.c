@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern cvar_t *vid_ref;
 extern cvar_t *vid_fullscreen;
 extern cvar_t *vid_gamma;
+extern cvar_t *vid_hudscale;
 
 static cvar_t *gl_mode;
 static cvar_t *gl_driver;
@@ -170,6 +171,7 @@ static void CancelChanges( void *unused )
 */
 void VID_MenuInit( void )
 {
+   const float scale = vid_hudscale->value;
 	static const char *resolutions[] = 
 	{
 		"[320 240  ]",
@@ -249,12 +251,12 @@ void VID_MenuInit( void )
 		s_mode_list[i].generic.type = MTYPE_SPINCONTROL;
 		s_mode_list[i].generic.name = "video mode";
 		s_mode_list[i].generic.x = 0;
-		s_mode_list[i].generic.y = 10;
+		s_mode_list[i].generic.y = 10*scale;
 		s_mode_list[i].itemnames = resolutions;
 
 		s_brightness_slider[i].generic.type	= MTYPE_SLIDER;
 		s_brightness_slider[i].generic.x	= 0;
-		s_brightness_slider[i].generic.y	= 30;
+		s_brightness_slider[i].generic.y	= 30*scale;
 		s_brightness_slider[i].generic.name	= "brightness";
 		s_brightness_slider[i].generic.callback = BrightnessCallback;
 		s_brightness_slider[i].minvalue = 5;
@@ -263,7 +265,7 @@ void VID_MenuInit( void )
 
 		s_fs_box[i].generic.type = MTYPE_SPINCONTROL;
 		s_fs_box[i].generic.x	= 0;
-		s_fs_box[i].generic.y	= 40;
+		s_fs_box[i].generic.y	= 40*scale;
 		s_fs_box[i].generic.name	= "fullscreen";
 		s_fs_box[i].itemnames = yesno_names;
 		s_fs_box[i].curvalue = vid_fullscreen->value;
@@ -271,19 +273,19 @@ void VID_MenuInit( void )
 		s_defaults_action[i].generic.type = MTYPE_ACTION;
 		s_defaults_action[i].generic.name = "reset to defaults";
 		s_defaults_action[i].generic.x    = 0;
-		s_defaults_action[i].generic.y    = 90;
+		s_defaults_action[i].generic.y    = 90*scale;
 		s_defaults_action[i].generic.callback = ResetDefaults;
 
 		s_cancel_action[i].generic.type = MTYPE_ACTION;
 		s_cancel_action[i].generic.name = "cancel";
 		s_cancel_action[i].generic.x    = 0;
-		s_cancel_action[i].generic.y    = 100;
+		s_cancel_action[i].generic.y    = 100*scale;
 		s_cancel_action[i].generic.callback = CancelChanges;
 	}
 
 	s_tq_slider.generic.type	= MTYPE_SLIDER;
 	s_tq_slider.generic.x		= 0;
-	s_tq_slider.generic.y		= 60;
+	s_tq_slider.generic.y		= 60*scale;
 	s_tq_slider.generic.name	= "texture quality";
 	s_tq_slider.minvalue = 0;
 	s_tq_slider.maxvalue = 3;
@@ -291,14 +293,14 @@ void VID_MenuInit( void )
 
 	s_paletted_texture_box.generic.type = MTYPE_SPINCONTROL;
 	s_paletted_texture_box.generic.x	= 0;
-	s_paletted_texture_box.generic.y	= 70;
+	s_paletted_texture_box.generic.y	= 70*scale;
 	s_paletted_texture_box.generic.name	= "8-bit textures";
 	s_paletted_texture_box.itemnames = yesno_names;
 	s_paletted_texture_box.curvalue = gl_ext_palettedtexture->value;
 
 	s_finish_box.generic.type = MTYPE_SPINCONTROL;
 	s_finish_box.generic.x	= 0;
-	s_finish_box.generic.y	= 80;
+	s_finish_box.generic.y	= 80*scale;
 	s_finish_box.generic.name	= "sync every frame";
 	s_finish_box.curvalue = gl_finish->value;
 	s_finish_box.itemnames = yesno_names;
@@ -333,7 +335,7 @@ void VID_MenuDraw (void)
 	** draw the banner
 	*/
 	re.DrawGetPicSize( &w, &h, "m_banner_video" );
-	re.DrawPic( viddef.width / 2 - w / 2, viddef.height /2 - 110, "m_banner_video" );
+	re.DrawPic( viddef.width / 2 - w / 2, viddef.height /2 - 110*vid_hudscale->value, "m_banner_video" );
 
 	/*
 	** move cursor to a reasonable starting position

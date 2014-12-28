@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "gl_local.h"
 
 image_t		*draw_chars;
+cvar_t      *vid_hudscale;
 
 extern	qboolean	scrap_dirty;
 void Scrap_Upload (void);
@@ -40,6 +41,8 @@ void Draw_InitLocal (void)
 	GL_Bind( draw_chars->texnum );
 	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+   vid_hudscale = ri.Cvar_Get("vid_hudscale", "1", CVAR_ARCHIVE);
 }
 
 
@@ -57,6 +60,7 @@ void Draw_Char (int x, int y, int num)
 {
 	int				row, col;
 	float			frow, fcol, size;
+   float       pixel_size;
 
 	num &= 255;
 	
@@ -73,17 +77,19 @@ void Draw_Char (int x, int y, int num)
 	fcol = col*0.0625;
 	size = 0.0625;
 
+   pixel_size = 8 * vid_hudscale->value;
+
 	GL_Bind (draw_chars->texnum);
 
 	qglBegin (GL_QUADS);
 	qglTexCoord2f (fcol, frow);
-	qglVertex2f (x, y);
+	qglVertex2f(x, y);
 	qglTexCoord2f (fcol + size, frow);
-	qglVertex2f (x+8, y);
+   qglVertex2f(x + pixel_size, y);
 	qglTexCoord2f (fcol + size, frow + size);
-	qglVertex2f (x+8, y+8);
+   qglVertex2f(x + pixel_size, y + pixel_size);
 	qglTexCoord2f (fcol, frow + size);
-	qglVertex2f (x, y+8);
+   qglVertex2f(x, y + pixel_size);
 	qglEnd ();
 }
 
@@ -123,8 +129,8 @@ void Draw_GetPicSize (int *w, int *h, char *pic)
 		*w = *h = -1;
 		return;
 	}
-	*w = gl->width;
-	*h = gl->height;
+   *w = gl->width * vid_hudscale->value;
+   *h = gl->height * vid_hudscale->value;
 }
 
 /*
@@ -168,6 +174,7 @@ Draw_Pic
 void Draw_Pic (int x, int y, char *pic)
 {
 	image_t *gl;
+   float    scaled_width, scaled_height;
 
 	gl = Draw_FindPic (pic);
 	if (!gl)
@@ -178,16 +185,19 @@ void Draw_Pic (int x, int y, char *pic)
 	if (scrap_dirty)
 		Scrap_Upload ();
 
-	GL_Bind (gl->texnum);
+   scaled_width = gl->width * vid_hudscale->value;
+   scaled_height = gl->height * vid_hudscale->value;
+   
+   GL_Bind (gl->texnum);
 	qglBegin (GL_QUADS);
 	qglTexCoord2f (gl->sl, gl->tl);
-	qglVertex2f (x, y);
+	qglVertex2f(x, y);
 	qglTexCoord2f (gl->sh, gl->tl);
-	qglVertex2f (x+gl->width, y);
+   qglVertex2f(x + scaled_width, y);
 	qglTexCoord2f (gl->sh, gl->th);
-	qglVertex2f (x+gl->width, y+gl->height);
+   qglVertex2f(x + scaled_width, y + scaled_height);
 	qglTexCoord2f (gl->sl, gl->th);
-	qglVertex2f (x, y+gl->height);
+   qglVertex2f(x, y + scaled_height);
 	qglEnd ();
 }
 
