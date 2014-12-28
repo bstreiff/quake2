@@ -138,6 +138,7 @@ cvar_t	*vid_gamma;
 cvar_t	*vid_ref;
 cvar_t	*vid_width;
 cvar_t	*vid_height;
+cvar_t   *vid_resolution_list;
 
 /*
 =================
@@ -1054,6 +1055,7 @@ void R_Register( void )
 	vid_ref = ri.Cvar_Get( "vid_ref", "gl", CVAR_ARCHIVE );
 	vid_width = ri.Cvar_Get("vid_width", "1024", CVAR_ARCHIVE);
 	vid_height = ri.Cvar_Get("vid_height", "768", CVAR_ARCHIVE);
+   vid_resolution_list = ri.Cvar_Get("vid_resolution_list", "640x480 800x600 1024x768 1152x864 1280x960 1600x1200", 0);
 
 	ri.Cmd_AddCommand( "imagelist", GL_ImageList_f );
 	ri.Cmd_AddCommand( "screenshot", GL_ScreenShot_f );

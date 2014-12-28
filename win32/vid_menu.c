@@ -29,6 +29,8 @@ extern cvar_t *vid_ref;
 extern cvar_t *vid_fullscreen;
 extern cvar_t *vid_gamma;
 extern cvar_t *vid_hudscale;
+extern cvar_t *vid_width;
+extern cvar_t *vid_height;
 
 static cvar_t *gl_mode;
 static cvar_t *gl_driver;
@@ -37,6 +39,7 @@ static cvar_t *gl_ext_palettedtexture;
 static cvar_t *gl_finish;
 
 extern void M_ForceMenuOff( void );
+extern qboolean VID_GetModeInfo(int *width, int *height, int mode);
 
 /*
 ====================================================================
@@ -61,6 +64,11 @@ static menulist_s  		s_paletted_texture_box;
 static menulist_s  		s_finish_box;
 static menuaction_s		s_cancel_action[1];
 static menuaction_s		s_defaults_action[1];
+
+static viddef_t*        s_possible_resolutions_list = NULL;
+static size_t           s_possible_resolutions_list_count = 0;
+static char**           s_possible_resolutions_str_list = NULL;
+static void VID_MenuDestroy();
 
 static void DriverCallback( void *unused )
 {
@@ -105,7 +113,9 @@ static void ApplyChanges( void *unused )
 	Cvar_SetValue( "vid_fullscreen", s_fs_box[s_current_menu_index].curvalue );
 	Cvar_SetValue( "gl_ext_palettedtexture", s_paletted_texture_box.curvalue );
 	Cvar_SetValue( "gl_finish", s_finish_box.curvalue );
-	Cvar_SetValue( "gl_mode", s_mode_list[OPENGL_MENU].curvalue );
+   Cvar_SetValue( "gl_mode", -1);
+   Cvar_SetValue( "vid_height", s_possible_resolutions_list[s_mode_list[OPENGL_MENU].curvalue].height);
+   Cvar_SetValue( "vid_width", s_possible_resolutions_list[s_mode_list[OPENGL_MENU].curvalue].width);
 
 	switch ( s_ref_list[s_current_menu_index].curvalue )
 	{
@@ -157,13 +167,130 @@ static void ApplyChanges( void *unused )
 			vid_ref->modified = true;
 	}
 
+   VID_MenuDestroy();
 	M_ForceMenuOff();
 }
 
 void M_PopMenu(void);
 static void CancelChanges( void *unused )
 {
+   VID_MenuDestroy();
 	M_PopMenu();
+}
+
+static void VID_DestroyResolutionList();
+
+static void VID_CreateResolutionList()
+{
+   cvar_t* vid_resolution_list = Cvar_Get("vid_resolution_list", "640x480 800x600 1024x768 1152x864 1280x960 1600x1200", 0);
+   char* itr = vid_resolution_list->string;
+   int res_count = 0;
+
+   // Make sure the list is cleared out before we start...
+   VID_DestroyResolutionList();
+
+   // Count number of spaces in the string. This is number of resolutions, minus one.
+   while (*itr != '\0')
+   {
+      if (*itr == ' ')
+         res_count++;
+      ++itr;
+   }
+   res_count++;
+
+   s_possible_resolutions_list_count = res_count;
+   s_possible_resolutions_list = (viddef_t*)calloc(res_count, sizeof(viddef_t));
+   if (!s_possible_resolutions_list)
+   {
+      Sys_Error(ERR_FATAL, "VID_CreateResolutionList: alloc failure");
+      return;
+   }
+
+   // Move itr back to start of string
+   itr = vid_resolution_list->string;
+
+   for (int res = 0; res < res_count; ++res)
+   {
+      long int width, height;
+
+      width = strtol(itr, &itr, 10);
+      ++itr; // skip over "x"
+      height = strtol(itr, &itr, 10);
+
+      s_possible_resolutions_list[res].height = (int)height;
+      s_possible_resolutions_list[res].width = (int)width;
+   }
+
+   // Now, convert the resolution list into strings. Need +1 for terminator.
+   s_possible_resolutions_str_list = (char**)calloc(res_count+1, sizeof(char*));
+   if (!s_possible_resolutions_str_list)
+   {
+      Sys_Error(ERR_FATAL, "VID_CreateResolutionList: alloc failure");
+      return;
+   }
+
+   for (int res = 0; res < res_count; ++res)
+   {
+      const int field_width = 14;
+
+      s_possible_resolutions_str_list[res] = (char*)calloc(field_width, sizeof(char));
+      if (!s_possible_resolutions_str_list[res])
+      {
+         Sys_Error(ERR_FATAL, "VID_CreateResolutionList: alloc failure");
+         return;
+      }
+
+      Com_sprintf(s_possible_resolutions_str_list[res], field_width-1, "[%d %d",
+         s_possible_resolutions_list[res].width,
+         s_possible_resolutions_list[res].height);
+
+      // From right, add the ']' and pad with spaces.
+      s_possible_resolutions_str_list[res][field_width-1] = '\0';
+      s_possible_resolutions_str_list[res][field_width-2] = ']';
+      for (int i = field_width-3; i > 0; --i)
+      {
+         if (s_possible_resolutions_str_list[res][i] == '\0')
+            s_possible_resolutions_str_list[res][i] = ' ';
+      }
+   }
+}
+
+static int VID_FindIndexForResolution(int width, int height)
+{
+   // First, look for an exact match.
+   for (int res = 0; res < s_possible_resolutions_list_count; ++res)
+   {
+      if (s_possible_resolutions_list[res].width == width &&
+          s_possible_resolutions_list[res].height == height)
+      {
+         return res;
+      }
+   }
+
+   // No exact match, just pick the first one.
+   return 0;
+}
+
+static void VID_DestroyResolutionList()
+{
+   if (s_possible_resolutions_list)
+   {
+      free(s_possible_resolutions_list);
+      s_possible_resolutions_list = NULL;
+      s_possible_resolutions_list_count = 0;
+   }
+   if (s_possible_resolutions_str_list)
+   {
+      char** itr = s_possible_resolutions_str_list;
+      while (*itr != NULL)
+      {
+         free(*itr);
+         *itr = NULL;
+         ++itr;
+      }
+      free(s_possible_resolutions_str_list);
+      s_possible_resolutions_str_list = NULL;
+   }
 }
 
 /*
@@ -172,21 +299,7 @@ static void CancelChanges( void *unused )
 void VID_MenuInit( void )
 {
    const float scale = vid_hudscale->value;
-	static const char *resolutions[] = 
-	{
-		"[320 240  ]",
-		"[400 300  ]",
-		"[512 384  ]",
-		"[640 480  ]",
-		"[800 600  ]",
-		"[960 720  ]",
-		"[1024 768 ]",
-		"[1152 864 ]",
-		"[1280 960 ]",
-		"[1600 1200]",
-		"[2048 1536]",
-		0
-	};
+
 	static const char *refs[] =
 	{
 		"[default OpenGL]",
@@ -202,8 +315,12 @@ void VID_MenuInit( void )
 		0
 	};
 	int i;
+   int width;
+   int height;
 
-	if ( !gl_driver )
+   VID_CreateResolutionList();
+   
+   if ( !gl_driver )
 		gl_driver = Cvar_Get( "gl_driver", "opengl32", 0 );
 	if ( !gl_picmip )
 		gl_picmip = Cvar_Get( "gl_picmip", "0", 0 );
@@ -214,14 +331,10 @@ void VID_MenuInit( void )
 	if ( !gl_finish )
 		gl_finish = Cvar_Get( "gl_finish", "0", CVAR_ARCHIVE );
 
-	// We allow gl_mode to be -1 for custom resolutions but this currently
-	// isn't supported in the menu system. Coerce it to mode 6 (1024x768)
-	// if this happens.
-	if (gl_mode->value >= 0)
-		s_mode_list[OPENGL_MENU].curvalue = gl_mode->value;
-	else
-		s_mode_list[OPENGL_MENU].curvalue = 6;
-
+   // Get current width and height.
+   VID_GetModeInfo(&width, &height, gl_mode->value);
+   s_mode_list[OPENGL_MENU].curvalue = VID_FindIndexForResolution(width, height);
+   
 	if ( strcmp( vid_ref->string, "gl" ) == 0 )
 	{
 		s_current_menu_index = OPENGL_MENU;
@@ -252,7 +365,7 @@ void VID_MenuInit( void )
 		s_mode_list[i].generic.name = "video mode";
 		s_mode_list[i].generic.x = 0;
 		s_mode_list[i].generic.y = 10*scale;
-		s_mode_list[i].itemnames = resolutions;
+		s_mode_list[i].itemnames = s_possible_resolutions_str_list;
 
 		s_brightness_slider[i].generic.type	= MTYPE_SLIDER;
 		s_brightness_slider[i].generic.x	= 0;
@@ -318,6 +431,11 @@ void VID_MenuInit( void )
 
 	Menu_Center( &s_opengl_menu );
 	s_opengl_menu.x -= 8;
+}
+
+static void VID_MenuDestroy()
+{
+   VID_DestroyResolutionList();
 }
 
 /*
