@@ -129,7 +129,7 @@ void GL_ScreenShot_f (void)
 		goto fopen_failed;
 	}
 
-	png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+   png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	if (!png)
 	{
 		ri.Con_Printf(PRINT_ALL, "SCR_ScreenShot_f: Unable to create PNG.\n");
@@ -171,7 +171,7 @@ void GL_ScreenShot_f (void)
 	// up the row pointers into the buffer in reverse.
 	for (int i = 0; i < vid.height; ++i)
 	{
-		row_pointers[i] = buffer + (vid.height-i)*(vid.width*3);
+		row_pointers[i] = buffer + (vid.height-i-1)*(vid.width*3);
 	}
 
 	png_init_io(png, f);
