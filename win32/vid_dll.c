@@ -42,7 +42,7 @@ cvar_t		*vid_fullscreen;
 cvar_t		*vid_width;
 cvar_t		*vid_height;
 cvar_t		*vid_hudscale;
-cvar_t      *vid_resolution_list; // List of resolutions, populated by DLL.
+cvar_t		*vid_resolution_list; // List of resolutions, populated by DLL.
 
 // Global variables used internally by this module
 viddef_t	viddef;				// global video state; used by other modules
@@ -196,9 +196,9 @@ void VID_Front_f( void )
 */
 typedef struct vidmode_s
 {
-	const char *description;
-	int         width, height;
-	int         mode;
+	const char	*description;
+	int		width, height;
+	int		mode;
 } vidmode_t;
 
 vidmode_t vid_modes[] =
@@ -421,7 +421,7 @@ void VID_Init (void)
 	vid_width = Cvar_Get("vid_width", "1024", CVAR_ARCHIVE);
 	vid_height = Cvar_Get("vid_height", "768", CVAR_ARCHIVE);
 	vid_hudscale = Cvar_Get("vid_hudscale", "1", CVAR_ARCHIVE);
-   vid_resolution_list = Cvar_Get("vid_resolution_list", "640x480 800x600 1024x768 1152x864 1280x960 1600x1200", 0);
+	vid_resolution_list = Cvar_Get("vid_resolution_list", "640x480 800x600 1024x768 1152x864 1280x960 1600x1200", 0);
 
 	/* Add some console commands that we want to handle */
 	Cmd_AddCommand ("vid_restart", VID_Restart_f);

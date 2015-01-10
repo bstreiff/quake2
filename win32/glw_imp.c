@@ -160,119 +160,119 @@ void GLimp_Shutdown( void )
 
 static int VidDefCompare(const void* a, const void* b)
 {
-   const viddef_t* aa = (const viddef_t*)a;
-   const viddef_t* bb = (const viddef_t*)b;
+	const viddef_t* aa = (const viddef_t*)a;
+	const viddef_t* bb = (const viddef_t*)b;
 
-   // Sort by width first...
-   if (aa->width != bb->width)
-   {
-      return (aa->width - bb->width);
-   }
-   else
-   {
-      // If width matches, sort by height.
-      return (aa->height - bb->height);
-   }
+	// Sort by width first...
+	if (aa->width != bb->width)
+	{
+		return (aa->width - bb->width);
+	}
+	else
+	{
+		// If width matches, sort by height.
+		return (aa->height - bb->height);
+	}
 }
 
 void GLimp_GetResolutions(void)
 {
-   int display_count = 0;
-   int max_modes = 0;
-   SDL_DisplayMode mode_settings = {SDL_PIXELFORMAT_UNKNOWN, 0, 0, 0, 0};
-   viddef_t* resolutions = NULL;
-   size_t resolutions_count = 0;
-   char* resolution_string = NULL;
-   size_t resolution_string_len = 0;
+	int display_count = 0;
+	int max_modes = 0;
+	SDL_DisplayMode mode_settings = {SDL_PIXELFORMAT_UNKNOWN, 0, 0, 0, 0};
+	viddef_t* resolutions = NULL;
+	size_t resolutions_count = 0;
+	char* resolution_string = NULL;
+	size_t resolution_string_len = 0;
 
-   if ((display_count = SDL_GetNumVideoDisplays()) < 1)
-      return;
+	if ((display_count = SDL_GetNumVideoDisplays()) < 1)
+		return;
 
-   // First try and figure out an upper bound on number of modes.
-   for (int display = 0; display < display_count; ++display)
-   {
-      int mode_count = 0;
-      if ((mode_count = SDL_GetNumDisplayModes(display)) < 1)
-         continue;
-      max_modes += mode_count;
-   }
+	// First try and figure out an upper bound on number of modes.
+	for (int display = 0; display < display_count; ++display)
+	{
+		int mode_count = 0;
+		if ((mode_count = SDL_GetNumDisplayModes(display)) < 1)
+			continue;
+		max_modes += mode_count;
+	}
 
-   resolutions = (viddef_t*)calloc(max_modes, sizeof(viddef_t));
-   if (!resolutions)
-   {
-      ri.Sys_Error(ERR_FATAL, "GetResolutions: alloc failure");
-      goto fail;
-   }
+	resolutions = (viddef_t*)calloc(max_modes, sizeof(viddef_t));
+	if (!resolutions)
+	{
+		ri.Sys_Error(ERR_FATAL, "GetResolutions: alloc failure");
+		goto fail;
+	}
 
-   for (int display = 0; display < display_count; ++display)
-   {
-      int mode_count = 0;
-      if ((mode_count = SDL_GetNumDisplayModes(display)) < 1)
-         continue;
+	for (int display = 0; display < display_count; ++display)
+	{
+		int mode_count = 0;
+		if ((mode_count = SDL_GetNumDisplayModes(display)) < 1)
+			continue;
 
-      for (int mode = 0; mode < mode_count; ++mode)
-      {
-         viddef_t new_res;
-         qboolean found_res = false;
-         if ((SDL_GetDisplayMode(display, mode, &mode_settings)) != 0)
-            continue;
+		for (int mode = 0; mode < mode_count; ++mode)
+		{
+			viddef_t new_res;
+			qboolean found_res = false;
+			if ((SDL_GetDisplayMode(display, mode, &mode_settings)) != 0)
+			continue;
 
-         // Is this a new resolution?
-         new_res.width = mode_settings.w;
-         new_res.height = mode_settings.h;
+			// Is this a new resolution?
+			new_res.width = mode_settings.w;
+			new_res.height = mode_settings.h;
 
-         for (int res = 0; res < resolutions_count; ++res)
-         {
-            if (VidDefCompare(&new_res, &resolutions[res]) == 0)
-            {
-               found_res = true;
-               break;
-            }
-         }
+			for (int res = 0; res < resolutions_count; ++res)
+			{
+				if (VidDefCompare(&new_res, &resolutions[res]) == 0)
+				{
+					found_res = true;
+					break;
+				}
+			}
 
-         if (!found_res)
-         {
-            resolutions[resolutions_count].width = new_res.width;
-            resolutions[resolutions_count].height = new_res.height;
-            ++resolutions_count;
-         }
-      }
-      max_modes += mode_count;
-   }
+			if (!found_res)
+			{
+			resolutions[resolutions_count].width = new_res.width;
+			resolutions[resolutions_count].height = new_res.height;
+			++resolutions_count;
+			}
+		}
+		max_modes += mode_count;
+	}
 
-   // Sort the resolutions.
-   qsort(resolutions, resolutions_count, sizeof(viddef_t), VidDefCompare);
+	// Sort the resolutions.
+	qsort(resolutions, resolutions_count, sizeof(viddef_t), VidDefCompare);
 
-   // Now turn them into a string. Conservatively assume ten characters
-   // per mode... should be enough for "XXXXXxXXXXX "
-   resolution_string_len = 10 * resolutions_count;
-   resolution_string = (char*)calloc(resolution_string_len, sizeof(char));
-   if (!resolution_string)
-   {
-      ri.Sys_Error(ERR_FATAL, "GetResolutions: alloc failure");
-      goto fail;
-   }
+	// Now turn them into a string. Conservatively assume ten characters
+	// per mode... should be enough for "XXXXXxXXXXX "
+	resolution_string_len = 10 * resolutions_count;
+	resolution_string = (char*)calloc(resolution_string_len, sizeof(char));
+	if (!resolution_string)
+	{
+		ri.Sys_Error(ERR_FATAL, "GetResolutions: alloc failure");
+		goto fail;
+	}
 
-   for (int res = 0; res < resolutions_count; ++res)
-   {
-      char tmp[20] = {0};
-      sprintf(tmp, "%s%dx%d",
-         (res == 0 ? "" : " "),
-         resolutions[res].width,
-         resolutions[res].height);
-      strcat(resolution_string, tmp);
-   }
+	for (int res = 0; res < resolutions_count; ++res)
+	{
+		char tmp[20] = {0};
+		sprintf(tmp, "%s%dx%d",
+			(res == 0 ? "" : " "),
+			resolutions[res].width,
+			resolutions[res].height);
+		strcat(resolution_string, tmp);
+	}
 
-   // Without breaking the DLL interface, the only way to pass the resolution list
-   // back to the main engine is via a cvar...
-   ri.Cvar_Set("vid_resolution_list", resolution_string);
+	// Without breaking the DLL interface, the only way to pass the resolution list
+	// back to the main engine is via a cvar...
+	ri.Cvar_Set("vid_resolution_list", resolution_string);
 
 fail:
-   if (resolution_string)
-      free(resolution_string);
-   if (resolutions)
-      free(resolutions);
-   return;
+	if (resolution_string)
+		free(resolution_string);
+	if (resolutions)
+		free(resolutions);
+	return;
 }
 
 /*
@@ -289,9 +289,9 @@ qboolean GLimp_Init( void *hinstance, void *wndproc )
 		SDL_InitSubSystem(SDL_INIT_VIDEO);
 	}
 
-   GLimp_GetResolutions();
-   
-   return true;
+	GLimp_GetResolutions();
+
+	return true;
 }
 
 qboolean GLimp_InitGL (void)
