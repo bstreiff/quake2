@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __GLW_WIN_H__
 #define __GLW_WIN_H__
 
-#include "SDL.h"
+#include "SDL2/SDL.h"
 
 typedef struct
 {
