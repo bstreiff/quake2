@@ -46,14 +46,10 @@ cvar_t		*vid_resolution_list; // List of resolutions, populated by DLL.
 
 // Global variables used internally by this module
 viddef_t	viddef;				// global video state; used by other modules
-HINSTANCE	reflib_library;		// Handle to refresh DLL 
+void*		reflib_library;		// Handle to refresh DLL 
 qboolean	reflib_active = 0;
 
-HWND        cl_hwnd;            // Main window handle for life of program
-
 #define VID_NUM_MODES ( sizeof( vid_modes ) / sizeof( vid_modes[0] ) )
-
-LONG WINAPI MainWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
 static qboolean s_alttab_disabled;
 
@@ -272,8 +268,7 @@ void VID_NewWindow ( int width, int height)
 
 void VID_FreeReflib (void)
 {
-	if ( !FreeLibrary( reflib_library ) )
-		Com_Error( ERR_FATAL, "Reflib FreeLibrary failed" );
+	SDL_UnloadObject(reflib_library);
 	memset (&re, 0, sizeof(re));
 	reflib_library = NULL;
 	reflib_active  = false;
@@ -297,7 +292,7 @@ qboolean VID_LoadRefresh( char *name )
 
 	Com_Printf( "------- Loading %s -------\n", name );
 
-	if ( ( reflib_library = LoadLibrary( name ) ) == 0 )
+	if ((reflib_library = SDL_LoadObject(name)) == 0)
 	{
 		Com_Printf( "LoadLibrary(\"%s\") failed\n", name );
 
@@ -321,7 +316,7 @@ qboolean VID_LoadRefresh( char *name )
 	ri.Vid_MenuInit = VID_MenuInit;
 	ri.Vid_NewWindow = VID_NewWindow;
 
-	if ( ( GetRefAPI = (void *) GetProcAddress( reflib_library, "GetRefAPI" ) ) == 0 )
+	if ((GetRefAPI = (GetRefAPI_t)SDL_LoadFunction(reflib_library, "GetRefAPI")) == 0)
 		Com_Error( ERR_FATAL, "GetProcAddress failed on %s", name );
 
 	re = GetRefAPI( ri );

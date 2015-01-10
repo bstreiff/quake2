@@ -129,26 +129,6 @@ Sys_Init
 */
 void Sys_Init (void)
 {
-#if 0
-	// allocate a named semaphore on the client so the
-	// front end can tell if it is alive
-
-	// mutex will fail if semephore already exists
-    qwclsemaphore = CreateMutex(
-        NULL,         /* Security attributes */
-        0,            /* owner       */
-        "qwcl"); /* Semaphore name      */
-	if (!qwclsemaphore)
-		Sys_Error ("QWCL is already running on this system");
-	CloseHandle (qwclsemaphore);
-
-    qwclsemaphore = CreateSemaphore(
-        NULL,         /* Security attributes */
-        0,            /* Initial count       */
-        1,            /* Maximum count       */
-        "qwcl"); /* Semaphore name      */
-#endif
-
 	if (dedicated->value)
 	{
 		if (!AllocConsole ())
@@ -423,7 +403,7 @@ void *Sys_GetGameAPI (void *parms)
 		}
 	}
 
-	GetGameAPI = (void (*)(void *))SDL_LoadFunction(game_library, "GetGameAPI");
+	GetGameAPI = SDL_LoadFunction(game_library, "GetGameAPI");
 	if (!GetGameAPI)
 	{
 		Sys_UnloadGame ();		
@@ -435,6 +415,7 @@ void *Sys_GetGameAPI (void *parms)
 
 //=======================================================================
 
+#if _WIN32
 /*
 ==================
 Sys_GetSteamDirectory
@@ -497,6 +478,12 @@ size_t Sys_GetSteamDirectory(char* steamDirectory, size_t length)
 
 	return 0;
 }
+#else
+size_t Sys_GetSteamDirectory(char* steamDirectory, size_t length)
+{
+	return 0;
+}
+#endif
 
 /*
 ==================
@@ -504,76 +491,6 @@ WinMain
 
 ==================
 */
-#if 0
-int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
-{
-    MSG				msg;
-	int				time, oldtime, newtime;
-	char			*cddir;
-
-    /* previous instances do not exist in Win32 */
-    if (hPrevInstance)
-        return 0;
-
-	global_hInstance = hInstance;
-
-	ParseCommandLine (lpCmdLine);
-
-	// if we find the CD, add a +set cddir xxx command line
-	cddir = Sys_ScanForCD ();
-	if (cddir && argc < MAX_NUM_ARGVS - 3)
-	{
-		int		i;
-
-		// don't override a cddir on the command line
-		for (i=0 ; i<argc ; i++)
-			if (!strcmp(argv[i], "cddir"))
-				break;
-		if (i == argc)
-		{
-			argv[argc++] = "+set";
-			argv[argc++] = "cddir";
-			argv[argc++] = cddir;
-		}
-	}
-
-	Qcommon_Init (argc, argv);
-	oldtime = Sys_Milliseconds ();
-
-    /* main window message loop */
-	while (1)
-	{
-		// if at a full screen console, don't update unless needed
-		if (Minimized || (dedicated && dedicated->value) )
-		{
-			Sleep (1);
-		}
-
-		while (PeekMessage (&msg, NULL, 0, 0, PM_NOREMOVE))
-		{
-			if (!GetMessage (&msg, NULL, 0, 0))
-				Com_Quit ();
-			TranslateMessage (&msg);
-   			DispatchMessage (&msg);
-		}
-
-		do
-		{
-			newtime = Sys_Milliseconds ();
-			time = newtime - oldtime;
-		} while (time < 1);
-//			Con_Printf ("time:%5.2f - %5.2f = %5.2f\n", newtime, oldtime, time);
-
-		Qcommon_Frame (time);
-
-		oldtime = newtime;
-	}
-
-	// never gets here
-    return TRUE;
-}
-#endif
-
 int main(int argc, char* argv[])
 {
 	int				time, oldtime, newtime;
