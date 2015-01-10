@@ -38,7 +38,7 @@ void DrawString (int x, int y, char *s)
 	while (*s)
 	{
 		re.DrawChar (x, y, *s);
-      x += 8 * vid_hudscale->value;
+		x += 8 * vid_hudscale->value;
 		s++;
 	}
 }
@@ -48,7 +48,7 @@ void DrawAltString (int x, int y, char *s)
 	while (*s)
 	{
 		re.DrawChar (x, y, *s ^ 0x80);
-      x += 8 * vid_hudscale->value;
+		x += 8 * vid_hudscale->value;
 		s++;
 	}
 }
@@ -256,10 +256,10 @@ void Con_CheckResize (void)
 	int		i, j, width, oldwidth, oldtotallines, numlines, numchars;
 	char	tbuf[CON_TEXTSIZE];
 
-   if (viddef.width > 0)
-      width = (viddef.width / (8 * vid_hudscale->value)) - 2;
-   else
-      width = 0;
+	if (viddef.width > 0)
+		width = (viddef.width / (8 * vid_hudscale->value)) - 2;
+	else
+		width = 0;
 
 	if (width == con.linewidth)
 		return;
@@ -533,9 +533,9 @@ void Con_DrawNotify (void)
 		text = con.text + (i % con.totallines)*con.linewidth;
 		
 		for (x = 0 ; x < con.linewidth ; x++)
-         re.DrawChar((x + 1) * 8 * vid_hudscale->value, v, text[x]);
+			re.DrawChar((x + 1) * 8 * vid_hudscale->value, v, text[x]);
 
-      v += 8 * vid_hudscale->value;
+		v += 8 * vid_hudscale->value;
 	}
 
 
@@ -543,31 +543,31 @@ void Con_DrawNotify (void)
 	{
 		if (chat_console)
 		{
-         DrawString(8 * vid_hudscale->value, v, "> ");
+			DrawString(8 * vid_hudscale->value, v, "> ");
 			skip = 3;
 		}
 		else if (chat_team)
 		{
-         DrawString(8 * vid_hudscale->value, v, "say_team:");
+			DrawString(8 * vid_hudscale->value, v, "say_team:");
 			skip = 11;
 		}
 		else
 		{
-         DrawString(8 * vid_hudscale->value, v, "say:");
+			DrawString(8 * vid_hudscale->value, v, "say:");
 			skip = 5;
 		}
 
 		s = chat_buffer;
-      if (chat_bufferlen > (viddef.width / (8 * vid_hudscale->value)) - (skip + 1))
-         s += chat_bufferlen - (int)((viddef.width / (8 * vid_hudscale->value)) - (skip + 1));
+		if (chat_bufferlen > (viddef.width / (8 * vid_hudscale->value)) - (skip + 1))
+			s += chat_bufferlen - (int)((viddef.width / (8 * vid_hudscale->value)) - (skip + 1));
 		x = 0;
 		while(s[x])
 		{
-         re.DrawChar((x + skip) * 8 * vid_hudscale->value, v, s[x]);
+			re.DrawChar((x + skip) * 8 * vid_hudscale->value, v, s[x]);
 			x++;
 		}
-      re.DrawChar((x + skip) * 8 * vid_hudscale->value, v, 10 + ((cls.realtime >> 8) & 1));
-      v += 8 * vid_hudscale->value;
+		re.DrawChar((x + skip) * 8 * vid_hudscale->value, v, 10 + ((cls.realtime >> 8) & 1));
+		v += 8 * vid_hudscale->value;
 	}
 	
 }
@@ -601,28 +601,28 @@ void Con_DrawConsole (float frac)
 
 	Com_sprintf (version, sizeof(version), "v%4.2f", VERSION);
 	for (x=0 ; x<5 ; x++)
-      re.DrawChar(viddef.width - (44 * vid_hudscale->value) + x * 8 * vid_hudscale->value, lines - (12 * vid_hudscale->value), 128 + version[x]);
+		re.DrawChar(viddef.width - (44 * vid_hudscale->value) + x * 8 * vid_hudscale->value, lines - (12 * vid_hudscale->value), 128 + version[x]);
 
 // draw the text
 	con.vislines = lines;
 	
-   rows = (lines - 22) / (8 * vid_hudscale->value);		// rows of text to draw
+	rows = (lines - 22) / (8 * vid_hudscale->value);		// rows of text to draw
 
-   y = lines - (30 * vid_hudscale->value);
+	y = lines - (30 * vid_hudscale->value);
 
 // draw from the bottom up
 	if (con.display != con.current)
 	{
 	// draw arrows to show the buffer is backscrolled
 		for (x=0 ; x<con.linewidth ; x+=4)
-         re.DrawChar((x + 1) * 8 * vid_hudscale->value, y, '^');
+			re.DrawChar((x + 1) * 8 * vid_hudscale->value, y, '^');
 	
-      y -= 8 * vid_hudscale->value;
+		y -= 8 * vid_hudscale->value;
 		rows--;
 	}
 	
 	row = con.display;
-   for (i = 0; i<rows; i++, y -= 8 * vid_hudscale->value, row--)
+	for (i = 0; i<rows; i++, y -= 8 * vid_hudscale->value, row--)
 	{
 		if (row < 0)
 			break;
@@ -632,7 +632,7 @@ void Con_DrawConsole (float frac)
 		text = con.text + (row % con.totallines)*con.linewidth;
 
 		for (x=0 ; x<con.linewidth ; x++)
-         re.DrawChar((x + 1) * 8 * vid_hudscale->value, y, text[x]);
+			re.DrawChar((x + 1) * 8 * vid_hudscale->value, y, text[x]);
 	}
 
 //ZOID

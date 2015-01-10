@@ -252,7 +252,7 @@ void M_DrawCharacter (int cx, int cy, int num)
 
 void M_Print (int cx, int cy, char *str)
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	while (*str)
 	{
 		M_DrawCharacter (cx, cy, (*str)+128);
@@ -263,7 +263,7 @@ void M_Print (int cx, int cy, char *str)
 
 void M_PrintWhite (int cx, int cy, char *str)
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	while (*str)
 	{
 		M_DrawCharacter (cx, cy, *str);
@@ -289,7 +289,7 @@ and both above and below y.
 */
 void M_DrawCursor( int x, int y, int f )
 {
-   char	cursorname[80];
+	char	cursorname[80];
 	static qboolean cached;
 
 	if ( !cached )
@@ -311,8 +311,8 @@ void M_DrawCursor( int x, int y, int f )
 
 void M_DrawTextBox (int x, int y, int width, int lines)
 {
-   const float scale = vid_hudscale->value;
-   int		cx, cy;
+	const float scale = vid_hudscale->value;
+	int		cx, cy;
 	int		n;
 
 	// draw left side
@@ -366,7 +366,7 @@ MAIN MENU
 
 void M_Main_Draw (void)
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	int i;
 	int w, h;
 	int ystart;
@@ -519,7 +519,7 @@ static void StartNetworkServerFunc( void *unused )
 
 void Multiplayer_MenuInit( void )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	s_multiplayer_menu.x = viddef.width * 0.50 - 64 * scale;
 	s_multiplayer_menu.nitems = 0;
 
@@ -676,7 +676,7 @@ static void M_FindKeysForCommand (char *command, int *twokeys)
 
 static void KeyCursorDrawFunc( menuframework_s *menu )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	if ( bind_grab )
 		re.DrawChar( menu->x, menu->y + menu->cursor * 9*scale, '=' );
 	else
@@ -685,7 +685,7 @@ static void KeyCursorDrawFunc( menuframework_s *menu )
 
 static void DrawKeyBindingFunc( void *self )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	int keys[2];
 	menuaction_s *a = ( menuaction_s * ) self;
 
@@ -731,7 +731,7 @@ static void KeyBindingFunc( void *self )
 
 static void Keys_MenuInit( void )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	int y = 0;
 	int i = 0;
 
@@ -1156,7 +1156,7 @@ static void ConsoleFunc( void *unused )
 
 static void UpdateSoundQualityFunc( void *unused )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	if ( s_options_quality_list.curvalue )
 	{
 		Cvar_SetValue( "s_khz", 22 );
@@ -1214,7 +1214,7 @@ void Options_MenuInit( void )
 		"angle",
 		0
 	};
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 
 	win_noalttab = Cvar_Get( "win_noalttab", "0", CVAR_ARCHIVE );
 
@@ -1751,7 +1751,7 @@ static const char *roguecredits[] =
 
 void M_Credits_MenuDraw( void )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	int i, y;
 
 	/*
@@ -1931,7 +1931,7 @@ static void CreditsFunc( void *unused )
 
 void Game_MenuInit( void )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	static const char *difficulty_names[] =
 	{
 		"easy",
@@ -2071,7 +2071,7 @@ void LoadGameCallback( void *self )
 
 void LoadGame_MenuInit( void )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	int i;
 
 	s_loadgame_menu.x = viddef.width / 2 - 120*scale;
@@ -2150,7 +2150,7 @@ void SaveGame_MenuDraw( void )
 
 void SaveGame_MenuInit( void )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	int i;
 
 	s_savegame_menu.x = viddef.width / 2 - 120*scale;
@@ -2271,7 +2271,7 @@ void NullCursorDraw( void *self )
 
 void SearchLocalGames( void )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	int		i;
 
 	m_num_servers = 0;
@@ -2297,8 +2297,8 @@ void SearchLocalGamesFunc( void *self )
 
 void JoinServer_MenuInit( void )
 {
-   const float scale = vid_hudscale->value;
-   int i;
+	const float scale = vid_hudscale->value;
+	int i;
 
 	s_joinserver_menu.x = viddef.width * 0.50 - 120*scale;
 	s_joinserver_menu.nitems = 0;
@@ -2320,8 +2320,8 @@ void JoinServer_MenuInit( void )
 
 	s_joinserver_server_title.generic.type = MTYPE_SEPARATOR;
 	s_joinserver_server_title.generic.name = "connect to...";
-	s_joinserver_server_title.generic.x    = 80*scale;
-	s_joinserver_server_title.generic.y	   = 30*scale;
+	s_joinserver_server_title.generic.x	= 80*scale;
+	s_joinserver_server_title.generic.y	= 30*scale;
 
 	for ( i = 0; i < MAX_LOCAL_SERVERS; i++ )
 	{
@@ -2503,7 +2503,7 @@ void StartServerActionFunc( void *self )
 
 void StartServer_MenuInit( void )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	static const char *dm_coop_names[] =
 	{
 		"deathmatch",
@@ -2571,8 +2571,8 @@ void StartServer_MenuInit( void )
 
 	for ( i = 0; i < nummaps; i++ )
 	{
-    char  shortname[MAX_TOKEN_CHARS];
-    char  longname[MAX_TOKEN_CHARS];
+		char  shortname[MAX_TOKEN_CHARS];
+		char  longname[MAX_TOKEN_CHARS];
 		char  scratch[200];
 		int		j, l;
 
@@ -2916,7 +2916,7 @@ setvalue:
 
 void DMOptions_MenuInit( void )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	static const char *yes_no_names[] =
 	{
 		"no", "yes", 0
@@ -3189,7 +3189,7 @@ static void DownloadCallback( void *self )
 
 void DownloadOptions_MenuInit( void )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	static const char *yes_no_names[] =
 	{
 		"no", "yes", 0
@@ -3287,7 +3287,7 @@ static menufield_s		s_addressbook_fields[NUM_ADDRESSBOOK_ENTRIES];
 
 void AddressBook_MenuInit( void )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	int i;
 
 	s_addressbook_menu.x = viddef.width / 2 - 142*scale;
@@ -3605,7 +3605,7 @@ static int pmicmpfnc( const void *_a, const void *_b )
 
 qboolean PlayerConfig_MenuInit( void )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	extern cvar_t *name;
 	extern cvar_t *team;
 	extern cvar_t *skin;
@@ -3771,7 +3771,7 @@ float CalcFov(float fov_x, float w, float h);
 
 void PlayerConfig_MenuDraw( void )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	refdef_t refdef;
 	char scratch[MAX_QPATH];
 

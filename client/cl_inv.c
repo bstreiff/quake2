@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "client.h"
 
-extern cvar_t*    vid_hudscale;
+extern cvar_t*	vid_hudscale;
 
 /*
 ================
@@ -44,7 +44,7 @@ Inv_DrawString
 */
 void Inv_DrawString (int x, int y, char *string)
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	while (*string)
 	{
 		re.DrawChar (x, y, *string);
@@ -68,7 +68,7 @@ CL_DrawInventory
 
 void CL_DrawInventory (void)
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	int		i, j;
 	int		num, selected_num, item;
 	int		index[MAX_ITEMS];

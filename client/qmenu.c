@@ -56,7 +56,7 @@ void Action_DoEnter( menuaction_s *a )
 
 void Action_Draw( menuaction_s *a )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	if ( a->generic.flags & QMF_LEFT_JUSTIFY )
 	{
 		if ( a->generic.flags & QMF_GRAYED )
@@ -89,7 +89,7 @@ void Field_Draw( menufield_s *f )
 {
 	int i;
 	char tempbuffer[128]="";
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 
 	if ( f->generic.name )
 		Menu_DrawStringR2LDark( f->generic.x + f->generic.parent->x + LCOLUMN_OFFSET, f->generic.y + f->generic.parent->y, f->generic.name );
@@ -349,7 +349,7 @@ void Menu_Draw( menuframework_s *menu )
 {
 	int i;
 	menucommon_s *item;
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 
 	/*
 	** draw contents
@@ -419,7 +419,7 @@ void Menu_Draw( menuframework_s *menu )
 
 void Menu_DrawStatusBar( const char *string )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	if ( string )
 	{
 		int l = strlen( string );
@@ -437,7 +437,7 @@ void Menu_DrawStatusBar( const char *string )
 
 void Menu_DrawString( int x, int y, const char *string )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	unsigned i;
 
 	for ( i = 0; i < strlen( string ); i++ )
@@ -448,7 +448,7 @@ void Menu_DrawString( int x, int y, const char *string )
 
 void Menu_DrawStringDark( int x, int y, const char *string )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	unsigned i;
 
 	for ( i = 0; i < strlen( string ); i++ )
@@ -459,7 +459,7 @@ void Menu_DrawStringDark( int x, int y, const char *string )
 
 void Menu_DrawStringR2L( int x, int y, const char *string )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	unsigned i;
 
 	for ( i = 0; i < strlen( string ); i++ )
@@ -470,7 +470,7 @@ void Menu_DrawStringR2L( int x, int y, const char *string )
 
 void Menu_DrawStringR2LDark( int x, int y, const char *string )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	unsigned i;
 
 	for ( i = 0; i < strlen( string ); i++ )
@@ -574,7 +574,7 @@ void Menulist_DoEnter( menulist_s *l )
 
 void MenuList_Draw( menulist_s *l )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	const char **n;
 	int y = 0;
 
@@ -615,7 +615,7 @@ void Slider_DoSlide( menuslider_s *s, int dir )
 
 void Slider_Draw( menuslider_s *s )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	int	i;
 
 	Menu_DrawStringR2LDark( s->generic.x + s->generic.parent->x + LCOLUMN_OFFSET*scale,
@@ -660,7 +660,7 @@ void SpinControl_DoSlide( menulist_s *s, int dir )
 
 void SpinControl_Draw( menulist_s *s )
 {
-   const float scale = vid_hudscale->value;
+	const float scale = vid_hudscale->value;
 	char buffer[100];
 
 	if ( s->generic.name )
