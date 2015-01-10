@@ -116,18 +116,21 @@ void Hunk_Free (void *base)
 Sys_Milliseconds
 ================
 */
+static int s_timebase = 0;
 int	curtime;
 int Sys_Milliseconds (void)
 {
-	static int		base;
-	static qboolean	initialized = false;
+	struct timeval tv;
 
-	if (!initialized)
-	{	// let base retain 16 bits of effectively random data
-		base = timeGetTime() & 0xffff0000;
-		initialized = true;
+	Sys_GetTimeOfDay(&tv);
+
+	if (!s_timebase)
+	{
+		s_timebase = tv.tv_sec;
+		return tv.tv_usec / 1000;
 	}
-	curtime = timeGetTime() - base;
+
+	curtime = (tv.tv_sec - s_timebase)*1000 + tv.tv_usec/1000;
 
 	return curtime;
 }
