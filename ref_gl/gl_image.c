@@ -46,7 +46,7 @@ int		gl_filter_max = GL_LINEAR;
 
 void GL_EnableMultitexture( qboolean enable )
 {
-	if ( !qglActiveTextureARB )
+	if ( !qglActiveTexture )
 		return;
 
 	if ( enable )
@@ -69,7 +69,7 @@ void GL_SelectTexture( GLenum texture )
 {
 	int tmu;
 
-	if ( !qglActiveTextureARB )
+	if ( !qglActiveTexture )
 		return;
 
 	if ( texture == GL_TEXTURE0 )
@@ -88,8 +88,8 @@ void GL_SelectTexture( GLenum texture )
 
 	gl_state.currenttmu = tmu;
 
-	qglActiveTextureARB( texture );
-	qglClientActiveTextureARB( texture );
+	qglActiveTexture( texture );
+	qglClientActiveTexture( texture );
 }
 
 void GL_TexEnv( GLenum mode )

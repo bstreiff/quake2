@@ -18,21 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#ifdef _WIN32
-#  include <windows.h>
-#endif
-
+#include "SDL2/SDL_opengl.h"
 #include <stdio.h>
-
-#include <GL/gl.h>
-#include <GL/glu.h>
 #include <math.h>
-
-#ifndef __linux__
-#ifndef GL_COLOR_INDEX8_EXT
-#define GL_COLOR_INDEX8_EXT GL_COLOR_INDEX
-#endif
-#endif
 
 #include "../client/ref.h"
 
@@ -185,11 +173,6 @@ extern	cvar_t	*r_lerpmodels;
 extern	cvar_t	*r_lightlevel;	// FIXME: This is a HACK to get the client's light level
 
 extern cvar_t	*gl_vertex_arrays;
-
-extern cvar_t	*gl_ext_swapinterval;
-extern cvar_t	*gl_ext_multitexture;
-extern cvar_t	*gl_ext_pointparameters;
-extern cvar_t	*gl_ext_compiled_vertex_array;
 
 extern cvar_t	*gl_particle_min_size;
 extern cvar_t	*gl_particle_max_size;
@@ -352,17 +335,12 @@ void GL_DrawParticles( int n, const particle_t particles[], const unsigned color
 /*
 ** GL config stuff
 */
-#define GL_RENDERER_OTHER		0x80000000
-
 typedef struct
 {
-	int         renderer;
 	const char *renderer_string;
 	const char *vendor_string;
 	const char *version_string;
 	const char *extensions_string;
-
-	qboolean	allow_cds;
 } glconfig_t;
 
 typedef struct

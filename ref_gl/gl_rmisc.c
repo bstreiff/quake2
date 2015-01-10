@@ -24,6 +24,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <zlib.h>
 #include "SDL2/SDL.h"
 
+#ifdef _WIN32
+#include <WinSock2.h> // For some reason this is where 'struct timeval' is declared.
+#endif
+
 /*
 ==================
 R_InitParticleTexture
@@ -240,7 +244,7 @@ void GL_SetDefaultState( void )
 
 	GL_TexEnv( GL_REPLACE );
 
-	if ( qglPointParameterfEXT )
+	if ( qglPointParameterf )
 	{
 		float attenuations[3];
 
@@ -249,9 +253,9 @@ void GL_SetDefaultState( void )
 		attenuations[2] = gl_particle_att_c->value;
 
 		qglEnable( GL_POINT_SMOOTH );
-		qglPointParameterfEXT( GL_POINT_SIZE_MIN_EXT, gl_particle_min_size->value );
-		qglPointParameterfEXT( GL_POINT_SIZE_MAX_EXT, gl_particle_max_size->value );
-		qglPointParameterfvEXT( GL_DISTANCE_ATTENUATION_EXT, attenuations );
+		qglPointParameterf( GL_POINT_SIZE_MIN, gl_particle_min_size->value );
+		qglPointParameterf( GL_POINT_SIZE_MAX, gl_particle_max_size->value );
+		qglPointParameterfv( GL_POINT_DISTANCE_ATTENUATION, attenuations );
 	}
 
 	GL_UpdateSwapInterval();

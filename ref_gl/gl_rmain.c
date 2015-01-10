@@ -27,8 +27,6 @@ viddef_t	vid;
 
 refimport_t	ri;
 
-GLenum GL_TEXTURE0, GL_TEXTURE1;
-
 model_t		*r_worldmodel;
 
 float		gldepthmin, gldepthmax;
@@ -94,11 +92,6 @@ cvar_t	*gl_particle_size;
 cvar_t	*gl_particle_att_a;
 cvar_t	*gl_particle_att_b;
 cvar_t	*gl_particle_att_c;
-
-cvar_t	*gl_ext_swapinterval;
-cvar_t	*gl_ext_multitexture;
-cvar_t	*gl_ext_pointparameters;
-cvar_t	*gl_ext_compiled_vertex_array;
 
 cvar_t	*gl_log;
 cvar_t	*gl_bitdepth;
@@ -1036,11 +1029,6 @@ void R_Register( void )
 
 	gl_vertex_arrays = ri.Cvar_Get( "gl_vertex_arrays", "0", CVAR_ARCHIVE );
 
-	gl_ext_swapinterval = ri.Cvar_Get( "gl_ext_swapinterval", "1", CVAR_ARCHIVE );
-	gl_ext_multitexture = ri.Cvar_Get( "gl_ext_multitexture", "1", CVAR_ARCHIVE );
-	gl_ext_pointparameters = ri.Cvar_Get( "gl_ext_pointparameters", "1", CVAR_ARCHIVE );
-	gl_ext_compiled_vertex_array = ri.Cvar_Get( "gl_ext_compiled_vertex_array", "1", CVAR_ARCHIVE );
-
 	gl_drawbuffer = ri.Cvar_Get( "gl_drawbuffer", "GL_BACK", 0 );
 	gl_swapinterval = ri.Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
 
@@ -1072,13 +1060,6 @@ qboolean R_SetMode (void)
 {
 	rserr_t err;
 	qboolean fullscreen;
-
-	if ( vid_fullscreen->modified && !gl_config.allow_cds )
-	{
-		ri.Con_Printf( PRINT_ALL, "R_SetMode() - CDS not allowed with this driver\n" );
-		ri.Cvar_SetValue( "vid_fullscreen", !vid_fullscreen->value );
-		vid_fullscreen->modified = false;
-	}
 
 	fullscreen = vid_fullscreen->value;
 
@@ -1146,18 +1127,19 @@ qboolean R_Init( void *hinstance, void *hWnd )
 
 	R_Register();
 
-	// initialize our QGL dynamic bindings
-	if ( !QGL_Init( gl_driver->string ) )
-	{
-		QGL_Shutdown();
-        ri.Con_Printf (PRINT_ALL, "ref_gl::R_Init() - could not load \"%s\"\n", gl_driver->string );
-		return false;
-	}
-
 	// initialize OS-specific parts of OpenGL
 	if ( !GLimp_Init( hinstance, hWnd ) )
 	{
-		QGL_Shutdown();
+		ri.Con_Printf(PRINT_ALL, "ref_gl::R_Init() - could not load os stuff\n");
+		return false;
+	}
+
+	// initialize our QGL dynamic bindings
+	// TODO: This queries for function pointers! However it does so before we create an OpenGL context!
+	if (!QGL_InitLibrary(gl_driver->string))
+	{
+		GLimp_Shutdown();
+		ri.Con_Printf(PRINT_ALL, "ref_gl::R_Init() - could not load \"%s\"\n", gl_driver->string);
 		return false;
 	}
 
@@ -1167,8 +1149,17 @@ qboolean R_Init( void *hinstance, void *hWnd )
 	// create the window and set up the context
 	if ( !R_SetMode () )
 	{
-		QGL_Shutdown();
+		GLimp_Shutdown();
+		QGL_ShutdownLibrary();
         ri.Con_Printf (PRINT_ALL, "ref_gl::R_Init() - could not R_SetMode()\n" );
+		return false;
+	}
+
+	if ( !QGL_InitPointers())
+	{
+		GLimp_Shutdown();
+		QGL_ShutdownLibrary();
+		ri.Con_Printf(PRINT_ALL, "ref_gl::R_Init() - could not get pointers\n");
 		return false;
 	}
 
@@ -1192,8 +1183,6 @@ qboolean R_Init( void *hinstance, void *hWnd )
 	strcpy( vendor_buffer, gl_config.vendor_string );
 	strlwr( vendor_buffer );
 
-	gl_config.renderer = GL_RENDERER_OTHER;
-
 	if ( toupper( gl_monolightmap->string[1] ) != 'F' )
 	{
 		ri.Cvar_Set( "gl_monolightmap", "0" );
@@ -1204,87 +1193,6 @@ qboolean R_Init( void *hinstance, void *hWnd )
 #ifdef __linux__
 	ri.Cvar_SetValue( "gl_finish", 1 );
 #endif
-
-	gl_config.allow_cds = true;
-
-	if ( gl_config.allow_cds )
-		ri.Con_Printf( PRINT_ALL, "...allowing CDS\n" );
-	else
-		ri.Con_Printf( PRINT_ALL, "...disabling CDS\n" );
-
-	/*
-	** grab extensions
-	*/
-	if (SDL_GL_ExtensionSupported("GL_EXT_compiled_vertex_array") ||
-		SDL_GL_ExtensionSupported("GL_SGI_compiled_vertex_array"))
-	{
-		ri.Con_Printf( PRINT_ALL, "...enabling GL_EXT_compiled_vertex_array\n" );
-		qglLockArraysEXT = (void(APIENTRY *)(int,int))SDL_GL_GetProcAddress("glLockArraysEXT");
-		qglUnlockArraysEXT = (void(APIENTRY *)(void))SDL_GL_GetProcAddress("glUnlockArraysEXT");
-	}
-	else
-	{
-		ri.Con_Printf( PRINT_ALL, "...GL_EXT_compiled_vertex_array not found\n" );
-	}
-
-	if (SDL_GL_ExtensionSupported("GL_EXT_point_parameters"))
-	{
-		if ( gl_ext_pointparameters->value )
-		{
-			qglPointParameterfEXT = (void (APIENTRY *)(GLenum, GLfloat)) SDL_GL_GetProcAddress("glPointParameterfEXT");
-			qglPointParameterfvEXT = (void (APIENTRY *)(GLenum, const GLfloat *)) SDL_GL_GetProcAddress("glPointParameterfvEXT");
-			ri.Con_Printf( PRINT_ALL, "...using GL_EXT_point_parameters\n" );
-		}
-		else
-		{
-			ri.Con_Printf( PRINT_ALL, "...ignoring GL_EXT_point_parameters\n" );
-		}
-	}
-	else
-	{
-		ri.Con_Printf( PRINT_ALL, "...GL_EXT_point_parameters not found\n" );
-	}
-
-#ifdef __linux__
-	if ( strstr( gl_config.extensions_string, "3DFX_set_global_palette" ))
-	{
-		if ( gl_ext_palettedtexture->value )
-		{
-			ri.Con_Printf( PRINT_ALL, "...using 3DFX_set_global_palette\n" );
-			qgl3DfxSetPaletteEXT = ( void ( APIENTRY * ) (GLuint *) )SDL_GL_GetProcAddress( "gl3DfxSetPaletteEXT" );
-			qglColorTableEXT = Fake_glColorTableEXT;
-		}
-		else
-		{
-			ri.Con_Printf( PRINT_ALL, "...ignoring 3DFX_set_global_palette\n" );
-		}
-	}
-	else
-	{
-		ri.Con_Printf( PRINT_ALL, "...3DFX_set_global_palette not found\n" );
-	}
-#endif
-
-	if (SDL_GL_ExtensionSupported("GL_ARB_multitexture"))
-	{
-		if ( gl_ext_multitexture->value )
-		{
-			ri.Con_Printf( PRINT_ALL, "...using GL_ARB_multitexture\n" );
-			qglMultiTexCoord2fARB = (void (APIENTRY*)(GLenum,GLfloat,GLfloat))SDL_GL_GetProcAddress("glMultiTexCoord2fARB");
-			qglActiveTextureARB = (void (APIENTRY*)(GLenum))SDL_GL_GetProcAddress("glActiveTextureARB");
-			qglClientActiveTextureARB = (void (APIENTRY*)(GLenum))SDL_GL_GetProcAddress("glClientActiveTextureARB");
-			GL_TEXTURE0 = GL_TEXTURE0_ARB;
-			GL_TEXTURE1 = GL_TEXTURE1_ARB;
-		}
-		else
-		{
-			ri.Con_Printf( PRINT_ALL, "...ignoring GL_ARB_multitexture\n" );
-		}
-	}
-	else
-	{
-		ri.Con_Printf( PRINT_ALL, "...GL_ARB_multitexture not found\n" );
-	}
 
 	GL_SetDefaultState();
 
@@ -1327,6 +1235,8 @@ void R_Shutdown (void)
 
 	GL_ShutdownImages ();
 
+	QGL_ShutdownPointers();
+
 	/*
 	** shut down OS specific OpenGL stuff like contexts, etc.
 	*/
@@ -1335,7 +1245,7 @@ void R_Shutdown (void)
 	/*
 	** shutdown our QGL subsystem
 	*/
-	QGL_Shutdown();
+	QGL_ShutdownLibrary();
 }
 
 

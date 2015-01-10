@@ -368,17 +368,15 @@ void ( APIENTRY * qglVertex4sv )(const GLshort *v);
 void ( APIENTRY * qglVertexPointer )(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 void ( APIENTRY * qglViewport )(GLint x, GLint y, GLsizei width, GLsizei height);
 
-void ( APIENTRY * qglLockArraysEXT)( int, int);
-void ( APIENTRY * qglUnlockArraysEXT) ( void );
-
-void ( APIENTRY * qglPointParameterfEXT)( GLenum param, GLfloat value );
-void ( APIENTRY * qglPointParameterfvEXT)( GLenum param, const GLfloat *value );
-void ( APIENTRY * qglColorTableEXT)( int, int, int, int, int, const void * );
-void ( APIENTRY * qglMultiTexCoord2fARB)(GLenum, GLfloat, GLfloat);
-void ( APIENTRY * qglActiveTextureARB) ( GLenum );
-void ( APIENTRY * qglClientActiveTextureARB) ( GLenum );
+void ( APIENTRY * qglPointParameterf)( GLenum param, GLfloat value );
+void ( APIENTRY * qglPointParameterfv)( GLenum param, const GLfloat *value );
+void ( APIENTRY * qglColorTable)( GLenum target, GLenum internalformat, GLsizei width, GLenum format, GLenum type, const GLvoid* data );
+void ( APIENTRY * qglMultiTexCoord2f)(GLenum, GLfloat, GLfloat);
+void ( APIENTRY * qglActiveTexture) ( GLenum );
+void ( APIENTRY * qglClientActiveTexture) ( GLenum );
 
 static void ( APIENTRY * dllAccum )(GLenum op, GLfloat value);
+static void ( APIENTRY * dllActiveTexture )(GLenum texture);
 static void ( APIENTRY * dllAlphaFunc )(GLenum func, GLclampf ref);
 GLboolean ( APIENTRY * dllAreTexturesResident )(GLsizei n, const GLuint *textures, GLboolean *residences);
 static void ( APIENTRY * dllArrayElement )(GLint i);
@@ -395,6 +393,7 @@ static void ( APIENTRY * dllClearDepth )(GLclampd depth);
 static void ( APIENTRY * dllClearIndex )(GLfloat c);
 static void ( APIENTRY * dllClearStencil )(GLint s);
 static void ( APIENTRY * dllClipPlane )(GLenum plane, const GLdouble *equation);
+static void ( APIENTRY * dllClientActiveTexture )(GLenum texture);
 static void ( APIENTRY * dllColor3b )(GLbyte red, GLbyte green, GLbyte blue);
 static void ( APIENTRY * dllColor3bv )(const GLbyte *v);
 static void ( APIENTRY * dllColor3d )(GLdouble red, GLdouble green, GLdouble blue);
@@ -430,6 +429,7 @@ static void ( APIENTRY * dllColor4usv )(const GLushort *v);
 static void ( APIENTRY * dllColorMask )(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
 static void ( APIENTRY * dllColorMaterial )(GLenum face, GLenum mode);
 static void ( APIENTRY * dllColorPointer )(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
+static void ( APIENTRY * dllColorTable )(GLenum target, GLenum internalformat, GLsizei width, GLenum format, GLenum type, const GLvoid* data);
 static void ( APIENTRY * dllCopyPixels )(GLint x, GLint y, GLsizei width, GLsizei height, GLenum type);
 static void ( APIENTRY * dllCopyTexImage1D )(GLenum target, GLint level, GLenum internalFormat, GLint x, GLint y, GLsizei width, GLint border);
 static void ( APIENTRY * dllCopyTexImage2D )(GLenum target, GLint level, GLenum internalFormat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
@@ -555,6 +555,7 @@ static void ( APIENTRY * dllMaterialiv )(GLenum face, GLenum pname, const GLint 
 static void ( APIENTRY * dllMatrixMode )(GLenum mode);
 static void ( APIENTRY * dllMultMatrixd )(const GLdouble *m);
 static void ( APIENTRY * dllMultMatrixf )(const GLfloat *m);
+static void ( APIENTRY * dllMultiTexCoord2f )(GLenum target, GLfloat s, GLfloat t);
 static void ( APIENTRY * dllNewList )(GLuint list, GLenum mode);
 static void ( APIENTRY * dllNormal3b )(GLbyte nx, GLbyte ny, GLbyte nz);
 static void ( APIENTRY * dllNormal3bv )(const GLbyte *v);
@@ -577,6 +578,8 @@ static void ( APIENTRY * dllPixelStorei )(GLenum pname, GLint param);
 static void ( APIENTRY * dllPixelTransferf )(GLenum pname, GLfloat param);
 static void ( APIENTRY * dllPixelTransferi )(GLenum pname, GLint param);
 static void ( APIENTRY * dllPixelZoom )(GLfloat xfactor, GLfloat yfactor);
+static void ( APIENTRY * dllPointParameterf )(GLenum pname, GLfloat param);
+static void ( APIENTRY * dllPointParameterfv )(GLenum pname, const GLfloat* params);
 static void ( APIENTRY * dllPointSize )(GLfloat size);
 static void ( APIENTRY * dllPolygonMode )(GLenum face, GLenum mode);
 static void ( APIENTRY * dllPolygonOffset )(GLfloat factor, GLfloat units);
@@ -715,10 +718,18 @@ static void ( APIENTRY * dllVertex4sv )(const GLshort *v);
 static void ( APIENTRY * dllVertexPointer )(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 static void ( APIENTRY * dllViewport )(GLint x, GLint y, GLsizei width, GLsizei height);
 
+#define SIG( x ) fprintf( glw_state.log_fp, x "\n" )
+
 static void APIENTRY logAccum(GLenum op, GLfloat value)
 {
 	fprintf( glw_state.log_fp, "glAccum\n" );
 	dllAccum( op, value );
+}
+
+static void APIENTRY logActiveTexture(GLenum texture)
+{
+	SIG("glActiveTexture");
+	dllActiveTexture(texture);
 }
 
 static void APIENTRY logAlphaFunc(GLenum func, GLclampf ref)
@@ -811,6 +822,12 @@ static void APIENTRY logClearStencil(GLint s)
 	dllClearStencil( s );
 }
 
+static void APIENTRY logClientActiveTexture(GLenum texture)
+{
+	SIG("glActiveTexture");
+	dllClientActiveTexture(texture);
+}
+
 static void APIENTRY logClipPlane(GLenum plane, const GLdouble *equation)
 {
 	fprintf( glw_state.log_fp, "glClipPlane\n" );
@@ -888,8 +905,6 @@ static void APIENTRY logColor3ubv(const GLubyte *v)
 	fprintf( glw_state.log_fp, "glColor3ubv\n" );
 	dllColor3ubv( v );
 }
-
-#define SIG( x ) fprintf( glw_state.log_fp, x "\n" )
 
 static void APIENTRY logColor3ui(GLuint red, GLuint green, GLuint blue)
 {
@@ -996,6 +1011,11 @@ static void APIENTRY logColor4usv(const GLushort *v)
 {
 	SIG( "glColor4usv" );
 	dllColor4usv( v );
+}
+static void APIENTRY logColorTable(GLenum target, GLenum internalformat, GLsizei width, GLenum format, GLenum type, const GLvoid* data)
+{
+	SIG( "glColorTable" );
+	dllColorTable(target, internalformat, width, format, type, data);
 }
 static void APIENTRY logColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha)
 {
@@ -1752,6 +1772,12 @@ static void APIENTRY logMultMatrixf(const GLfloat *m)
 	dllMultMatrixf( m );
 }
 
+static void APIENTRY logMultiTexCoord2f(GLenum target, GLfloat s, GLfloat t)
+{
+	SIG( "glMultiTexCoord2f" );
+	dllMultiTexCoord2f( target, s, t );
+}
+
 static void APIENTRY logNewList(GLuint list, GLenum mode)
 {
 	SIG( "glNewList" );
@@ -1873,6 +1899,18 @@ static void APIENTRY logPixelZoom(GLfloat xfactor, GLfloat yfactor)
 {
 	SIG( "glPixelZoom" );
 	dllPixelZoom( xfactor, yfactor );
+}
+
+static void APIENTRY logPointParameterf(GLenum pname, GLfloat param)
+{
+	SIG( "logPointParameterf" );
+	dllPointParameterf( pname, param );
+}
+
+static void APIENTRY logPointParameterfv(GLenum pname, const GLfloat* param)
+{
+	SIG("logPointParameterf");
+	dllPointParameterfv(pname, param);
 }
 
 static void APIENTRY logPointSize(GLfloat size)
@@ -2607,10 +2645,13 @@ static void APIENTRY logViewport(GLint x, GLint y, GLsizei width, GLsizei height
 **
 ** Unloads the specified DLL then nulls out all the proc pointers.
 */
-void QGL_Shutdown( void )
+void QGL_ShutdownLibrary()
 {
 	SDL_GL_UnloadLibrary();
+}
 
+void QGL_ShutdownPointers( void )
+{
 	qglAccum                     = NULL;
 	qglAlphaFunc                 = NULL;
 	qglAreTexturesResident       = NULL;
@@ -2962,23 +3003,36 @@ void QGL_Shutdown( void )
 ** might be.
 ** 
 */
-qboolean QGL_Init( const char *dllname )
+qboolean QGL_InitLibrary(const char *dllname)
 {
 	if (SDL_GL_LoadLibrary(NULL) != 0)
 	{
 		const char *buf = SDL_GetError();
 
 		//FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, SDL_GetError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR) &buf, 0, NULL);
-		ri.Con_Printf( PRINT_ALL, "%s\n", buf );
+		ri.Con_Printf(PRINT_ALL, "%s\n", buf);
 		return false;
 	}
+	return true;
+}
 
-	gl_config.allow_cds = true;
+qboolean QGL_InitPointers()
+{
+	qboolean supports_multitexture = false;
+
+	if (SDL_GL_ExtensionSupported("GL_ARB_multitexture"))
+	{
+		qglActiveTexture = dllActiveTexture = GPA("glActiveTextureARB");
+		qglClientActiveTexture = dllClientActiveTexture = GPA("glClientActiveTextureARB");
+		supports_multitexture = true;
+	}
 
 	qglAccum                     = dllAccum = GPA( "glAccum" );
+	qglActiveTexture             = dllActiveTexture = GPA("glActiveTexture");
 	qglAlphaFunc                 = dllAlphaFunc = GPA( "glAlphaFunc" );
 	qglAreTexturesResident       = dllAreTexturesResident = GPA( "glAreTexturesResident" );
 	qglArrayElement              = dllArrayElement = GPA( "glArrayElement" );
+	qglClientActiveTexture       = dllClientActiveTexture = GPA("glClientActiveTexture");
 	qglBegin                     = dllBegin = GPA( "glBegin" );
 	qglBindTexture               = dllBindTexture = GPA( "glBindTexture" );
 	qglBitmap                    = dllBitmap = GPA( "glBitmap" );
@@ -3028,6 +3082,7 @@ qboolean QGL_Init( const char *dllname )
 	qglColorMaterial             = dllColorMaterial = GPA( "glColorMaterial" );
 	qglColorPointer              = dllColorPointer = GPA( "glColorPointer" );
 	qglCopyPixels                = dllCopyPixels = GPA( "glCopyPixels" );
+	qglColorTable                = dllColorTable = GPA("glColorTable");
 	qglCopyTexImage1D            = dllCopyTexImage1D = GPA( "glCopyTexImage1D" );
 	qglCopyTexImage2D            = dllCopyTexImage2D = GPA( "glCopyTexImage2D" );
 	qglCopyTexSubImage1D         = dllCopyTexSubImage1D = GPA( "glCopyTexSubImage1D" );
@@ -3150,6 +3205,7 @@ qboolean QGL_Init( const char *dllname )
 	qglMateriali                 = 	dllMateriali                 = GPA( "glMateriali" );
 	qglMaterialiv                = 	dllMaterialiv                = GPA( "glMaterialiv" );
 	qglMatrixMode                = 	dllMatrixMode                = GPA( "glMatrixMode" );
+	qglMultiTexCoord2f           =  dllMultiTexCoord2f           = GPA( "glMultiTexCoord2f" );
 	qglMultMatrixd               = 	dllMultMatrixd               = GPA( "glMultMatrixd" );
 	qglMultMatrixf               = 	dllMultMatrixf               = GPA( "glMultMatrixf" );
 	qglNewList                   = 	dllNewList                   = GPA( "glNewList" );
@@ -3174,6 +3230,8 @@ qboolean QGL_Init( const char *dllname )
 	qglPixelTransferf            = 	dllPixelTransferf            = GPA( "glPixelTransferf" );
 	qglPixelTransferi            = 	dllPixelTransferi            = GPA( "glPixelTransferi" );
 	qglPixelZoom                 = 	dllPixelZoom                 = GPA( "glPixelZoom" );
+	qglPointParameterf           =  dllPointParameterf           = GPA( "glPointParameterf" );
+	qglPointParameterfv          =  dllPointParameterfv          = GPA( "glPointParameterfv" );
 	qglPointSize                 = 	dllPointSize                 = GPA( "glPointSize" );
 	qglPolygonMode               = 	dllPolygonMode               = GPA( "glPolygonMode" );
 	qglPolygonOffset             = 	dllPolygonOffset             = GPA( "glPolygonOffset" );
@@ -3312,11 +3370,6 @@ qboolean QGL_Init( const char *dllname )
 	qglVertexPointer             = 	dllVertexPointer             = GPA( "glVertexPointer" );
 	qglViewport                  = 	dllViewport                  = GPA( "glViewport" );
 
-	qglPointParameterfEXT = 0;
-	qglPointParameterfvEXT = 0;
-	qglColorTableEXT = 0;
-	qglMultiTexCoord2fARB = 0;
-
 	return true;
 }
 
@@ -3342,6 +3395,7 @@ void GLimp_EnableLogging( qboolean enable )
 		}
 
 		qglAccum                     = logAccum;
+		qglActiveTexture             = logActiveTexture;
 		qglAlphaFunc                 = logAlphaFunc;
 		qglAreTexturesResident       = logAreTexturesResident;
 		qglArrayElement              = logArrayElement;
@@ -3357,6 +3411,7 @@ void GLimp_EnableLogging( qboolean enable )
 		qglClearDepth                = logClearDepth;
 		qglClearIndex                = logClearIndex;
 		qglClearStencil              = logClearStencil;
+		qglClientActiveTexture       = logClientActiveTexture;
 		qglClipPlane                 = logClipPlane;
 		qglColor3b                   = logColor3b;
 		qglColor3bv                  = logColor3bv;
@@ -3390,6 +3445,7 @@ void GLimp_EnableLogging( qboolean enable )
 		qglColor4uiv                 = logColor4uiv;
 		qglColor4us                  = logColor4us;
 		qglColor4usv                 = logColor4usv;
+		qglColorTable                = logColorTable;
 		qglColorMask                 = logColorMask;
 		qglColorMaterial             = logColorMaterial;
 		qglColorPointer              = logColorPointer;
@@ -3518,6 +3574,7 @@ void GLimp_EnableLogging( qboolean enable )
 		qglMatrixMode                = 	logMatrixMode                ;
 		qglMultMatrixd               = 	logMultMatrixd               ;
 		qglMultMatrixf               = 	logMultMatrixf               ;
+		qglMultiTexCoord2f           =  logMultiTexCoord2f           ;
 		qglNewList                   = 	logNewList                   ;
 		qglNormal3b                  = 	logNormal3b                  ;
 		qglNormal3bv                 = 	logNormal3bv                 ;
@@ -3540,6 +3597,8 @@ void GLimp_EnableLogging( qboolean enable )
 		qglPixelTransferf            = 	logPixelTransferf            ;
 		qglPixelTransferi            = 	logPixelTransferi            ;
 		qglPixelZoom                 = 	logPixelZoom                 ;
+		qglPointParameterf           =  logPointParameterf           ;
+		qglPointParameterfv          =  logPointParameterfv          ;
 		qglPointSize                 = 	logPointSize                 ;
 		qglPolygonMode               = 	logPolygonMode               ;
 		qglPolygonOffset             = 	logPolygonOffset             ;
@@ -3729,6 +3788,7 @@ void GLimp_EnableLogging( qboolean enable )
 		qglColor4uiv                 = dllColor4uiv;
 		qglColor4us                  = dllColor4us;
 		qglColor4usv                 = dllColor4usv;
+		qglColorTable                = dllColorTable;
 		qglColorMask                 = dllColorMask;
 		qglColorMaterial             = dllColorMaterial;
 		qglColorPointer              = dllColorPointer;
@@ -3857,6 +3917,7 @@ void GLimp_EnableLogging( qboolean enable )
 		qglMatrixMode                = 	dllMatrixMode                ;
 		qglMultMatrixd               = 	dllMultMatrixd               ;
 		qglMultMatrixf               = 	dllMultMatrixf               ;
+		qglMultiTexCoord2f           =  dllMultiTexCoord2f           ;
 		qglNewList                   = 	dllNewList                   ;
 		qglNormal3b                  = 	dllNormal3b                  ;
 		qglNormal3bv                 = 	dllNormal3bv                 ;
@@ -3879,6 +3940,8 @@ void GLimp_EnableLogging( qboolean enable )
 		qglPixelTransferf            = 	dllPixelTransferf            ;
 		qglPixelTransferi            = 	dllPixelTransferi            ;
 		qglPixelZoom                 = 	dllPixelZoom                 ;
+		qglPointParameterf           =  dllPointParameterf           ;
+		qglPointParameterfv          =  dllPointParameterfv          ;
 		qglPointSize                 = 	dllPointSize                 ;
 		qglPolygonMode               = 	dllPolygonMode               ;
 		qglPolygonOffset             = 	dllPolygonOffset             ;

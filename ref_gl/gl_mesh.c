@@ -182,9 +182,6 @@ static void GL_DrawAliasFrameLerp (const alias_model_t *alias, float backlerp)
 			}
 		}
 
-		if ( qglLockArraysEXT != 0 )
-			qglLockArraysEXT( 0, frame->num_verts );
-
 		for (;;)
 		{
 			// get the vertex count and primitive type
@@ -234,8 +231,6 @@ static void GL_DrawAliasFrameLerp (const alias_model_t *alias, float backlerp)
 			qglEnd ();
 		}
 
-		if ( qglUnlockArraysEXT != 0 )
-			qglUnlockArraysEXT();
 	}
 	else
 	{
