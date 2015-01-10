@@ -48,3 +48,7 @@ int CDAudio_Init(void)
 void CDAudio_Shutdown(void)
 {
 }
+
+void CDAudio_Activate(qboolean active)
+{
+}

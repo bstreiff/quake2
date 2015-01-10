@@ -170,7 +170,7 @@
   <ItemGroup>
     <ClCompile Include="client\in_gamepad.c" />
     <ClCompile Include="client\in_mouse.c" />
-    <ClCompile Include="win32\cd_win.c" />
+    <ClCompile Include="null\cd_null.c" />
     <ClCompile Include="client\cl_cin.c" />
     <ClCompile Include="client\cl_ents.c" />
     <ClCompile Include="client\cl_fx.c" />

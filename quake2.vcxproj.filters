@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="win32\cd_win.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="client\cl_cin.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -160,6 +157,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="client\snd_sdl.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="null\cd_null.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
