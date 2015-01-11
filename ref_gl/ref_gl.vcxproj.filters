@@ -42,16 +42,10 @@
     <ClCompile Include="gl_warp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\win32\glw_imp.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\game\q_shared.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\win32\q_shwin.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\win32\qgl_win.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="q_math.c">
@@ -63,6 +57,12 @@
     <ClCompile Include="xbrz\xbrz_wrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="gl_sdl.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="qgl_sdl.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anorms.h">
@@ -72,9 +72,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="gl_model.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\win32\glw_win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\game\q_shared.h">
@@ -95,13 +92,13 @@
     <ClInclude Include="warpsin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\win32\winquake.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="q_math.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="xbrz\xbrz.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gl_sdl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
