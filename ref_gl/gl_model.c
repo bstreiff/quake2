@@ -150,10 +150,8 @@ void Mod_Modellist_f (void)
 	{
 		if (!mod->name[0])
 			continue;
-		ri.Con_Printf (PRINT_ALL, "%8i : %s\n",mod->extradatasize, mod->name);
-		total += mod->extradatasize;
+		ri.Con_Printf (PRINT_ALL, " %s\n", mod->name);
 	}
-	ri.Con_Printf (PRINT_ALL, "Total resident: %i\n", total);
 }
 
 /*
@@ -246,17 +244,14 @@ model_t *Mod_ForName (char *name, qboolean crash)
 	switch (LittleLong(*(unsigned *)buf))
 	{
 	case IDALIASHEADER:
-		loadmodel->extradata = Hunk_Begin (0x800000);
 		Mod_LoadAliasModel (mod, buf);
 		break;
 		
 	case IDSPRITEHEADER:
-		loadmodel->extradata = Hunk_Begin (0x10000);
 		Mod_LoadSpriteModel (mod, buf);
 		break;
 	
 	case IDBSPHEADER:
-		loadmodel->extradata = Hunk_Begin (0x1000000);
 		Mod_LoadBrushModel (mod, buf);
 		break;
 
@@ -264,8 +259,6 @@ model_t *Mod_ForName (char *name, qboolean crash)
 		ri.Sys_Error (ERR_DROP,"Mod_NumForName: unknown fileid for %s", mod->name);
 		break;
 	}
-
-	loadmodel->extradatasize = Hunk_End ();
 
 	ri.FS_FreeFile (buf);
 
@@ -852,7 +845,9 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	int			i;
 	dheader_t	*header;
 	mmodel_t 	*bm;
-	
+
+	loadmodel->extradata = Hunk_Begin(0x1000000);
+
 	loadmodel->type = mod_brush;
 	if (loadmodel != mod_known)
 		ri.Sys_Error (ERR_DROP, "Loaded a brush model after the world");
@@ -912,6 +907,17 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 
 		starmod->numleafs = bm->visleafs;
 	}
+
+	Hunk_End();
+}
+
+void Mod_UnloadBrushModel(model_t* mod)
+{
+	if (mod->extradata)
+	{
+		Hunk_Free(mod->extradata);
+		mod->extradata = NULL;
+	}
 }
 
 /*
@@ -970,8 +976,7 @@ static void Mod_FixupAliasSubmodel(
 	frame_info_t* frame_info;
 	size_t vtxcount = (end - begin);
 
-	frame_info = (frame_info_t*)malloc(sizeof(frame_info_t)*alias->num_frames);
-	memset(frame_info, 0, sizeof(frame_info_t)*alias->num_frames);
+	frame_info = (frame_info_t*)calloc(alias->num_frames, sizeof(frame_info_t));
 
 	// Compute the centroids (midpoint of all vertices) for each frame
 	for (int f = 0; f < alias->num_frames; ++f)
@@ -1092,8 +1097,7 @@ static void Mod_RecomputeVertexNormals(
 	} computed_normal_t;
 
 	computed_normal_t* normals;
-	normals = (computed_normal_t*)malloc(sizeof(computed_normal_t)*alias->frames[0].num_verts);
-	memset(normals, 0, sizeof(computed_normal_t)*alias->frames[0].num_verts);
+	normals = (computed_normal_t*)calloc(alias->frames[0].num_verts, sizeof(computed_normal_t));
 
 	for (int f = 0; f < alias->num_frames; ++f)
 	{
@@ -1153,7 +1157,7 @@ static void Mod_FixupAliasModel(const char* name, alias_model_t *alias)
 	if (alias->num_frames <= 1)
 		return;
 
-	vtx_submodel_ids = (vertex_submodel_t*)malloc(alias->frames[0].num_verts*sizeof(vertex_submodel_t));
+	vtx_submodel_ids = (vertex_submodel_t*)calloc(alias->frames[0].num_verts, sizeof(vertex_submodel_t));
 
 	// Initially, each submodel_id id corresponds to each vertex id.
 	for (size_t i = 0; i < alias->frames[0].num_verts; ++i)
@@ -1289,14 +1293,14 @@ void Mod_LoadAliasModel(model_t *mod, void *buffer)
 	header.ofs_end = LittleLong(*(int*)bufferItr);
 	bufferItr += sizeof(int);
 
-	outmodel = (alias_model_t*)Hunk_Alloc(sizeof(alias_model_t));
+	mod->extradata = outmodel = (alias_model_t*)calloc(1, sizeof(alias_model_t));
 
 	//
 	// load triangle lists
 	//
 	pintri = (dtriangle_t *)((byte *)buffer + header.ofs_tris);
 	outmodel->num_tris = header.num_tris;
-	outmodel->tris = (alias_model_triangle_t*)Hunk_Alloc(header.num_tris * sizeof(alias_model_triangle_t));
+	outmodel->tris = (alias_model_triangle_t*)calloc(header.num_tris, sizeof(alias_model_triangle_t));
 
 	for (i = 0; i<header.num_tris; i++)
 	{
@@ -1310,7 +1314,7 @@ void Mod_LoadAliasModel(model_t *mod, void *buffer)
 	// load the frames
 	//
 	outmodel->num_frames = header.num_frames;
-	outmodel->frames = (alias_model_frame_t*)Hunk_Alloc(header.num_frames * sizeof(alias_model_frame_t));
+	outmodel->frames = (alias_model_frame_t*)calloc(header.num_frames, sizeof(alias_model_frame_t));
 	for (i = 0; i<header.num_frames; i++)
 	{
 		vec3_t scale;
@@ -1325,7 +1329,7 @@ void Mod_LoadAliasModel(model_t *mod, void *buffer)
 		}
 
 		frame->num_verts = header.num_xyz;
-		frame->verts = (alias_model_vertex_t*)Hunk_Alloc(header.num_xyz * sizeof(alias_model_vertex_t));
+		frame->verts = (alias_model_vertex_t*)calloc(header.num_xyz, sizeof(alias_model_vertex_t));
 		for (j = 0; j < header.num_xyz; ++j)
 		{
 			const dtrivertx_t* ptrivertx = &(pinframe->verts[j]);
@@ -1353,19 +1357,21 @@ void Mod_LoadAliasModel(model_t *mod, void *buffer)
 	//
 	pincmd = (int *)((byte *)buffer + header.ofs_glcmds);
 	outmodel->num_glcmds = header.num_glcmds;
-	outmodel->glcmds = (int*)Hunk_Alloc(header.num_glcmds * sizeof(int));
+	outmodel->glcmds = (int*)calloc(header.num_glcmds, sizeof(int));
 	for (i = 0; i<header.num_glcmds; i++)
 		outmodel->glcmds[i] = LittleLong(pincmd[i]);
 
 	// register all skins
+	outmodel->skinheight = header.skinheight;
+	outmodel->skinwidth = header.skinwidth;
 	outmodel->num_skins = header.num_skins;
-	outmodel->skins = (char**)Hunk_Alloc(header.num_skins * sizeof(char*));
+	outmodel->skins = (char**)calloc(header.num_skins, sizeof(char*));
 	for (i = 0; i<header.num_skins; i++)
 	{
 		const char* skinname = (char *)buffer + header.ofs_skins + i*MAX_SKINNAME;
 		size_t skinname_length = strnlen(skinname, MAX_SKINNAME);
-		outmodel->skins[i] = (char*)Hunk_Alloc((skinname_length+1)*sizeof(char));
-		strncpy(outmodel->skins[i], skinname, MAX_SKINNAME);
+		outmodel->skins[i] = (char*)calloc((skinname_length + 1), sizeof(char));
+		strncpy(outmodel->skins[i], skinname, skinname_length);
 		outmodel->skins[i][skinname_length] = '\0';
 
 		mod->skins[i] = GL_FindImage(outmodel->skins[i], it_skin);
@@ -1383,6 +1389,46 @@ void Mod_LoadAliasModel(model_t *mod, void *buffer)
 	{
 		Mod_FixupAliasModel(mod->name, outmodel);
 	}
+}
+
+void Mod_UnloadAliasModel(model_t *mod)
+{
+	alias_model_t		*modeldata = (alias_model_t*)mod->extradata;
+	int					i;
+
+	if (modeldata->skins)
+	{
+		free(modeldata->skins);
+		modeldata->skins = NULL;
+	}
+	if (modeldata->glcmds)
+	{
+		free(modeldata->glcmds);
+		modeldata->glcmds = NULL;
+	}
+	if (modeldata->frames)
+	{
+		for (i = 0; i < modeldata->num_frames; ++i)
+		{
+			alias_model_frame_t* frame = &(modeldata->frames[i]);
+			if (frame->verts)
+			{
+				free(frame->verts);
+				frame->verts = NULL;
+			}
+		}
+
+		free(modeldata->frames);
+		modeldata->frames = NULL;
+	}
+	if (modeldata->tris)
+	{
+		free(modeldata->tris);
+		modeldata->tris = NULL;
+	}
+
+	free(mod->extradata);
+	mod->extradata = NULL;
 }
 
 /*
@@ -1404,7 +1450,7 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 	int			i;
 
 	sprin = (dsprite_t *)buffer;
-	sprout = Hunk_Alloc (modfilelen);
+	mod->extradata = sprout = malloc(modfilelen);
 
 	sprout->ident = LittleLong (sprin->ident);
 	sprout->version = LittleLong (sprin->version);
@@ -1431,6 +1477,15 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 	}
 
 	mod->type = mod_sprite;
+}
+
+void Mod_UnloadSpriteModel(model_t* mod)
+{
+	if (mod->extradata)
+	{
+		free(mod->extradata);
+		mod->extradata = NULL;
+	}
 }
 
 //=============================================================================
@@ -1542,7 +1597,12 @@ Mod_Free
 */
 void Mod_Free (model_t *mod)
 {
-	Hunk_Free(mod->extradata);
+	if (mod->type == mod_alias)
+		Mod_UnloadAliasModel(mod);
+	else if (mod->type == mod_sprite)
+		Mod_UnloadSpriteModel(mod);
+	else if (mod->type == mod_brush)
+		Mod_UnloadBrushModel(mod);
 	memset(mod, 0, sizeof(*mod));
 }
 
@@ -1557,7 +1617,6 @@ void Mod_FreeAll (void)
 
 	for (i=0 ; i<mod_numknown ; i++)
 	{
-		if (mod_known[i].extradatasize)
-			Mod_Free (&mod_known[i]);
+		Mod_Free (&mod_known[i]);
 	}
 }

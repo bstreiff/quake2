@@ -238,7 +238,6 @@ typedef struct model_s
 	// for alias models and skins
 	image_t		*skins[MAX_MD2SKINS];
 
-	int			extradatasize;
 	void		*extradata;
 } model_t;
 
