@@ -288,7 +288,7 @@ void Mod_LoadLighting (lump_t *l)
 		loadmodel->lightdata = NULL;
 		return;
 	}
-	loadmodel->lightdata = Hunk_Alloc ( l->filelen);	
+	loadmodel->lightdata = (byte*)malloc(l->filelen);	
 	memcpy (loadmodel->lightdata, mod_base + l->fileofs, l->filelen);
 }
 
@@ -307,7 +307,7 @@ void Mod_LoadVisibility (lump_t *l)
 		loadmodel->vis = NULL;
 		return;
 	}
-	loadmodel->vis = Hunk_Alloc ( l->filelen);	
+	loadmodel->vis = (dvis_t*)malloc(l->filelen);	
 	memcpy (loadmodel->vis, mod_base + l->fileofs, l->filelen);
 
 	loadmodel->vis->numclusters = LittleLong (loadmodel->vis->numclusters);
@@ -334,9 +334,8 @@ void Mod_LoadVertexes (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
 
-	loadmodel->vertexes = out;
+	loadmodel->vertexes = out = (mvertex_t*)calloc(count, sizeof(mvertex_t));
 	loadmodel->numvertexes = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
@@ -381,9 +380,8 @@ void Mod_LoadSubmodels (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
 
-	loadmodel->submodels = out;
+	loadmodel->submodels = out = (mmodel_t*)calloc(count, sizeof(mmodel_t));
 	loadmodel->numsubmodels = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
@@ -416,9 +414,8 @@ void Mod_LoadEdges (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( (count + 1) * sizeof(*out));	
 
-	loadmodel->edges = out;
+	loadmodel->edges = out = (medge_t*)calloc(count + 1, sizeof(medge_t));
 	loadmodel->numedges = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
@@ -445,9 +442,8 @@ void Mod_LoadTexinfo (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
 
-	loadmodel->texinfo = out;
+	loadmodel->texinfo = out = (mtexinfo_t*)calloc(count, sizeof(mtexinfo_t));
 	loadmodel->numtexinfo = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
@@ -558,9 +554,8 @@ void Mod_LoadFaces (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
 
-	loadmodel->surfaces = out;
+	loadmodel->surfaces = out = (msurface_t*)calloc(count, sizeof(msurface_t));
 	loadmodel->numsurfaces = count;
 
 	currentmodel = loadmodel;
@@ -653,9 +648,8 @@ void Mod_LoadNodes (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
 
-	loadmodel->nodes = out;
+	loadmodel->nodes = out = (mnode_t*)calloc(count, sizeof(mnode_t));
 	loadmodel->numnodes = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
@@ -702,9 +696,8 @@ void Mod_LoadLeafs (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
 
-	loadmodel->leafs = out;
+	loadmodel->leafs = out = (mleaf_t*)calloc(count, sizeof(mleaf_t));
 	loadmodel->numleafs = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
@@ -755,9 +748,8 @@ void Mod_LoadMarksurfaces (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*sizeof(*out));	
 
-	loadmodel->marksurfaces = out;
+	loadmodel->marksurfaces = out = (msurface_t**)calloc(count, sizeof(msurface_t*));
 	loadmodel->nummarksurfaces = count;
 
 	for ( i=0 ; i<count ; i++)
@@ -787,9 +779,7 @@ void Mod_LoadSurfedges (lump_t *l)
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: bad surfedges count in %s: %i",
 		loadmodel->name, count);
 
-	out = Hunk_Alloc ( count*sizeof(*out));	
-
-	loadmodel->surfedges = out;
+	loadmodel->surfedges = out = (int*)calloc(count, sizeof(int));
 	loadmodel->numsurfedges = count;
 
 	for ( i=0 ; i<count ; i++)
@@ -814,9 +804,8 @@ void Mod_LoadPlanes (lump_t *l)
 	if (l->filelen % sizeof(*in))
 		ri.Sys_Error (ERR_DROP, "MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Hunk_Alloc ( count*2*sizeof(*out));	
 	
-	loadmodel->planes = out;
+	loadmodel->planes = out = (cplane_t*)calloc(count*2, sizeof(cplane_t));
 	loadmodel->numplanes = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
@@ -846,9 +835,8 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	dheader_t	*header;
 	mmodel_t 	*bm;
 
-	loadmodel->extradata = Hunk_Begin(0x1000000);
-
 	loadmodel->type = mod_brush;
+	loadmodel->extradata = NULL;
 	if (loadmodel != mod_known)
 		ri.Sys_Error (ERR_DROP, "Loaded a brush model after the world");
 
@@ -907,12 +895,91 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 
 		starmod->numleafs = bm->visleafs;
 	}
-
-	Hunk_End();
 }
 
 void Mod_UnloadBrushModel(model_t* mod)
 {
+	if (mod->lightdata)
+	{
+		free(mod->lightdata);
+		mod->lightdata = NULL;
+	}
+
+	if (mod->vis)
+	{
+		free(mod->vis);
+		mod->vis = NULL;
+	}
+
+	if (mod->submodels)
+	{
+		free(mod->submodels);
+		mod->submodels = NULL;
+	}
+
+	if (mod->surfaces)
+	{
+		glpoly_t* tmp;
+		// Oddly, 'chain' is never used, so just iterate through 'next' to clean up.
+		while (mod->surfaces->polys)
+		{
+			tmp = mod->surfaces->polys;
+			mod->surfaces->polys = tmp->next;
+			free(tmp);
+		}
+
+		free(mod->surfaces);
+		mod->surfaces = NULL;
+	}
+
+	if (mod->vertexes)
+	{
+		free(mod->vertexes);
+		mod->vertexes = NULL;
+	}
+
+	if (mod->edges)
+	{
+		free(mod->edges);
+		mod->edges = NULL;
+	}
+
+	if (mod->texinfo)
+	{
+		free(mod->texinfo);
+		mod->texinfo = NULL;
+	}
+
+	if (mod->nodes)
+	{
+		free(mod->nodes);
+		mod->nodes = NULL;
+	}
+
+	if (mod->leafs)
+	{
+		free(mod->leafs);
+		mod->leafs = NULL;
+	}
+
+	if (mod->marksurfaces)
+	{
+		free(mod->marksurfaces);
+		mod->marksurfaces = NULL;
+	}
+
+	if (mod->surfedges)
+	{
+		free(mod->surfedges);
+		mod->surfedges = NULL;
+	}
+
+	if (mod->planes)
+	{
+		free(mod->planes);
+		mod->planes = NULL;
+	}
+
 	if (mod->extradata)
 	{
 		Hunk_Free(mod->extradata);

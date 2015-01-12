@@ -86,10 +86,10 @@ typedef struct mtexinfo_s
 typedef struct glpoly_s
 {
 	struct	glpoly_s	*next;
-	struct	glpoly_s	*chain;
+	struct	glpoly_s	*chain; // never actually used?
 	int		numverts;
 	int		flags;			// for SURF_UNDERWATER (not needed anymore?)
-	float	verts[4][VERTEXSIZE];	// variable sized (xyz s1t1 s2t2)
+	float	verts[][VERTEXSIZE];	// variable sized (xyz s1t1 s2t2)
 } glpoly_t;
 
 typedef struct msurface_s

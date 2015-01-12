@@ -1465,8 +1465,9 @@ void GL_BuildPolygonFromSurface(msurface_t *fa)
 	//
 	// draw texture
 	//
-	poly = Hunk_Alloc (sizeof(glpoly_t) + (lnumverts-4) * VERTEXSIZE*sizeof(float));
+	poly = (glpoly_t*)malloc(sizeof(glpoly_t) + lnumverts*VERTEXSIZE*sizeof(float));
 	poly->next = fa->polys;
+	poly->chain = NULL;
 	poly->flags = fa->flags;
 	fa->polys = poly;
 	poly->numverts = lnumverts;
