@@ -979,12 +979,6 @@ void Mod_UnloadBrushModel(model_t* mod)
 		free(mod->planes);
 		mod->planes = NULL;
 	}
-
-	if (mod->extradata)
-	{
-		Hunk_Free(mod->extradata);
-		mod->extradata = NULL;
-	}
 }
 
 /*
