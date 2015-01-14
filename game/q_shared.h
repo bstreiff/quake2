@@ -212,14 +212,61 @@ int Q_strncasecmp (const char *s1, const char *s2, int n);
 
 //=============================================
 
-short	BigShort(short l);
-short	LittleShort(short l);
-int		BigLong (int l);
-int		LittleLong (int l);
-float	BigFloat (float l);
-float	LittleFloat (float l);
+#if _MSC_VER
+#pragma intrinsic(_byteswap_ushort)
+#pragma intrinsic(_byteswap_ulong)
+#pragma intrinsic(_byteswap_uint64)
+// All Windows platforms are required to be little-endian.
+// http://blogs.msdn.com/b/larryosterman/archive/2005/06/07/426334.aspx
+static __forceinline short BigShort(short s) { return (short)_byteswap_ushort((unsigned short)s); };
+static __forceinline int   BigLong(int i)    { return (int)_byteswap_ulong((unsigned long)i); }
+static __forceinline float BigFloat(float f) {
+	const unsigned long swapped = _byteswap_ulong(*(unsigned long*)&f);
+	return *(float*)(&swapped);
+}
+static __forceinline short LittleShort(short s) { return s; }
+static __forceinline int   LittleLong(int i)    { return i; }
+static __forceinline float LittleFloat(float f) { return f; }
 
-void	Swap_Init (void);
+#else
+
+#define Q_Swap16(s) ((s & 0xFF00) >> 8) | ((s & 0x00FF) << 8)
+#define Q_Swap32(i) (((i & 0xFF000000) >> 24) | ((i & 0x00FF0000) >> 8) | ((i & 0x0000FF00) << 8) | ((i & 0x000000FF) << 24))
+
+#if (defined(__hppa__) || defined(__m68k__) || defined(mc68000) || defined(_M_M68K) || (defined(__MIPS__) && defined(__MISPEB__)) ||   defined(__ppc__) || defined(__POWERPC__) || defined(_M_PPC) || defined(__sparc__))
+// Big endian.
+
+static _inline short BigShort(short s)    { return s; };
+static _inline int   BigLong(int i)       { return i; }
+static _inline float BigFloat(float f)    { return f; }
+static _inline short LittleShort(short s)    { return Q_Swap16(s); }
+static _inline int   LittleLong(int i)       { return Q_Swap32(i); }
+static _inline float LittleFloat(float f)    {
+	union { int i; float f; } tmp;
+	tmp.f = f;
+	tmp.i = Q_Swap32(tmp.i);
+	return tmp.f;
+}
+
+#else
+// Little endian.
+
+static _inline short BigShort(short s)    { return Q_Swap16(s); }
+static _inline int   BigLong(int i)       { return Q_Swap32(i); }
+static _inline float BigFloat(float f)    {
+	union { int i; float f; } tmp;
+	tmp.f = f;
+	tmp.i = Q_Swap32(tmp.i);
+	return tmp.f;
+}
+static _inline short LittleShort(short s) { return s; }
+static _inline int   LittleLong(int i)    { return i; }
+static _inline float LittleFloat(float f) { return f; }
+#endif
+
+#endif
+
+
 char	*va(const char *format, ...);
 
 //=============================================

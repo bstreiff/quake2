@@ -1381,7 +1381,6 @@ void Qcommon_Init (int argc, char **argv)
 	// cvar and command buffer management
 	COM_InitArgv (argc, argv);
 
-	Swap_Init ();
 	Cbuf_Init ();
 
 	Cmd_Init ();
