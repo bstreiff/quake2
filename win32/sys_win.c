@@ -109,21 +109,6 @@ void Sys_Quit (void)
 
 /*
 ================
-Sys_ScanForCD
-
-================
-*/
-char *Sys_ScanForCD (void)
-{
-	// Nobody has CD drives anymore.
-	return NULL;
-}
-
-//================================================================
-
-
-/*
-================
 Sys_Init
 ================
 */
